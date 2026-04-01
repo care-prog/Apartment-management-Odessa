@@ -1,0 +1,64 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-commit-format.sh"
+          },
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-session-log.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-dashboard-markers.sh"
+          },
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-claude-integrity.sh"
+          },
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-task-stage-skip.sh"
+          }
+        ]
+      },
+      {
+        "matcher": "Write",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-claude-integrity.sh"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-git-log-sync.sh"
+          },
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-pipeline-update.sh"
+          },
+          {
+            "type": "command",
+            "command": "cat /dev/stdin | bash scripts/hooks/check-git-push-reminder.sh"
+          }
+        ]
+      }
+    ]
+  }
+}

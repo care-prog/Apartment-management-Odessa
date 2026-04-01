@@ -1,0 +1,16 @@
+node_modules/
+.env
+.env.local
+dist/
+build/
+.DS_Store
+*.log
+.next/
+__pycache__/
+*.pyc
+.venv/
+.turbo/
+coverage/
+
+# ProjectOS multi-session lock file
+.claude/active-sessions.json
