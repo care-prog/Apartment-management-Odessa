@@ -3,1776 +3,530 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ProjectOS Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<title>Apartment Management Odessa</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0a0b0f;
-    --surface: #12131a;
-    --surface-hover: #1a1b25;
-    --border: #1e2030;
-    --border-accent: #2a2d42;
-    --text: #e2e4f0;
-    --text-dim: #6b7094;
-    --text-muted: #454866;
-    --accent: #64ffda;
-    --accent-dim: rgba(100, 255, 218, 0.08);
-    --red: #ff5370;
-    --orange: #f78c6c;
-    --yellow: #ffcb6b;
-    --green: #c3e88d;
-    --blue: #82aaff;
-    --purple: #c792ea;
-    --cyan: #89ddff;
+    --bg: #0f1117;
+    --surface: #161822;
+    --surface-2: #1c1f2e;
+    --surface-hover: #222539;
+    --border: #252840;
+    --border-accent: #353960;
+    --text: #e8eaf0;
+    --text-dim: #8b8fa8;
+    --text-muted: #505470;
+    --accent: #6c9fff;
+    --accent-glow: rgba(108, 159, 255, 0.12);
+    --green: #4ade80;
+    --green-dim: rgba(74, 222, 128, 0.1);
+    --red: #f87171;
+    --red-dim: rgba(248, 113, 113, 0.1);
+    --yellow: #fbbf24;
+    --yellow-dim: rgba(251, 191, 36, 0.1);
+    --orange: #fb923c;
+    --purple: #a78bfa;
+    --cyan: #22d3ee;
+    --radius: 10px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
 
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Outfit', sans-serif;
-    min-height: 100vh;
-  }
+  /* ── Layout ── */
+  .app { display: flex; min-height: 100vh; }
 
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background-image:
-      linear-gradient(rgba(100, 255, 218, 0.02) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(100, 255, 218, 0.02) 1px, transparent 1px);
-    background-size: 60px 60px;
-    pointer-events: none;
-    z-index: 0;
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 10;
   }
-
-  .app { position: relative; z-index: 1; max-width: 1000px; margin: 0 auto; padding: 40px 24px; }
-
-  /* ── Status Bar ── */
-  .status-bar {
-    display: flex; gap: 1px; background: var(--border);
-    border-radius: 10px; overflow: hidden;
-    margin-bottom: 24px; border: 1px solid var(--border);
-  }
-  .status-item {
-    flex: 1; background: var(--surface); padding: 12px 16px;
-    text-align: center; min-width: 0;
-  }
-  .status-label {
-    display: block; font-size: 9px; text-transform: uppercase;
-    letter-spacing: 1.5px; color: var(--text-muted);
-    font-family: 'JetBrains Mono', monospace; margin-bottom: 4px;
-  }
-  .status-value {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px; font-weight: 600; color: var(--text);
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .status-value.accent { color: var(--accent); }
-  .status-value.yellow { color: var(--yellow); }
-  .status-value.red { color: var(--red); }
-  .status-value.green { color: var(--green); }
-
-  /* ── Header ── */
-  .header { margin-bottom: 40px; }
-  .header-top { display: flex; align-items: center; gap: 12px; margin-bottom: 6px; }
-  .header-icon {
-    width: 36px; height: 36px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent-dim), transparent);
-    border: 1px solid rgba(100, 255, 218, 0.15);
-    display: flex; align-items: center; justify-content: center; font-size: 16px;
-  }
-  h1 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 22px; font-weight: 600;
-    color: var(--text);
-  }
-  .header-meta {
-    display: flex; gap: 16px; padding-left: 48px;
-    font-size: 12px; color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .badge {
-    display: inline-flex; align-items: center; gap: 5px;
-    padding: 3px 8px; border-radius: 5px;
-    font-size: 10px; font-weight: 600;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .badge-active { background: rgba(195, 232, 141, 0.1); color: var(--green); border: 1px solid rgba(195, 232, 141, 0.15); }
-  .badge-paused { background: rgba(255, 203, 107, 0.1); color: var(--yellow); border: 1px solid rgba(255, 203, 107, 0.15); }
-  .badge-blocked { background: rgba(255, 83, 112, 0.1); color: var(--red); border: 1px solid rgba(255, 83, 112, 0.15); }
-  .badge-planning { background: rgba(130, 170, 255, 0.1); color: var(--blue); border: 1px solid rgba(130, 170, 255, 0.15); }
-
-  /* ── Sections ── */
-  .section { margin-bottom: 36px; }
-  .section-header {
+  .sidebar-brand {
+    padding: 20px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 10px;
-    margin-bottom: 14px; padding-bottom: 10px;
-    border-bottom: 1px solid var(--border);
   }
-  .section-header h2 {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 500;
-    text-transform: uppercase; letter-spacing: 2px;
-    color: var(--text-dim);
-  }
-  .section-header .line { flex: 1; height: 1px; background: var(--border); }
-  .section-header .count-badge {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; font-weight: 600;
-    padding: 2px 8px; border-radius: 10px;
-  }
-
-  /* ── Progress overview ── */
-  .progress-overview {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; margin-bottom: 36px;
-  }
-  .progress-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; }
-  .progress-phase {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; color: var(--text-dim);
-  }
-  .progress-pct {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 20px; font-weight: 700; color: var(--accent);
-  }
-  .progress-bar { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-bottom: 16px; }
-  .progress-fill {
-    height: 100%; border-radius: 3px;
-    background: linear-gradient(90deg, var(--accent), var(--green));
-    transition: width 0.6s ease;
-  }
-  .stage-summary { display: flex; gap: 12px; flex-wrap: wrap; }
-  .stage-item {
-    display: flex; align-items: center; gap: 6px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; color: var(--text-dim);
-    padding: 4px 10px; border-radius: 6px;
-    background: rgba(255,255,255,0.02);
-    border: 1px solid var(--border);
-  }
-  .stage-item .num { font-weight: 700; }
-  .stage-item.s-todo .num { color: var(--text-muted); }
-  .stage-item.s-audit .num { color: var(--cyan); }
-  .stage-item.s-progress .num { color: var(--yellow); }
-  .stage-item.s-built .num { color: var(--blue); }
-  .stage-item.s-tested .num { color: var(--green); }
-  .stage-item.s-documented .num { color: var(--orange); }
-  .stage-item.s-deployed .num { color: var(--purple); }
-  .stage-item.s-blocked .num { color: var(--red); }
-
-  /* ── Action Required ── */
-  .action-list { display: flex; flex-direction: column; gap: 8px; }
-  .action-card {
-    padding: 14px 18px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 8px;
-    border-left: 3px solid var(--red);
-  }
-  .action-card.question { border-left-color: var(--yellow); }
-  .action-type {
-    font-size: 10px; font-family: 'JetBrains Mono', monospace;
-    text-transform: uppercase; letter-spacing: 1px;
-    color: var(--text-dim); margin-bottom: 4px;
-  }
-  .action-title {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; font-weight: 500; margin-bottom: 4px;
-  }
-  .action-detail { font-size: 12px; color: var(--text-dim); }
-  .action-source {
-    font-size: 10px; color: var(--text-muted);
-    font-family: 'JetBrains Mono', monospace; margin-top: 6px;
-  }
-
-  /* ── Features Grid ── */
-  .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 8px; }
-  .feature-card {
-    padding: 14px 16px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 8px;
-    transition: all 0.15s;
-  }
-  .feature-card:hover { background: var(--surface-hover); border-color: var(--border-accent); }
-  .feature-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; font-weight: 500; margin-bottom: 4px;
-  }
-  .feature-desc { font-size: 11px; color: var(--text-dim); margin-bottom: 8px; line-height: 1.5; }
-  .feature-meta {
-    display: flex; justify-content: space-between; align-items: center;
-    font-size: 10px; font-family: 'JetBrains Mono', monospace;
-  }
-  .feature-phase { color: var(--text-muted); }
-  .feature-status { padding: 2px 6px; border-radius: 4px; font-weight: 500; }
-  .fs-complete { color: var(--green); background: rgba(195, 232, 141, 0.08); }
-  .fs-in-progress { color: var(--yellow); background: rgba(255, 203, 107, 0.08); }
-  .fs-planned { color: var(--blue); background: rgba(130, 170, 255, 0.08); }
-  .fs-blocked { color: var(--red); background: rgba(255, 83, 112, 0.08); }
-  .fs-not-started { color: var(--text-muted); background: rgba(255,255,255,0.02); }
-
-  /* ── Task list ── */
-  .task-list { display: flex; flex-direction: column; gap: 4px; }
-  .task-row {
-    display: grid; grid-template-columns: auto 130px 100px 1fr;
-    align-items: center; gap: 12px; padding: 10px 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; font-size: 13px;
-    transition: all 0.15s;
-  }
-  .task-row:hover { background: var(--surface-hover); border-color: var(--border-accent); }
-  .task-name { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
-  .task-stage {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; text-align: center;
-    padding: 3px 8px; border-radius: 4px;
-  }
-  .task-stage.todo { color: var(--text-muted); background: rgba(255,255,255,0.02); }
-  .task-stage.audit { color: var(--cyan); background: rgba(137, 221, 255, 0.08); }
-  .task-stage.progress { color: var(--yellow); background: rgba(255, 203, 107, 0.08); }
-  .task-stage.built { color: var(--blue); background: rgba(130, 170, 255, 0.08); }
-  .task-stage.tested { color: var(--green); background: rgba(195, 232, 141, 0.08); }
-  .task-stage.documented { color: var(--orange); background: rgba(247, 140, 108, 0.08); }
-  .task-stage.deployed { color: var(--purple); background: rgba(199, 146, 234, 0.08); }
-  .task-stage.blocked { color: var(--red); background: rgba(255, 83, 112, 0.08); }
-  .task-phase { font-size: 11px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; }
-  .task-notes { font-size: 11px; color: var(--text-muted); }
-
-  /* ── Tech stack (enhanced) ── */
-  .stack-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 8px; }
-  .stack-item {
-    padding: 12px 16px; background: var(--surface);
-    border: 1px solid var(--border); border-radius: 8px;
-    transition: all 0.15s;
-  }
-  .stack-item:hover { background: var(--surface-hover); }
-  .stack-item.has-detail { cursor: pointer; }
-  .stack-main {
-    display: flex; align-items: center; justify-content: space-between; width: 100%;
-  }
-  .stack-left { display: flex; flex-direction: column; gap: 2px; }
-  .stack-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; font-weight: 500;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .stack-cat { font-size: 10px; color: var(--text-dim); font-family: 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: 1px; }
-  .stack-status { font-size: 12px; }
-  .stack-expand-icon {
-    font-size: 10px; color: var(--text-muted);
-    transition: transform 0.2s; margin-left: 8px;
-  }
-  .stack-item.expanded .stack-expand-icon { transform: rotate(90deg); }
-  .stack-detail {
-    display: none; margin-top: 12px; padding-top: 12px;
-    border-top: 1px solid var(--border);
-  }
-  .stack-item.expanded .stack-detail { display: block; }
-  .detail-row {
-    display: flex; justify-content: space-between;
-    padding: 3px 0; font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .detail-key { color: var(--text-dim); }
-  .detail-value { color: var(--text); text-align: right; }
-  .detail-value.expired { color: var(--red); font-weight: 600; }
-  .detail-value.expiring-soon { color: var(--yellow); font-weight: 600; }
-  .api-badge {
-    font-size: 8px; padding: 1px 5px; border-radius: 3px;
-    background: rgba(100, 255, 218, 0.1); color: var(--accent);
-    border: 1px solid rgba(100, 255, 218, 0.15);
-    font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;
-  }
-
-  /* ── Schedules ── */
-  .schedule-list { display: flex; flex-direction: column; gap: 4px; }
-  .schedule-row {
-    display: grid; grid-template-columns: 1fr 100px 130px 130px 80px;
-    align-items: center; gap: 12px; padding: 10px 16px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; font-size: 12px;
-  }
-  .schedule-row:hover { background: var(--surface-hover); }
-  .schedule-name { font-weight: 500; color: var(--text); }
-  .schedule-type {
-    font-size: 10px; padding: 2px 6px; border-radius: 3px;
-    text-align: center; font-weight: 600; text-transform: uppercase;
-    background: rgba(100, 255, 218, 0.08); color: var(--accent);
-    border: 1px solid rgba(100, 255, 218, 0.12);
-  }
-  .schedule-time { color: var(--text-dim); font-family: 'JetBrains Mono', monospace; font-size: 11px; }
-  .schedule-time.overdue { color: var(--red); font-weight: 600; }
-  .schedule-status {
-    font-size: 10px; padding: 2px 8px; border-radius: 10px;
-    text-align: center; font-weight: 600;
-  }
-  .sched-active { background: rgba(100, 255, 218, 0.1); color: var(--green); }
-  .sched-paused { background: rgba(255, 203, 107, 0.1); color: var(--yellow); }
-  .sched-disabled { background: rgba(255, 83, 112, 0.1); color: var(--red); }
-  .schedule-header-row {
-    display: grid; grid-template-columns: 1fr 100px 130px 130px 80px;
-    gap: 12px; padding: 4px 16px; font-size: 10px;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    color: var(--text-muted); font-weight: 600;
-  }
-
-  /* ── Health ── */
-  .health-banner {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 36px;
-  }
-  .health-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .health-overall { display: flex; align-items: center; gap: 10px; }
-  .health-indicator { font-size: 20px; }
-  .health-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px; font-weight: 600;
-  }
-  .health-label.healthy { color: var(--green); }
-  .health-label.attention { color: var(--yellow); }
-  .health-label.critical { color: var(--red); }
-  .health-timestamp {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; color: var(--text-muted);
-  }
-  .health-checks {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 6px;
-  }
-  .health-check {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 6px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .health-check .check-icon { font-size: 14px; flex-shrink: 0; }
-  .health-check .check-name {
-    flex: 1; color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-  }
-  .health-check .check-detail {
-    font-size: 10px; color: var(--text-muted);
-    max-width: 120px; overflow: hidden;
-    text-overflow: ellipsis; white-space: nowrap;
-    font-family: 'JetBrains Mono', monospace;
-  }
-  .health-check.pass { border-left: 2px solid var(--green); }
-  .health-check.warn { border-left: 2px solid var(--yellow); }
-  .health-check.fail { border-left: 2px solid var(--red); }
-
-  /* ── Audit ── */
-  .audit-banner {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 20px 24px;
-    margin-bottom: 36px;
-  }
-  .audit-top {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 16px;
-  }
-  .audit-overall { display: flex; align-items: center; gap: 10px; }
-  .audit-grade {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 28px; font-weight: 700;
-    width: 40px; height: 40px;
+  .brand-icon {
+    width: 34px; height: 34px; border-radius: 8px;
+    background: linear-gradient(135deg, var(--accent), #4c7aff);
     display: flex; align-items: center; justify-content: center;
-    border-radius: 8px; border: 2px solid;
+    font-size: 16px; font-weight: 700; color: #fff;
   }
-  .audit-grade.grade-a { color: var(--green); border-color: var(--green); background: rgba(195, 232, 141, 0.08); }
-  .audit-grade.grade-b { color: var(--cyan); border-color: var(--cyan); background: rgba(137, 221, 255, 0.08); }
-  .audit-grade.grade-c { color: var(--yellow); border-color: var(--yellow); background: rgba(255, 203, 107, 0.08); }
-  .audit-grade.grade-d { color: var(--orange); border-color: var(--orange); background: rgba(247, 140, 108, 0.08); }
-  .audit-grade.grade-f { color: var(--red); border-color: var(--red); background: rgba(255, 83, 112, 0.08); }
-  .audit-label {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 14px; font-weight: 600;
-  }
-  .audit-label.grade-a { color: var(--green); }
-  .audit-label.grade-b { color: var(--cyan); }
-  .audit-label.grade-c { color: var(--yellow); }
-  .audit-label.grade-d { color: var(--orange); }
-  .audit-label.grade-f { color: var(--red); }
-  .audit-timestamp {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 11px; color: var(--text-muted);
-  }
-  .audit-checks {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-    gap: 6px;
-  }
-  .audit-check {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 12px; border-radius: 6px;
-    background: rgba(255, 255, 255, 0.02);
-    border: 1px solid var(--border);
-    font-size: 12px;
-  }
-  .audit-check .check-icon { font-size: 14px; flex-shrink: 0; }
-  .audit-check .check-name {
-    flex: 1; color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace; font-size: 11px;
-  }
-  .audit-check .check-value {
-    font-size: 10px; color: var(--text-muted);
-    font-family: 'JetBrains Mono', monospace; font-weight: 600;
-  }
-  .audit-check.pass { border-left: 2px solid var(--green); }
-  .audit-check.warn { border-left: 2px solid var(--yellow); }
-  .audit-check.fail { border-left: 2px solid var(--red); }
-  .audit-history { margin-top: 16px; display: none; }
-  .audit-history.visible { display: block; }
-  .audit-history-table {
-    width: 100%; font-size: 11px;
-    font-family: 'JetBrains Mono', monospace;
-    border-collapse: collapse;
-  }
-  .audit-history-table th {
-    text-align: left; padding: 6px 8px;
-    color: var(--text-muted); font-weight: 500;
-    text-transform: uppercase; letter-spacing: 0.5px;
-    font-size: 9px; border-bottom: 1px solid var(--border);
-  }
-  .audit-history-table td {
-    padding: 5px 8px; color: var(--text-dim);
-    border-bottom: 1px solid var(--border);
-  }
-  .audit-history-table tr:hover td { color: var(--text); }
+  .brand-text { font-size: 13px; font-weight: 600; line-height: 1.3; }
+  .brand-sub { font-size: 10px; color: var(--text-dim); font-weight: 400; }
 
-  /* ── Phase Groups ── */
-  .phase-group { margin-bottom: 4px; }
-  .phase-group-header {
-    display: flex; align-items: center; gap: 8px;
-    padding: 8px 16px; cursor: pointer; user-select: none;
-    background: rgba(100, 255, 218, 0.03);
-    border: 1px solid var(--border); border-radius: 8px;
-    margin-bottom: 4px; transition: all 0.15s;
+  .sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
+  .nav-group { margin-bottom: 16px; }
+  .nav-group-label {
+    font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
+    color: var(--text-muted); padding: 6px 12px; font-weight: 600;
   }
-  .phase-group-header:hover { background: rgba(100, 255, 218, 0.06); border-color: var(--border-accent); }
-  .phase-group-header .chevron {
-    font-size: 10px; color: var(--text-muted);
-    transition: transform 0.2s; display: inline-block;
+  .nav-item {
+    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
+    border-radius: 7px; cursor: pointer; transition: all 0.15s;
+    font-size: 13px; color: var(--text-dim); position: relative;
   }
-  .phase-group-header.collapsed .chevron { transform: rotate(-90deg); }
-  .phase-group-header .phase-name {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 600; color: var(--accent);
-    text-transform: uppercase; letter-spacing: 1px;
-  }
-  .phase-group-header .phase-count {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-muted);
+  .nav-item:hover { background: var(--surface-hover); color: var(--text); }
+  .nav-item.active { background: var(--accent-glow); color: var(--accent); }
+  .nav-item .icon { width: 18px; text-align: center; font-size: 14px; }
+  .nav-badge {
+    margin-left: auto; font-size: 10px; font-weight: 600;
     padding: 1px 6px; border-radius: 8px;
-    background: rgba(255, 255, 255, 0.04);
-  }
-  .phase-group-tasks { display: flex; flex-direction: column; gap: 4px; margin-bottom: 4px; }
-  .phase-group-header.collapsed + .phase-group-tasks { display: none; }
-  .hide-deployed-btn {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-muted);
-    background: rgba(255, 255, 255, 0.04);
-    border: 1px solid var(--border); border-radius: 4px;
-    padding: 3px 8px; cursor: pointer;
-    transition: all 0.15s;
   }
-  .hide-deployed-btn:hover { color: var(--text-dim); border-color: var(--border-accent); }
-  .hide-deployed-btn.active { color: var(--accent); border-color: rgba(100, 255, 218, 0.3); background: rgba(100, 255, 218, 0.06); }
+  .nav-badge.red { background: var(--red-dim); color: var(--red); }
+  .nav-badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
+  .nav-badge.green { background: var(--green-dim); color: var(--green); }
 
-  /* ── Feature Audits (Pre-Dev) ── */
-  .feature-audit-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 8px;
+  .sidebar-footer {
+    padding: 12px 16px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted);
   }
-  .feature-audit-card {
-    padding: 14px 16px;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-left: 3px solid var(--text-muted);
-    border-radius: 8px;
-    transition: all 0.15s;
+
+  /* ── Main Content ── */
+  .main { flex: 1; margin-left: 240px; }
+
+  /* ── Top Bar ── */
+  .topbar {
+    position: sticky; top: 0; z-index: 5;
+    background: rgba(15, 17, 23, 0.85); backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
   }
-  .feature-audit-card:hover {
-    background: var(--surface-hover);
-    border-color: var(--border-accent);
-  }
-  .feature-audit-card.grade-a { border-left-color: var(--green); }
-  .feature-audit-card.grade-b { border-left-color: var(--cyan); }
-  .feature-audit-card.grade-c { border-left-color: var(--yellow); }
-  .feature-audit-card.grade-d { border-left-color: var(--orange); }
-  .feature-audit-card.grade-f { border-left-color: var(--red); }
-  .feature-audit-card-top {
-    display: flex; align-items: center; gap: 8px; margin-bottom: 6px;
-  }
-  .feature-audit-badge {
+  .topbar-title { font-size: 16px; font-weight: 600; }
+  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .topbar-date {
+    font-size: 12px; color: var(--text-dim);
     font-family: 'JetBrains Mono', monospace;
-    font-size: 16px; font-weight: 700;
-    width: 28px; height: 28px;
+  }
+  .topbar-avatar {
+    width: 30px; height: 30px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--purple));
     display: flex; align-items: center; justify-content: center;
-    border-radius: 6px; border: 1.5px solid;
-  }
-  .feature-audit-badge.grade-a { color: var(--green); border-color: var(--green); background: rgba(195, 232, 141, 0.08); }
-  .feature-audit-badge.grade-b { color: var(--cyan); border-color: var(--cyan); background: rgba(137, 221, 255, 0.08); }
-  .feature-audit-badge.grade-c { color: var(--yellow); border-color: var(--yellow); background: rgba(255, 203, 107, 0.08); }
-  .feature-audit-badge.grade-d { color: var(--orange); border-color: var(--orange); background: rgba(247, 140, 108, 0.08); }
-  .feature-audit-badge.grade-f { color: var(--red); border-color: var(--red); background: rgba(255, 83, 112, 0.08); }
-  .feature-audit-task {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; font-weight: 500; color: var(--text);
-    flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .feature-audit-meta {
-    display: flex; gap: 12px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-muted);
-  }
-  .feature-audit-meta span { display: flex; align-items: center; gap: 3px; }
-  .feature-audit-empty {
-    text-align: center; padding: 24px;
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 12px; color: var(--text-muted);
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px;
+    font-size: 12px; font-weight: 700; color: #fff;
   }
 
-  @media (max-width: 640px) {
-    .audit-checks { grid-template-columns: 1fr; }
-    .feature-audit-grid { grid-template-columns: 1fr; }
-  }
+  /* ── Content ── */
+  .content { padding: 24px 28px; }
 
-  /* ── Git Log ── */
-  .git-list { display: flex; flex-direction: column; gap: 2px; }
-  .git-row {
-    display: grid; grid-template-columns: 70px 120px 1fr 90px;
-    align-items: center; gap: 12px; padding: 8px 16px;
+  /* ── Stats Row ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  .stat-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; font-size: 12px;
+    border-radius: var(--radius); padding: 16px 18px;
+  }
+  .stat-label {
+    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
+    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500;
+  }
+  .stat-value {
+    font-size: 26px; font-weight: 700;
     font-family: 'JetBrains Mono', monospace;
   }
-  .git-row:hover { background: var(--surface-hover); }
-  .git-hash { font-weight: 500; }
-  .git-hash a { color: var(--accent); text-decoration: none; }
-  .git-hash a:hover { text-decoration: underline; }
-  .git-date { color: var(--text-dim); font-size: 11px; }
-  .git-msg { color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .git-phase { color: var(--text-muted); font-size: 10px; text-align: right; }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-value.yellow { color: var(--yellow); }
+  .stat-value.accent { color: var(--accent); }
+  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
 
-  /* ── Mermaid ── */
-  .mermaid-container {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 12px; padding: 24px; overflow-x: auto;
-    min-height: 100px;
+  /* ── Section ── */
+  .section { margin-bottom: 28px; }
+  .section-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
   }
-  .mermaid-container .mermaid { display: flex; justify-content: center; }
-  .mermaid-container svg { max-width: 100%; height: auto; }
+  .section-title {
+    font-size: 14px; font-weight: 600; display: flex; align-items: center; gap: 8px;
+  }
+  .section-title .icon { font-size: 16px; }
+  .section-actions { display: flex; gap: 8px; }
+  .btn {
+    padding: 6px 14px; border-radius: 6px; border: 1px solid var(--border);
+    background: var(--surface); color: var(--text-dim); font-size: 12px;
+    cursor: pointer; transition: all 0.15s; font-family: inherit;
+  }
+  .btn:hover { background: var(--surface-hover); color: var(--text); border-color: var(--border-accent); }
+  .btn-primary {
+    background: var(--accent); color: #0f1117; border-color: var(--accent);
+    font-weight: 600;
+  }
+  .btn-primary:hover { opacity: 0.9; }
 
-  /* ── Session log (collapsible) ── */
-  .session-list { display: flex; flex-direction: column; gap: 6px; }
-  .session-entry {
+  /* ── Property Cards ── */
+  .property-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+  .property-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: 10px; overflow: hidden;
-    transition: border-color 0.15s;
+    border-radius: var(--radius); padding: 14px 16px; cursor: pointer;
+    transition: all 0.15s;
   }
-  .session-entry:hover { border-color: var(--border-accent); }
-  .session-entry.is-summary { border-left: 3px solid var(--accent); }
-  .session-toggle {
+  .property-card:hover { border-color: var(--border-accent); transform: translateY(-1px); box-shadow: var(--shadow); }
+  .property-card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .property-name { font-size: 13px; font-weight: 600; }
+  .property-status {
+    font-size: 9px; font-weight: 600; padding: 2px 7px; border-radius: 4px;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .status-occupied { background: var(--green-dim); color: var(--green); }
+  .status-vacant { background: var(--yellow-dim); color: var(--yellow); }
+  .status-maintenance { background: var(--red-dim); color: var(--red); }
+  .property-address { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; }
+  .property-stats { display: flex; gap: 12px; }
+  .property-stat {
+    font-size: 11px; color: var(--text-muted);
+    font-family: 'JetBrains Mono', monospace;
+  }
+  .property-stat span { color: var(--text); font-weight: 600; }
+
+  /* ── Tables ── */
+  .table-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  thead th {
+    text-align: left; padding: 10px 14px; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 1px;
+    color: var(--text-muted); font-weight: 600;
+    border-bottom: 1px solid var(--border); background: var(--surface-2);
+  }
+  tbody td {
+    padding: 10px 14px; font-size: 13px; border-bottom: 1px solid var(--border);
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-hover); }
+  .td-mono { font-family: 'JetBrains Mono', monospace; font-size: 12px; }
+
+  /* ── Status Pills ── */
+  .pill {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .pill-paid { background: var(--green-dim); color: var(--green); }
+  .pill-due { background: var(--yellow-dim); color: var(--yellow); }
+  .pill-overdue { background: var(--red-dim); color: var(--red); }
+  .pill-active { background: var(--green-dim); color: var(--green); }
+  .pill-expiring { background: var(--orange); color: #000; }
+  .pill-pending { background: rgba(108, 159, 255, 0.1); color: var(--accent); }
+  .pill-progress { background: var(--yellow-dim); color: var(--yellow); }
+  .pill-done { background: var(--green-dim); color: var(--green); }
+  .pill-urgent { background: var(--red-dim); color: var(--red); }
+
+  /* ── Alerts ── */
+  .alerts { display: flex; flex-direction: column; gap: 8px; margin-bottom: 24px; }
+  .alert {
     display: flex; align-items: center; gap: 10px;
-    padding: 14px 18px; cursor: pointer;
-    user-select: none;
+    padding: 10px 16px; border-radius: 8px;
+    font-size: 13px; border: 1px solid;
   }
-  .session-icon { font-size: 14px; flex-shrink: 0; }
-  .session-title {
-    flex: 1; font-family: 'JetBrains Mono', monospace;
-    font-size: 13px; font-weight: 500;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  }
-  .session-date {
-    font-size: 11px; color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace; flex-shrink: 0;
-  }
-  .session-chevron {
-    font-size: 10px; color: var(--text-muted);
-    transition: transform 0.2s; flex-shrink: 0;
-  }
-  .session-entry.open .session-chevron { transform: rotate(90deg); }
-  .session-content {
-    display: none; padding: 0 18px 18px;
-    font-size: 13px; color: var(--text-dim); line-height: 1.7;
-  }
-  .session-entry.open .session-content { display: block; }
-  .session-content strong { color: var(--text); font-weight: 500; }
-  .session-content .done-item { padding: 2px 0; }
-  .session-content .done-check { color: var(--green); margin-right: 4px; }
+  .alert-red { background: var(--red-dim); border-color: rgba(248,113,113,0.2); }
+  .alert-yellow { background: var(--yellow-dim); border-color: rgba(251,191,36,0.2); }
+  .alert-icon { font-size: 14px; }
+  .alert-text { flex: 1; }
+  .alert-text strong { font-weight: 600; }
 
-  .next-steps { margin-top: 16px; padding-top: 16px; border-top: 1px solid var(--border); }
-  .next-label {
-    font-size: 11px; text-transform: uppercase; letter-spacing: 1px;
-    color: var(--text-dim); font-family: 'JetBrains Mono', monospace;
-    display: block; margin-bottom: 6px;
+  /* ── Task Board ── */
+  .task-columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .task-column {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
   }
-  .next-step {
-    display: flex; align-items: baseline; gap: 8px;
-    font-size: 12px; font-family: 'JetBrains Mono', monospace;
-    color: var(--text-dim); padding: 4px 0;
+  .task-col-head {
+    padding: 10px 14px; font-size: 11px; font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+    border-bottom: 1px solid var(--border); display: flex;
+    align-items: center; justify-content: space-between;
   }
-  .next-step .marker { color: var(--accent); }
-
-  /* ── Toggle button (shared) ── */
-  .toggle-btn {
-    font-family: 'JetBrains Mono', monospace;
-    font-size: 10px; color: var(--text-dim);
-    background: transparent; border: 1px solid var(--border);
-    border-radius: 4px; padding: 3px 8px; cursor: pointer;
-    transition: all 0.15s; text-transform: uppercase; letter-spacing: 0.5px;
+  .task-col-head .count {
+    font-family: 'JetBrains Mono', monospace; font-size: 11px;
+    padding: 1px 6px; border-radius: 6px; background: rgba(255,255,255,0.05);
   }
-  .toggle-btn:hover {
-    color: var(--accent); border-color: rgba(100, 255, 218, 0.2);
+  .task-card {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    cursor: pointer; transition: background 0.1s;
+  }
+  .task-card:hover { background: var(--surface-hover); }
+  .task-card:last-child { border-bottom: none; }
+  .task-title { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
+  .task-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
+  .task-assignee {
+    font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px;
+    background: rgba(167, 139, 250, 0.1); color: var(--purple);
   }
 
-  /* ── Loading ── */
-  .loading {
-    text-align: center; padding: 40px;
-    color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+  /* ── Finance Mini Cards ── */
+  .finance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+  .finance-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px;
+  }
+  .finance-owner { font-size: 12px; font-weight: 600; margin-bottom: 4px; }
+  .finance-row { display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 2px; }
+  .finance-row .label { color: var(--text-dim); }
+  .finance-row .val { font-family: 'JetBrains Mono', monospace; font-weight: 500; }
+  .finance-row .val.green { color: var(--green); }
+  .finance-row .val.red { color: var(--red); }
+
+  /* ── Two Column Layout ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+  /* ── Meter Reading ── */
+  .meter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .meter-label { font-size: 11px; color: var(--text-dim); width: 80px; }
+  .meter-track { flex: 1; height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 3px; }
+  .meter-fill.ok { background: var(--green); }
+  .meter-fill.warn { background: var(--yellow); }
+  .meter-fill.danger { background: var(--red); }
+
+  /* ── Mobile Responsive ── */
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .main { margin-left: 0; }
+    .stats-row { grid-template-columns: repeat(2, 1fr); }
+    .property-grid { grid-template-columns: 1fr; }
+    .task-columns { grid-template-columns: 1fr; }
+    .two-col { grid-template-columns: 1fr; }
+    .finance-grid { grid-template-columns: 1fr; }
+    .content { padding: 16px; }
+    .topbar { padding: 12px 16px; }
   }
 
-  @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .fade-in { animation: fadeIn 0.3s ease forwards; opacity: 0; }
-
-  @media (max-width: 640px) {
-    .status-bar { flex-wrap: wrap; }
-    .status-item { min-width: 33%; }
-    .task-row { grid-template-columns: 1fr; gap: 4px; }
-    .stack-grid { grid-template-columns: 1fr; }
-    .features-grid { grid-template-columns: 1fr; }
-    .git-row { grid-template-columns: 1fr; gap: 4px; }
-    .git-phase { text-align: left; }
-    .health-checks { grid-template-columns: 1fr; }
+  @media (max-width: 480px) {
+    .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
+    .stat-card { padding: 12px; }
+    .stat-value { font-size: 20px; }
   }
 </style>
 </head>
 <body>
+
 <div class="app">
-
-  <!-- Status Bar -->
-  <div class="status-bar" id="statusBar">
-    <div class="status-item">
-      <span class="status-label">Phase</span>
-      <span class="status-value" id="sbPhase">-</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Complete</span>
-      <span class="status-value accent" id="sbComplete">-</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">In Progress</span>
-      <span class="status-value yellow" id="sbInProgress">0</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Blocked</span>
-      <span class="status-value red" id="sbBlocked">0</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Last Activity</span>
-      <span class="status-value" id="sbLastActivity">-</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Health</span>
-      <span class="status-value" id="sbHealth">-</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Audit</span>
-      <span class="status-value" id="sbAudit">-</span>
-    </div>
-    <div class="status-item">
-      <span class="status-label">Pre-Dev</span>
-      <span class="status-value" id="sbPreDev">-</span>
-    </div>
-  </div>
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-top">
-      <div class="header-icon">&#9672;</div>
-      <h1 id="projectName">Loading...</h1>
-    </div>
-    <div class="header-meta" id="headerMeta"></div>
-  </div>
-
-  <!-- Progress Overview -->
-  <div class="progress-overview fade-in" id="progressOverview">
-    <div class="progress-top">
-      <span class="progress-phase" id="currentPhase">-</span>
-      <span class="progress-pct" id="progressPct">-</span>
-    </div>
-    <div class="progress-bar"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
-    <div class="stage-summary" id="stageSummary"></div>
-  </div>
-
-  <!-- Action Required (hidden if empty) -->
-  <div class="section" id="actionSection" style="display:none">
-    <div class="section-header">
-      <h2>Action Required</h2>
-      <span class="count-badge" id="actionCount" style="color:var(--red);background:rgba(255,83,112,0.1);">0</span>
-      <div class="line"></div>
-    </div>
-    <div id="actionList" class="action-list"></div>
-  </div>
-
-  <!-- Health (hidden if no health data) -->
-  <div class="health-banner" id="healthSection" style="display:none">
-    <div class="health-top">
-      <div class="health-overall">
-        <span class="health-indicator" id="healthEmoji"></span>
-        <span class="health-label" id="healthLabel"></span>
-      </div>
-      <span class="health-timestamp" id="healthTimestamp"></span>
-    </div>
-    <div class="health-checks" id="healthChecks"></div>
-  </div>
-
-  <!-- Audit (hidden if no audit data) -->
-  <div class="audit-banner" id="auditSection" style="display:none">
-    <div class="audit-top">
-      <div class="audit-overall">
-        <span class="audit-grade" id="auditGrade"></span>
-        <span class="audit-label" id="auditLabel"></span>
-      </div>
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="audit-timestamp" id="auditTimestamp"></span>
-        <button class="toggle-btn" id="auditHistoryToggle" style="display:none">Show history</button>
+  <!-- ── Sidebar ── -->
+  <nav class="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-icon">AM</div>
+      <div>
+        <div class="brand-text">Apartment Mgmt</div>
+        <div class="brand-sub">Odessa, Ukraine</div>
       </div>
     </div>
-    <div class="audit-checks" id="auditChecks"></div>
-    <div class="audit-history" id="auditHistory"></div>
-  </div>
 
-  <!-- Pre-Dev Audits (hidden if empty) -->
-  <div class="section" id="featureAuditsSection" style="display:none">
-    <div class="section-header"><h2>Pre-Dev Audits</h2><div class="line"></div></div>
-    <div id="featureAuditsGrid" class="feature-audit-grid"></div>
-  </div>
+    <div class="sidebar-nav">
+      <div class="nav-group">
+        <div class="nav-group-label">Overview</div>
+        <div class="nav-item active"><span class="icon">&#9632;</span> Dashboard</div>
+        <div class="nav-item"><span class="icon">&#9872;</span> Properties <span class="nav-badge green">19</span></div>
+      </div>
 
-  <!-- Features (hidden if empty) -->
-  <div class="section" id="featuresSection" style="display:none">
-    <div class="section-header"><h2>Features</h2><div class="line"></div></div>
-    <div id="featuresGrid" class="features-grid"></div>
-  </div>
+      <div class="nav-group">
+        <div class="nav-group-label">Operations</div>
+        <div class="nav-item"><span class="icon">&#9783;</span> Tenants &amp; Leases</div>
+        <div class="nav-item"><span class="icon">&#8382;</span> Rent Collection <span class="nav-badge red">3</span></div>
+        <div class="nav-item"><span class="icon">&#9889;</span> Utilities <span class="nav-badge yellow">!</span></div>
+        <div class="nav-item"><span class="icon">&#9881;</span> Maintenance <span class="nav-badge yellow">4</span></div>
+        <div class="nav-item"><span class="icon">&#9745;</span> Tasks</div>
+      </div>
 
-  <!-- Task Pipeline -->
-  <div class="section">
-    <div class="section-header">
-      <h2>Task Pipeline</h2>
-      <button class="hide-deployed-btn" id="hideDeployedBtn">Hide deployed</button>
-      <div class="line"></div>
+      <div class="nav-group">
+        <div class="nav-group-label">Finance</div>
+        <div class="nav-item"><span class="icon">&#36;</span> Financial Reports</div>
+        <div class="nav-item"><span class="icon">&#128196;</span> Documents</div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-label">Settings</div>
+        <div class="nav-item"><span class="icon">&#9998;</span> Team</div>
+        <div class="nav-item"><span class="icon">&#9881;</span> Settings</div>
+      </div>
     </div>
-    <div id="taskList" class="task-list"><div class="loading">Loading tasks...</div></div>
-  </div>
 
-  <!-- Tech Stack -->
-  <div class="section">
-    <div class="section-header"><h2>Tech Stack</h2><div class="line"></div></div>
-    <div id="stackGrid" class="stack-grid"><div class="loading">Loading stack...</div></div>
-  </div>
-
-  <!-- Schedules (hidden if empty) -->
-  <div class="section" id="schedulesSection" style="display:none">
-    <div class="section-header"><h2>Schedules</h2><div class="line"></div></div>
-    <div class="schedule-header-row">
-      <span>Name</span><span>Type</span><span>Last Run</span><span>Next Run</span><span>Status</span>
+    <div class="sidebar-footer">
+      v1.0.0 MVP
     </div>
-    <div id="scheduleList" class="schedule-list"></div>
-  </div>
+  </nav>
 
-  <!-- Git History (hidden if empty) -->
-  <div class="section" id="gitSection" style="display:none">
-    <div class="section-header">
-      <h2>Git History</h2>
-      <button class="toggle-btn" id="gitToggle" style="display:none">Show all</button>
-      <div class="line"></div>
+  <!-- ── Main ── -->
+  <div class="main">
+
+    <!-- Top Bar -->
+    <div class="topbar">
+      <div class="topbar-title">Dashboard</div>
+      <div class="topbar-right">
+        <div class="topbar-date">Apr 01, 2026</div>
+        <div class="topbar-avatar">D</div>
+      </div>
     </div>
-    <div id="gitList" class="git-list"></div>
-  </div>
 
-  <!-- Data Structure (hidden if empty) -->
-  <div class="section" id="dataStructureSection" style="display:none">
-    <div class="section-header"><h2>Data Structure</h2><div class="line"></div></div>
-    <div id="dataStructureDiagram" class="mermaid-container">
-      <div class="loading">Loading diagram...</div>
+    <div class="content">
+
+      <!-- Alerts -->
+      <div id="alerts" class="alerts"></div>
+
+      <!-- Stats -->
+      <div id="stats-row" class="stats-row"></div>
+
+      <!-- Properties -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><span class="icon">&#9872;</span> Properties</div>
+          <div class="section-actions">
+            <button class="btn" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
+          </div>
+        </div>
+        <div id="property-grid" class="property-grid"></div>
+      </div>
+
+      <!-- Rent + Tasks -->
+      <div class="two-col">
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#8382;</span> Rent Collection</div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Apartment</th><th>Tenant</th><th>Amount</th><th>Status</th></tr></thead>
+            <tbody id="rent-tbody"></tbody></table>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9745;</span> Tasks</div>
+          </div>
+          <div id="task-columns" class="task-columns"></div>
+        </div>
+      </div>
+
+      <!-- Maintenance + Owners -->
+      <div class="two-col">
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9881;</span> Maintenance</div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Issue</th><th>Location</th><th>Status</th></tr></thead>
+            <tbody id="maint-tbody"></tbody></table>
+          </div>
+        </div>
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#36;</span> Owner Reports</div>
+          </div>
+          <div id="finance-grid" class="finance-grid"></div>
+        </div>
+      </div>
+
+      <!-- Leases -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><span class="icon">&#128196;</span> Upcoming Lease Expirations</div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Apartment</th><th>Tenant</th><th>Lease End</th><th>Rent</th><th>Status</th></tr></thead>
+          <tbody id="lease-tbody"></tbody></table>
+        </div>
+      </div>
+
+      <!-- Team -->
+      <div class="section">
+        <div class="section-head">
+          <div class="section-title"><span class="icon">&#9998;</span> Team</div>
+        </div>
+        <div class="table-wrap">
+          <table><thead><tr><th>Person</th><th>Role</th><th>Schedule</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Alina</strong></td><td>Weekday Manager</td><td class="td-mono">Mon-Fri 10-18</td><td><span class="pill pill-active">Active</span></td></tr>
+            <tr><td><strong>Anya</strong></td><td>Weekend Manager</td><td class="td-mono">Sat-Sun 10-18</td><td><span class="pill pill-pending">Off today</span></td></tr>
+          </tbody></table>
+        </div>
+      </div>
+
     </div>
   </div>
-
-  <!-- Process Flow (hidden if empty) -->
-  <div class="section" id="processFlowSection" style="display:none">
-    <div class="section-header"><h2>Process Flow</h2><div class="line"></div></div>
-    <div id="processFlowDiagram" class="mermaid-container">
-      <div class="loading">Loading diagram...</div>
-    </div>
-  </div>
-
-  <!-- Session Log (all sessions) -->
-  <div class="section">
-    <div class="section-header">
-      <h2>Session Log</h2>
-      <button class="toggle-btn" id="sessionToggleAll">Expand all</button>
-      <div class="line"></div>
-    </div>
-    <div id="sessionList" class="session-list"><div class="loading">Loading session log...</div></div>
-  </div>
-
 </div>
 
 <script>
-// ══════════════════════════════════════
-// PARSERS
-// ══════════════════════════════════════
-
-function parseTable(md) {
-  const lines = md.split('\n').filter(l => l.trim().startsWith('|') && !l.trim().match(/^\|[\s-|]+\|$/));
-  if (lines.length < 1) return [];
-  const headers = lines[0].split('|').map(h => h.trim()).filter(Boolean);
-  return lines.slice(1).map(line => {
-    const cells = line.split('|').map(c => c.trim()).filter(Boolean);
-    const row = {};
-    headers.forEach((h, i) => { row[h] = cells[i] || ''; });
-    return row;
-  }).filter(r => {
-    const vals = Object.values(r);
-    return vals.some(v => v && v !== '-');
-  });
-}
-
-function extractSection(md, start, end) {
-  const s = md.indexOf(start);
-  const e = md.indexOf(end);
-  if (s === -1 || e === -1) return '';
-  return md.substring(s + start.length, e);
-}
-
-// Convert inline markdown: **bold**, `code`, [link](url)
-function mdInline(text) {
-  if (!text) return '';
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
-    .replace(/`([^`]+)`/g, '<code style="background:rgba(100,255,218,0.08);padding:1px 4px;border-radius:3px;font-size:0.9em">$1</code>')
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" style="color:var(--accent)">$1</a>');
-}
-
-function getStageClass(stage) {
-  const s = stage.toLowerCase();
-  if (s.includes('blocked')) return 'blocked';
-  if (s.includes('deployed')) return 'deployed';
-  if (s.includes('documented')) return 'documented';
-  if (s.includes('tested')) return 'tested';
-  if (s.includes('built')) return 'built';
-  if (s.includes('ui first') || s.includes('progress')) return 'progress';
-  if (s.includes('audit')) return 'audit';
-  return 'todo';
-}
-
-function parseStackDetails(md) {
-  const section = extractSection(md,
-    '<!-- DASHBOARD:STACK_DETAILS:START -->',
-    '<!-- DASHBOARD:STACK_DETAILS:END -->');
-  if (!section) return {};
-
-  const details = {};
-  const blocks = section.split(/^### /m).filter(Boolean);
-  blocks.forEach(block => {
-    const lines = block.trim().split('\n');
-    const toolName = lines[0].trim();
-    if (!toolName || toolName.startsWith('<!--')) return;
-    const props = {};
-    lines.slice(1).forEach(line => {
-      const match = line.match(/^-\s+\*\*(.+?):\*\*\s*(.+)/);
-      if (match) props[match[1].trim()] = match[2].trim();
-    });
-    if (toolName && Object.keys(props).length > 0) details[toolName] = props;
-  });
-  return details;
-}
-
-function parseAllSessions(md) {
-  const sessions = [];
-  // Match ## or ### headers that look like session/task entries
-  const headerRegex = /^(#{2,3})\s+(.+)/gm;
-  let match;
-  const indices = [];
-
-  while ((match = headerRegex.exec(md)) !== null) {
-    const title = match[2];
-    // Session entries: "Session N", "[date] Session Summary", "[date] Task: name"
-    const isSession = title.match(/Session/i) || title.match(/Task:/i) ||
-                      title.match(/\d{4}-\d{2}-\d{2}/);
-    if (isSession) {
-      indices.push({
-        index: match.index,
-        level: match[1].length,
-        title: title,
-        fullMatch: match[0]
-      });
-    }
-  }
-
-  indices.forEach((entry, i) => {
-    const start = entry.index;
-    const end = i < indices.length - 1 ? indices[i + 1].index : md.length;
-    const content = md.substring(start, end);
-
-    const dateMatch = entry.title.match(/\[?(\d{4}-\d{2}-\d{2}[\s\d:]*)\]?/);
-    const isSummary = entry.level === 2;
-
-    // Parse done/completed items — match "Done", "What happened", "What was done"
-    const doneSection = content.match(/###?\s*(Done|What happened)\n([\s\S]*?)(?=\n#{2,3}\s|\n---|\n$)/i);
-    const doneItems = doneSection ? (doneSection[2].match(/^- .+/gm) || []) : [];
-    // Also check **Done:** or **What was done:**
-    const doneLine = content.match(/\*\*(What was done|Done|What happened):\*\*\s*([\s\S]*?)(?=\n\*\*|\n#{2,3}\s|\n---|\n$)/i);
-    const doneInline = doneLine ? (doneLine[2].match(/^- .+/gm) || [doneLine[2].trim()]) : [];
-
-    // Parse next steps — match "Next Steps", "What's next", "Next"
-    const nextSection = content.match(/###?\s*(Next Steps|What'?s next|Next)\n([\s\S]*?)(?=\n#{2,3}\s|\n---|\n$)/i);
-    const nextItems = nextSection ? (nextSection[2].match(/^- .+/gm) || nextSection[2].match(/^\d+\.\s+.+/gm) || []) : [];
-    const nextLine = content.match(/\*\*(Next steps|What'?s next):\*\*\s*([\s\S]*?)(?=\n\*\*|\n#{2,3}\s|\n---|\n$)/i);
-    const nextInline = nextLine ? (nextLine[2].match(/^- .+/gm) || nextLine[2].match(/^\d+\.\s+.+/gm) || []) : [];
-
-    // Parse open questions — match "Open Questions", "Open questions", "Blockers"
-    const questionsSection = content.match(/###?\s*(Open [Qq]uestions|Blockers)\n([\s\S]*?)(?=\n#{2,3}\s|\n---|\n$)/);
-    const openQuestions = questionsSection ? (questionsSection[2].match(/^- .+/gm) || []) : [];
-
-    // Parse focus/duration/model/cost
-    const focusMatch = content.match(/\*\*Focus:\*\*\s*(.+)/);
-    const stageMatch = content.match(/\*\*Stage:\*\*\s*(.+)/);
-    const modelMatch = content.match(/\*\*Model:\*\*\s*([^|*\n]+)/);
-    const costMatch = content.match(/\*\*Cost:\*\*\s*([^|*\n]+)/);
-    // Duration: stop at pipe, asterisk, or newline to avoid capturing trailing fields
-    const durationMatch = content.match(/\*\*Duration:\*\*\s*([^|*\n]+)/);
-
-    sessions.push({
-      title: entry.title,
-      date: dateMatch ? dateMatch[1].trim() : '',
-      isSummary,
-      done: doneItems.length > 0 ? doneItems : doneInline,
-      nextSteps: nextItems.length > 0 ? nextItems : nextInline,
-      openQuestions,
-      focus: focusMatch ? focusMatch[1] : '',
-      duration: durationMatch ? durationMatch[1].trim() : '',
-      model: modelMatch ? modelMatch[1].trim() : '',
-      cost: costMatch ? costMatch[1].trim() : '',
-      stage: stageMatch ? stageMatch[1] : '',
-      content
-    });
-  });
-
-  return sessions;
-}
-
-function parseMermaidBlock(md, startMarker, endMarker) {
-  const section = extractSection(md, startMarker, endMarker);
-  if (!section) return null;
-  const mermaidMatch = section.match(/```mermaid\s*\n([\s\S]*?)```/);
-  if (!mermaidMatch) return null;
-  const code = mermaidMatch[1].trim();
-  // Skip if it's just the default template placeholder
-  if (code.includes('ENTITY {') && code.split('\n').length <= 5) return null;
-  return code;
-}
-
-function getExpiryClass(dateStr) {
-  if (!dateStr || dateStr === 'N/A' || dateStr === '-') return '';
-  const expiry = new Date(dateStr);
-  if (isNaN(expiry)) return '';
-  const now = new Date();
-  const daysUntil = (expiry - now) / (1000 * 60 * 60 * 24);
-  if (daysUntil < 0) return 'expired';
-  if (daysUntil < 30) return 'expiring-soon';
-  return '';
-}
-
-function getFeatureStatusClass(status) {
-  const s = (status || '').toLowerCase();
-  if (s.includes('complete')) return 'fs-complete';
-  if (s.includes('progress')) return 'fs-in-progress';
-  if (s.includes('planned')) return 'fs-planned';
-  if (s.includes('blocked')) return 'fs-blocked';
-  return 'fs-not-started';
-}
-
-// ══════════════════════════════════════
-// MERMAID LAZY LOADER
-// ══════════════════════════════════════
-
-var _mermaidPromise = null;
-function loadMermaidLib() {
-  if (_mermaidPromise) return _mermaidPromise;
-  _mermaidPromise = new Promise(function(resolve, reject) {
-    if (window.mermaid) { resolve(); return; }
-    var script = document.createElement('script');
-    script.src = 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js';
-    script.onload = function() {
-      mermaid.initialize({
-        startOnLoad: false,
-        theme: 'dark',
-        themeVariables: {
-          darkMode: true,
-          background: '#12131a',
-          primaryColor: '#1a1b25',
-          primaryTextColor: '#e2e4f0',
-          primaryBorderColor: '#2a2d42',
-          lineColor: '#64ffda',
-          secondaryColor: '#1e2030',
-          tertiaryColor: '#0a0b0f',
-          fontFamily: 'JetBrains Mono, monospace',
-          fontSize: '12px'
-        }
-      });
-      resolve();
-    };
-    script.onerror = reject;
-    document.head.appendChild(script);
-  });
-  return _mermaidPromise;
-}
-
-// Queue ensures mermaid.run() calls are serialized (it can't handle parallel renders)
-var _renderQueue = Promise.resolve();
-function renderMermaid(containerId, code, sectionId) {
-  _renderQueue = _renderQueue.then(async function() {
-    try {
-      await loadMermaidLib();
-      document.getElementById(sectionId).style.display = '';
-      var container = document.getElementById(containerId);
-      var id = 'mmd-' + containerId + '-' + Date.now();
-      container.innerHTML = '<div class="mermaid" id="' + id + '">' + code + '</div>';
-      await mermaid.run({ nodes: [document.getElementById(id)] });
-    } catch (e) {
-      var container = document.getElementById(containerId);
-      container.innerHTML = '<div class="loading">Could not render diagram</div>';
-    }
-  });
-  return _renderQueue;
-}
-
-// ══════════════════════════════════════
-// LOADERS
-// ══════════════════════════════════════
-
-// Global stores for cross-loader data
-window._repoUrl = '';
-window._blockedTasks = [];
-window._sessions = [];
-
-async function loadBrief() {
+async function loadDashboard() {
   try {
-    const resp = await fetch('docs/PROJECT_BRIEF.md');
-    if (!resp.ok) return;
-    const md = await resp.text();
+    const res = await fetch('/api/dashboard');
+    const d = await res.json();
+    const s = d.stats;
 
-    // Project name
-    const match = md.match(/^#\s*PROJECT BRIEF:\s*(.+)/m);
-    if (match) {
-      const name = match[1].replace(/\[|\]/g, '').trim();
-      if (name && !name.includes('PROJECT NAME')) {
-        document.getElementById('projectName').textContent = name;
-        document.title = name + ' \u2014 Dashboard';
-      }
-    }
+    // Alerts
+    const alerts = [];
+    if (s.overdue_rent > 0) alerts.push(`<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text"><strong>${s.overdue_rent} tenants</strong> with no recorded payment this month</div></div>`);
+    if (s.active_maintenance > 0) alerts.push(`<div class="alert alert-yellow"><span class="alert-icon">&#9881;</span><div class="alert-text"><strong>${s.active_maintenance} maintenance</strong> orders open</div></div>`);
+    document.getElementById('alerts').innerHTML = alerts.join('') || '';
 
-    // Status badge
-    const statusMatch = md.match(/Status:\s*(.+)/);
-    if (statusMatch) {
-      document.getElementById('headerMeta').innerHTML =
-        '<span>' + statusMatch[1].trim() + '</span>';
-    }
+    // Stats
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Units</div><div class="stat-value accent">${s.total_units}</div><div class="stat-sub">${d.properties.length} properties</div></div>
+      <div class="stat-card"><div class="stat-label">Occupied</div><div class="stat-value green">${s.occupied}</div><div class="stat-sub">${Math.round(s.occupied/s.total_units*100)}% occupancy</div></div>
+      <div class="stat-card"><div class="stat-label">Vacant</div><div class="stat-value yellow">${s.vacant}</div><div class="stat-sub">${s.maintenance || 0} in maintenance</div></div>
+      <div class="stat-card"><div class="stat-label">Monthly Rent</div><div class="stat-value accent">$${s.total_monthly_rent.toLocaleString()}</div><div class="stat-sub">${s.pending_tasks} tasks pending</div></div>`;
 
-    // Repo URL (for git log links)
-    const repoMatch = md.match(/Repo:\s*\[?(https?:\/\/[^\]\s\)]+)\]?/);
-    if (repoMatch) {
-      window._repoUrl = repoMatch[1].replace(/\/$/, '');
-    }
+    // Properties
+    document.getElementById('property-grid').innerHTML = d.properties.map(p => {
+      let sc = 'status-occupied', st = p.occupied_units+'/'+p.total_units;
+      if (p.status==='maintenance'){sc='status-maintenance';st='Maint.';}
+      else if (p.status==='inactive'){sc='status-vacant';st='Inactive';}
+      else if (p.total_units===0){sc='status-maintenance';st=p.status;}
+      else if (p.occupied_units===0){sc='status-vacant';st='Vacant';}
+      return `<div class="property-card"><div class="property-card-head"><div class="property-name">${p.name}</div><span class="property-status ${sc}">${st}</span></div><div class="property-address">${p.address||''} ${p.owner_name?'&bull; '+p.owner_name:''}</div><div class="property-stats"><div class="property-stat">Units: <span>${p.total_units}</span></div><div class="property-stat">Rent: <span>$${p.monthly_rent||0}</span></div></div></div>`;
+    }).join('');
 
-    // Features table
-    const featuresSection = extractSection(md,
-      '<!-- DASHBOARD:FEATURES:START -->',
-      '<!-- DASHBOARD:FEATURES:END -->');
-    if (featuresSection) {
-      const features = parseTable(featuresSection);
-      if (features.length > 0) renderFeatures(features);
-    }
+    // Rent
+    document.getElementById('rent-tbody').innerHTML = (d.rent_status||[]).map(r => {
+      let pill='pill-overdue', label='No payment';
+      if(r.last_paid){const diff=Math.floor((Date.now()-new Date(r.last_paid))/86400000);if(diff>35){pill='pill-overdue';label=Math.floor(diff/30)+'mo late';}else if(diff>25){pill='pill-due';label='Due soon';}else{pill='pill-paid';label='Paid';}}
+      return `<tr><td>${r.property_name} #${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td><span class="pill ${pill}">${label}</span></td></tr>`;
+    }).join('');
 
-    // Process flow (Mermaid)
-    const flowCode = parseMermaidBlock(md,
-      '<!-- DASHBOARD:PROCESS_FLOW:START -->',
-      '<!-- DASHBOARD:PROCESS_FLOW:END -->');
-    if (flowCode) {
-      renderMermaid('processFlowDiagram', flowCode, 'processFlowSection');
-    }
-  } catch {}
-}
+    // Tasks
+    const pending=(d.tasks||[]).filter(t=>t.status==='pending'), progress=(d.tasks||[]).filter(t=>t.status==='in_progress'), done=(d.tasks||[]).filter(t=>t.status==='done');
+    const tc=t=>`<div class="task-card"><div class="task-title">${t.title}</div><div class="task-meta">${t.assigned_to?'<span class="task-assignee">'+t.assigned_to+'</span>':''}${t.due_date?'<span>'+t.due_date+'</span>':''}${t.priority==='urgent'?'<span style="color:var(--red)">Urgent</span>':''}</div></div>`;
+    document.getElementById('task-columns').innerHTML = `
+      <div class="task-column"><div class="task-col-head" style="color:var(--yellow)">Pending <span class="count">${pending.length}</span></div>${pending.map(tc).join('')}</div>
+      <div class="task-column"><div class="task-col-head" style="color:var(--accent)">In Progress <span class="count">${progress.length}</span></div>${progress.map(tc).join('')}</div>
+      <div class="task-column"><div class="task-col-head" style="color:var(--green)">Done <span class="count">${done.length}</span></div>${done.map(tc).join('')}</div>`;
 
-function renderFeatures(features) {
-  document.getElementById('featuresSection').style.display = '';
-  const container = document.getElementById('featuresGrid');
-  container.innerHTML = features.map((f, i) => {
-    const statusCls = getFeatureStatusClass(f.Status || '');
-    return '<div class="feature-card fade-in" style="animation-delay:' + (i * 0.04) + 's">' +
-      '<div class="feature-name">' + (f.Feature || '') + '</div>' +
-      '<div class="feature-desc">' + (f.Description || '') + '</div>' +
-      '<div class="feature-meta">' +
-        '<span class="feature-phase">' + (f.Phase || '') + '</span>' +
-        '<span class="feature-status ' + statusCls + '">' + (f.Status || '') + '</span>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
+    // Maintenance
+    document.getElementById('maint-tbody').innerHTML = (d.maintenance||[]).map(o => {
+      let pill='pill-pending',label=o.status;if(o.status==='in_progress'){pill='pill-progress';label='In Progress';}
+      return `<tr><td>${o.description}</td><td>${o.property_name} #${o.apt_number}</td><td><span class="pill ${pill}">${label}</span></td></tr>`;
+    }).join('') || '<tr><td colspan="3" style="color:var(--text-muted);text-align:center">No open orders</td></tr>';
 
-async function loadTasks() {
-  const container = document.getElementById('taskList');
-  try {
-    const resp = await fetch('docs/TASK_PIPELINE.md');
-    if (!resp.ok) throw new Error();
-    const md = await resp.text();
-    const section = extractSection(md, '<!-- DASHBOARD:TASKS:START -->', '<!-- DASHBOARD:TASKS:END -->');
-    const tasks = parseTable(section);
+    // Owners
+    document.getElementById('finance-grid').innerHTML = (d.owners||[]).map(o => `
+      <div class="finance-card"><div class="finance-owner">${o.name}</div>
+      <div class="finance-row"><span class="label">${o.notes||''}</span></div>
+      <div class="finance-row"><span class="label">Monthly</span><span class="val green">$${o.monthly_income||0}</span></div>
+      ${o.report_schedule?'<div class="finance-row"><span class="label">Report</span><span class="val">'+o.report_schedule+'</span></div>':''}</div>`).join('');
 
-    if (tasks.length === 0) {
-      container.innerHTML = '<div class="loading">No tasks defined yet</div>';
-      return;
-    }
+    // Leases
+    document.getElementById('lease-tbody').innerHTML = (d.upcoming_leases||[]).map(l => {
+      if(!l.end_date) return '';
+      const days=Math.floor((new Date(l.end_date)-Date.now())/86400000);
+      let pill='pill-active';if(days<30)pill='pill-expiring';else if(days<60)pill='pill-due';
+      return `<tr><td>${l.property_name} #${l.apt_number}</td><td>${l.tenant_name}</td><td class="td-mono">${l.end_date}</td><td class="td-mono">$${l.rent_amount}</td><td><span class="pill ${pill}">${days} days</span></td></tr>`;
+    }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);text-align:center">No upcoming expirations</td></tr>';
 
-    // Count stages
-    const counts = { todo: 0, audit: 0, progress: 0, built: 0, tested: 0, documented: 0, deployed: 0, blocked: 0 };
-    tasks.forEach(t => { counts[getStageClass(t.Stage || '')] ++; });
-    const total = tasks.length;
-    const done = counts.deployed + counts.documented + counts.tested;
-    const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-
-    // Status bar updates
-    document.getElementById('sbComplete').textContent = pct + '%';
-    document.getElementById('sbBlocked').textContent = counts.blocked;
-    document.getElementById('sbInProgress').textContent = counts.progress;
-
-    // Progress overview
-    document.getElementById('progressPct').textContent = pct + '%';
-    document.getElementById('progressFill').style.width = pct + '%';
-
-    const inProgress = tasks.find(t => getStageClass(t.Stage || '') === 'progress');
-    const nextTodo = tasks.find(t => getStageClass(t.Stage || '') === 'todo');
-    const currentPhase = inProgress ? (inProgress.Phase || 'In Progress') :
-                         (nextTodo ? (nextTodo.Phase || 'Next Up') : 'All done');
-    document.getElementById('currentPhase').textContent = currentPhase;
-    document.getElementById('sbPhase').textContent = currentPhase;
-
-    // Stage summary
-    const stageHTML = [
-      { cls: 's-todo', emoji: '\u26AA', label: 'To Do', count: counts.todo },
-      { cls: 's-audit', emoji: '\uD83D\uDD0D', label: 'Audit', count: counts.audit },
-      { cls: 's-progress', emoji: '\uD83D\uDFE1', label: 'UI First', count: counts.progress },
-      { cls: 's-built', emoji: '\uD83D\uDD35', label: 'Built', count: counts.built },
-      { cls: 's-tested', emoji: '\uD83D\uDFE2', label: 'Tested', count: counts.tested },
-      { cls: 's-documented', emoji: '\uD83D\uDCDD', label: 'Documented', count: counts.documented },
-      { cls: 's-deployed', emoji: '\uD83D\uDFE3', label: 'Deployed', count: counts.deployed },
-    ];
-    if (counts.blocked > 0) {
-      stageHTML.push({ cls: 's-blocked', emoji: '\uD83D\uDD34', label: 'Blocked', count: counts.blocked });
-    }
-    document.getElementById('stageSummary').innerHTML = stageHTML.map(s =>
-      '<span class="stage-item ' + s.cls + '">' + s.emoji +
-      ' <span class="num">' + s.count + '</span> ' + s.label + '</span>'
-    ).join('');
-
-    // Store blocked tasks for Action Required
-    window._blockedTasks = tasks.filter(t => getStageClass(t.Stage || '') === 'blocked');
-
-    // Group tasks by Phase
-    const phaseMap = {};
-    const phaseOrder = [];
-    tasks.forEach(t => {
-      const phase = t.Phase || 'Unassigned';
-      if (!phaseMap[phase]) {
-        phaseMap[phase] = [];
-        phaseOrder.push(phase);
-      }
-      phaseMap[phase].push(t);
-    });
-
-    // Render phase groups
-    function renderTaskGroups(hideDeployed) {
-      container.innerHTML = phaseOrder.map(phase => {
-        const phaseTasks = phaseMap[phase];
-        const visibleTasks = hideDeployed
-          ? phaseTasks.filter(t => getStageClass(t.Stage || '') !== 'deployed')
-          : phaseTasks;
-        if (visibleTasks.length === 0) return '';
-        const taskRows = visibleTasks.map((t, i) => {
-          const cls = getStageClass(t.Stage || '');
-          return '<div class="task-row fade-in" style="animation-delay:' + (i * 0.04) + 's">' +
-            '<span class="task-name">' + (t.Task || '') + '</span>' +
-            '<span class="task-stage ' + cls + '">' + (t.Stage || '\u26AA To Do') + '</span>' +
-            '<span class="task-phase">' + (t.Phase || '') + '</span>' +
-            '<span class="task-notes">' + (t.Notes && t.Notes !== '-' ? t.Notes : '') + '</span>' +
-          '</div>';
-        }).join('');
-        return '<div class="phase-group">' +
-          '<div class="phase-group-header" data-phase="' + phase + '">' +
-            '<span class="chevron">\u25BC</span>' +
-            '<span class="phase-name">' + phase + '</span>' +
-            '<span class="phase-count">' + visibleTasks.length + '</span>' +
-          '</div>' +
-          '<div class="phase-group-tasks">' + taskRows + '</div>' +
-        '</div>';
-      }).join('');
-
-      // Phase collapse handlers
-      container.querySelectorAll('.phase-group-header').forEach(header => {
-        header.addEventListener('click', function() {
-          this.classList.toggle('collapsed');
-        });
-      });
-    }
-
-    // Hide deployed toggle
-    const hideDeployedBtn = document.getElementById('hideDeployedBtn');
-    let hideDeployed = localStorage.getItem('projectos-hide-deployed') === 'true';
-    if (hideDeployed) hideDeployedBtn.classList.add('active');
-    hideDeployedBtn.textContent = hideDeployed ? 'Show deployed' : 'Hide deployed';
-
-    hideDeployedBtn.addEventListener('click', function() {
-      hideDeployed = !hideDeployed;
-      localStorage.setItem('projectos-hide-deployed', hideDeployed);
-      this.classList.toggle('active', hideDeployed);
-      this.textContent = hideDeployed ? 'Show deployed' : 'Hide deployed';
-      renderTaskGroups(hideDeployed);
-    });
-
-    renderTaskGroups(hideDeployed);
-
-  } catch {
-    container.innerHTML = '<div class="loading">Could not load TASK_PIPELINE.md</div>';
+  } catch(e) {
+    document.getElementById('alerts').innerHTML = '<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text">Cannot connect to API server</div></div>';
   }
 }
 
-async function loadStack() {
-  const container = document.getElementById('stackGrid');
+async function syncMonday() {
+  const btn = document.getElementById('sync-btn');
+  btn.textContent = 'Syncing...'; btn.disabled = true;
   try {
-    const resp = await fetch('docs/TECH_STACK.md');
-    if (!resp.ok) throw new Error();
-    const md = await resp.text();
-
-    const section = extractSection(md, '<!-- DASHBOARD:STACK:START -->', '<!-- DASHBOARD:STACK:END -->');
-    const items = parseTable(section);
-    const details = parseStackDetails(md);
-
-    if (items.length === 0) {
-      container.innerHTML = '<div class="loading">No tech stack defined yet</div>';
-      return;
-    }
-
-    container.innerHTML = items.map((item, i) => {
-      const toolName = item.Tool || '';
-      const detail = details[toolName];
-      const hasDetail = detail && Object.keys(detail).length > 0;
-      const hasApi = detail && (detail['Uses API'] === 'Yes' || detail['Uses API'] === 'yes');
-
-      let detailHTML = '';
-      if (hasDetail) {
-        detailHTML = '<div class="stack-detail">' +
-          Object.entries(detail).map(function(kv) {
-            const expCls = kv[0] === 'API Key Expires' ? getExpiryClass(kv[1]) : '';
-            return '<div class="detail-row">' +
-              '<span class="detail-key">' + kv[0] + '</span>' +
-              '<span class="detail-value ' + expCls + '">' + kv[1] + '</span>' +
-            '</div>';
-          }).join('') +
-        '</div>';
-      }
-
-      return '<div class="stack-item fade-in ' + (hasDetail ? 'has-detail' : '') + '" ' +
-        'style="animation-delay:' + (i * 0.04) + 's" ' +
-        (hasDetail ? 'onclick="this.classList.toggle(\'expanded\')"' : '') + '>' +
-        '<div class="stack-main">' +
-          '<div class="stack-left">' +
-            '<span class="stack-name">' +
-              (hasApi ? '<span class="api-badge">API</span> ' : '') +
-              toolName +
-            '</span>' +
-            '<span class="stack-cat">' + (item.Category || '') +
-              (item.Version && item.Version !== '-' ? ' \u00B7 v' + item.Version : '') +
-            '</span>' +
-          '</div>' +
-          '<span class="stack-status">' + (item.Status || '') + '</span>' +
-          (hasDetail ? '<span class="stack-expand-icon">\u25B8</span>' : '') +
-        '</div>' +
-        detailHTML +
-      '</div>';
-    }).join('');
-
-  } catch {
-    container.innerHTML = '<div class="loading">Could not load TECH_STACK.md</div>';
-  }
+    const res = await fetch('/api/sync', {method:'POST'});
+    const d = await res.json();
+    btn.textContent = `Synced ${d.synced} items`;
+    setTimeout(() => { btn.textContent = 'Sync Monday.com'; btn.disabled = false; loadDashboard(); }, 1500);
+  } catch(e) { btn.textContent = 'Sync failed'; btn.disabled = false; }
 }
 
-async function loadSession() {
-  const container = document.getElementById('sessionList');
-  try {
-    const resp = await fetch('docs/SESSION_LOG.md');
-    if (!resp.ok) throw new Error();
-    const md = await resp.text();
-    const sessions = parseAllSessions(md);
-
-    if (sessions.length === 0) {
-      container.innerHTML = '<div class="loading">No sessions logged yet</div>';
-      return;
-    }
-
-    window._sessions = sessions;
-
-    // Update status bar last activity
-    if (sessions[0].date) {
-      document.getElementById('sbLastActivity').textContent = sessions[0].date;
-    }
-
-    container.innerHTML = sessions.map(function(s, i) {
-      var isOpen = i === 0;
-      var icon = s.isSummary ? '\uD83D\uDCCB' : '\uD83D\uDD27';
-      var allDone = s.done.filter(function(d) { return d.trim(); });
-      var allNext = s.nextSteps;
-
-      var bodyHTML = '';
-      if (s.model) bodyHTML += '<strong>Model:</strong> ' + s.model + '<br>';
-      if (s.focus) bodyHTML += '<strong>Focus:</strong> ' + mdInline(s.focus) + '<br>';
-      if (s.stage) bodyHTML += '<strong>Stage:</strong> ' + mdInline(s.stage) + '<br>';
-      if (s.duration) bodyHTML += '<strong>Duration:</strong> ' + s.duration;
-      if (s.cost) bodyHTML += ' &nbsp;·&nbsp; <strong>Cost:</strong> ' + s.cost;
-      if (s.duration || s.cost) bodyHTML += '<br>';
-      if (bodyHTML) bodyHTML += '<br>';
-
-      if (allDone.length > 0) {
-        bodyHTML += '<strong>Completed:</strong><br>';
-        bodyHTML += allDone.map(function(d) {
-          return '<div class="done-item"><span class="done-check">\u2713</span> ' +
-            mdInline(d.replace(/^-\s*/, '')) + '</div>';
-        }).join('');
-      }
-
-      var nextHTML = '';
-      if (allNext.length > 0) {
-        nextHTML = '<div class="next-steps">' +
-          '<span class="next-label">Next Steps</span>' +
-          allNext.map(function(n) {
-            return '<div class="next-step"><span class="marker">\u2192</span> ' +
-              mdInline(n.replace(/^-\s*/, '').replace(/^\d+\.\s*/, '')) + '</div>';
-          }).join('') +
-        '</div>';
-      }
-
-      return '<div class="session-entry fade-in ' + (s.isSummary ? 'is-summary' : '') +
-        (isOpen ? ' open' : '') + '" style="animation-delay:' + (i * 0.03) + 's">' +
-        '<div class="session-toggle" onclick="this.parentElement.classList.toggle(\'open\')">' +
-          '<span class="session-icon">' + icon + '</span>' +
-          '<span class="session-title">' + s.title + '</span>' +
-          '<span class="session-date">' + s.date + '</span>' +
-          '<span class="session-chevron">\u25B8</span>' +
-        '</div>' +
-        '<div class="session-content">' + bodyHTML + nextHTML + '</div>' +
-      '</div>';
-    }).join('');
-
-    // Toggle all button
-    document.getElementById('sessionToggleAll').onclick = function() {
-      var cards = container.querySelectorAll('.session-entry');
-      var anyOpen = container.querySelector('.session-entry.open');
-      cards.forEach(function(c) {
-        if (anyOpen) c.classList.remove('open');
-        else c.classList.add('open');
-      });
-      document.getElementById('sessionToggleAll').textContent =
-        anyOpen ? 'Expand all' : 'Collapse all';
-    };
-
-  } catch {
-    container.innerHTML = '<div class="loading">Could not load SESSION_LOG.md</div>';
-  }
-}
-
-async function loadSchedules() {
-  try {
-    var resp = await fetch('docs/TECH_STACK.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-    var section = extractSection(md, '<!-- DASHBOARD:SCHEDULES:START -->', '<!-- DASHBOARD:SCHEDULES:END -->');
-    if (!section) return;
-    var schedules = parseTable(section);
-    if (schedules.length === 0) return;
-
-    document.getElementById('schedulesSection').style.display = '';
-    var container = document.getElementById('scheduleList');
-
-    container.innerHTML = schedules.map(function(s, i) {
-      var status = (s.Status || '').toLowerCase();
-      var statusCls = status.includes('active') ? 'sched-active' :
-                      status.includes('pause') ? 'sched-paused' : 'sched-disabled';
-      var statusLabel = status.includes('active') ? 'Active' :
-                        status.includes('pause') ? 'Paused' : 'Disabled';
-
-      // Check if overdue: last run older than expected
-      var lastRunCls = '';
-      var lastRun = s['Last Run'] || '';
-      var freq = (s.Frequency || '').toLowerCase();
-      if (lastRun && lastRun !== '-' && lastRun !== 'N/A' && status.includes('active')) {
-        var lastDate = new Date(lastRun);
-        var now = new Date();
-        var hoursSince = (now - lastDate) / (1000 * 60 * 60);
-        // Mark overdue based on frequency
-        if ((freq.includes('hour') && hoursSince > 24) ||
-            (freq.includes('daily') && hoursSince > 48) ||
-            (freq.includes('week') && hoursSince > 336)) {
-          lastRunCls = ' overdue';
-        }
-      }
-
-      return '<div class="schedule-row fade-in" style="animation-delay:' + (i * 0.04) + 's">' +
-        '<span class="schedule-name">' + (s.Name || '') + '</span>' +
-        '<span class="schedule-type">' + (s.Type || '') + '</span>' +
-        '<span class="schedule-time' + lastRunCls + '">' + lastRun + '</span>' +
-        '<span class="schedule-time">' + (s['Next Run'] || '') + '</span>' +
-        '<span class="schedule-status ' + statusCls + '">' + statusLabel + '</span>' +
-      '</div>';
-    }).join('');
-  } catch (e) { console.error('loadSchedules error:', e); }
-}
-
-async function loadHealth() {
-  try {
-    var resp = await fetch('docs/TECH_STACK.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-    var section = extractSection(md, '<!-- DASHBOARD:HEALTH:START -->', '<!-- DASHBOARD:HEALTH:END -->');
-    if (!section) return;
-    var checks = parseTable(section);
-    if (checks.length === 0) return;
-
-    var hasFail = checks.some(function(c) { return (c.Status || '').toUpperCase() === 'FAIL'; });
-    var hasWarn = checks.some(function(c) { return (c.Status || '').toUpperCase() === 'WARN'; });
-
-    var emoji, label, cls;
-    if (hasFail) { emoji = '\uD83D\uDD34'; label = 'Critical'; cls = 'critical'; }
-    else if (hasWarn) { emoji = '\uD83D\uDFE1'; label = 'Needs Attention'; cls = 'attention'; }
-    else { emoji = '\uD83D\uDFE2'; label = 'Healthy'; cls = 'healthy'; }
-
-    document.getElementById('healthSection').style.display = '';
-    document.getElementById('healthEmoji').textContent = emoji;
-    var labelEl = document.getElementById('healthLabel');
-    labelEl.textContent = label;
-    labelEl.className = 'health-label ' + cls;
-
-    var timestamp = checks[0]['Last Checked'] || '';
-    document.getElementById('healthTimestamp').textContent = timestamp ? 'Last checked: ' + timestamp : '';
-
-    var sbHealth = document.getElementById('sbHealth');
-    if (sbHealth) {
-      sbHealth.textContent = emoji + ' ' + label;
-      sbHealth.className = 'status-value ' + cls;
-    }
-
-    var container = document.getElementById('healthChecks');
-    container.innerHTML = checks.map(function(c, i) {
-      var status = (c.Status || '').toUpperCase();
-      var statusCls = status === 'PASS' ? 'pass' : status === 'WARN' ? 'warn' : 'fail';
-      var icon = status === 'PASS' ? '\u2705' : status === 'WARN' ? '\u26A0\uFE0F' : '\u274C';
-      return '<div class="health-check fade-in ' + statusCls +
-        '" style="animation-delay:' + (i * 0.04) + 's" title="' +
-        (c.Details || '').replace(/"/g, '&quot;') + '">' +
-        '<span class="check-icon">' + icon + '</span>' +
-        '<span class="check-name">' + (c.Check || '') + '</span>' +
-        '<span class="check-detail">' + (c.Details || '') + '</span>' +
-      '</div>';
-    }).join('');
-  } catch (e) { console.error('loadHealth error:', e); }
-}
-
-async function loadAudit() {
-  try {
-    var resp = await fetch('docs/AUDIT_LOG.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-
-    var section = extractSection(md, '<!-- DASHBOARD:AUDIT:START -->', '<!-- DASHBOARD:AUDIT:END -->');
-    if (!section) return;
-    var checks = parseTable(section);
-    if (checks.length === 0) return;
-
-    // Calculate overall grade
-    var fails = 0, warns = 0;
-    checks.forEach(function(c) {
-      var s = (c.Status || '').toUpperCase();
-      if (s === 'FAIL') fails++;
-      if (s === 'WARN') warns++;
-    });
-    var grade, gradeCls, gradeLabel;
-    if (fails >= 3)       { grade = 'F'; gradeCls = 'grade-f'; gradeLabel = 'Critical Issues'; }
-    else if (fails >= 1)  { grade = 'D'; gradeCls = 'grade-d'; gradeLabel = 'Needs Work'; }
-    else if (warns >= 3)  { grade = 'C'; gradeCls = 'grade-c'; gradeLabel = 'Fair'; }
-    else if (warns >= 1)  { grade = 'B'; gradeCls = 'grade-b'; gradeLabel = 'Good'; }
-    else                  { grade = 'A'; gradeCls = 'grade-a'; gradeLabel = 'Excellent'; }
-
-    // Show section
-    document.getElementById('auditSection').style.display = '';
-    var gradeEl = document.getElementById('auditGrade');
-    gradeEl.textContent = grade;
-    gradeEl.className = 'audit-grade ' + gradeCls;
-    var labelEl = document.getElementById('auditLabel');
-    labelEl.textContent = 'Code Quality: ' + gradeLabel;
-    labelEl.className = 'audit-label ' + gradeCls;
-
-    var timestamp = checks[0]['Last Audited'] || '';
-    document.getElementById('auditTimestamp').textContent = timestamp ? 'Last audit: ' + timestamp : '';
-
-    // Status bar
-    var sbAudit = document.getElementById('sbAudit');
-    if (sbAudit) {
-      sbAudit.textContent = grade + ' - ' + gradeLabel;
-      sbAudit.className = 'status-value ' + (gradeCls === 'grade-a' ? 'green' : gradeCls === 'grade-b' ? 'accent' : gradeCls === 'grade-c' ? 'yellow' : 'red');
-    }
-
-    // Render check cards
-    var container = document.getElementById('auditChecks');
-    container.innerHTML = checks.map(function(c, i) {
-      var status = (c.Status || '').toUpperCase();
-      var statusCls = status === 'PASS' ? 'pass' : status === 'WARN' ? 'warn' : 'fail';
-      var icon = status === 'PASS' ? '\u2705' : status === 'WARN' ? '\u26A0\uFE0F' : '\u274C';
-      return '<div class="audit-check fade-in ' + statusCls +
-        '" style="animation-delay:' + (i * 0.04) + 's" title="' +
-        (c.Details || '').replace(/"/g, '&quot;') + ' | Threshold: ' +
-        (c.Threshold || '').replace(/"/g, '&quot;') + '">' +
-        '<span class="check-icon">' + icon + '</span>' +
-        '<span class="check-name">' + (c.Check || '') + '</span>' +
-        '<span class="check-value">' + (c.Value || '') + '</span>' +
-      '</div>';
-    }).join('');
-
-    // Parse history
-    var histSection = extractSection(md, '<!-- DASHBOARD:AUDIT_HISTORY:START -->', '<!-- DASHBOARD:AUDIT_HISTORY:END -->');
-    if (histSection) {
-      var history = parseTable(histSection);
-      if (history.length > 0) {
-        var headers = Object.keys(history[0]);
-        var tableHTML = '<table class="audit-history-table"><thead><tr>' +
-          headers.map(function(h) { return '<th>' + h + '</th>'; }).join('') +
-          '</tr></thead><tbody>' +
-          history.slice(0, 7).map(function(row) {
-            return '<tr>' + headers.map(function(h) {
-              var val = row[h] || '';
-              if (h === 'Grade') {
-                var gc = val === 'A' ? 'var(--green)' : val === 'B' ? 'var(--cyan)' :
-                         val === 'C' ? 'var(--yellow)' : val === 'D' ? 'var(--orange)' : 'var(--red)';
-                return '<td style="color:' + gc + ';font-weight:700">' + val + '</td>';
-              }
-              return '<td>' + val + '</td>';
-            }).join('') + '</tr>';
-          }).join('') +
-          '</tbody></table>';
-
-        document.getElementById('auditHistory').innerHTML = tableHTML;
-        var toggleBtn = document.getElementById('auditHistoryToggle');
-        toggleBtn.style.display = '';
-        toggleBtn.onclick = function() {
-          var hist = document.getElementById('auditHistory');
-          var visible = hist.classList.contains('visible');
-          hist.classList.toggle('visible');
-          this.textContent = visible ? 'Show history' : 'Hide history';
-        };
-      }
-    }
-  } catch (e) { console.error('loadAudit error:', e); }
-}
-
-async function loadFeatureAudits() {
-  try {
-    var resp = await fetch('docs/FEATURE_AUDITS.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-
-    var section = extractSection(md, '<!-- DASHBOARD:FEATURE_AUDITS:START -->', '<!-- DASHBOARD:FEATURE_AUDITS:END -->');
-    if (!section) return;
-    var audits = parseTable(section);
-    if (audits.length === 0) return;
-
-    document.getElementById('featureAuditsSection').style.display = '';
-    var container = document.getElementById('featureAuditsGrid');
-
-    container.innerHTML = audits.map(function(a, i) {
-      var grade = (a.Grade || '-').toUpperCase().charAt(0);
-      var gradeCls = grade === 'A' ? 'grade-a' : grade === 'B' ? 'grade-b' :
-                     grade === 'C' ? 'grade-c' : grade === 'D' ? 'grade-d' : 'grade-f';
-
-      return '<div class="feature-audit-card fade-in ' + gradeCls +
-        '" style="animation-delay:' + (i * 0.04) + 's">' +
-        '<div class="feature-audit-card-top">' +
-          '<span class="feature-audit-badge ' + gradeCls + '">' + grade + '</span>' +
-          '<span class="feature-audit-task">' + (a.Task || '') + '</span>' +
-        '</div>' +
-        '<div class="feature-audit-meta">' +
-          '<span>\uD83D\uDD12 ' + (a.Security || '-') + '</span>' +
-          '<span>\uD83E\uDDEA ' + (a.Tests || '-') + '</span>' +
-          '<span>\uD83D\uDCCB ' + (a.Duplication || '-') + '</span>' +
-          '<span>\uD83D\uDCC5 ' + (a.Date || '') + '</span>' +
-        '</div>' +
-      '</div>';
-    }).join('');
-
-    // Status bar
-    var sbPreDev = document.getElementById('sbPreDev');
-    if (sbPreDev) {
-      sbPreDev.textContent = audits.length + ' audited';
-      sbPreDev.className = 'status-value accent';
-    }
-  } catch (e) { console.error('loadFeatureAudits error:', e); }
-}
-
-async function loadGitLog() {
-  try {
-    var resp = await fetch('docs/GIT_LOG.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-    var section = extractSection(md, '<!-- DASHBOARD:GIT_LOG:START -->', '<!-- DASHBOARD:GIT_LOG:END -->');
-    if (!section) return;
-    var commits = parseTable(section);
-    if (commits.length === 0) return;
-
-    document.getElementById('gitSection').style.display = '';
-    var container = document.getElementById('gitList');
-    var repoUrl = window._repoUrl || '';
-    var INITIAL_SHOW = 10;
-
-    container.innerHTML = commits.map(function(c, i) {
-      var hash = c.Hash || '';
-      var shortHash = hash.substring(0, 7);
-      var commitUrl = repoUrl ? repoUrl + '/commit/' + hash : '';
-      var hidden = i >= INITIAL_SHOW ? ' style="display:none"' : '';
-      return '<div class="git-row fade-in" data-git-row' + hidden +
-        ' style="animation-delay:' + (i * 0.03) + 's">' +
-        '<span class="git-hash">' +
-          (commitUrl ? '<a href="' + commitUrl + '" target="_blank">' + shortHash + '</a>' : shortHash) +
-        '</span>' +
-        '<span class="git-date">' + (c.Date || '') + '</span>' +
-        '<span class="git-msg">' + (c.Message || '') + '</span>' +
-        '<span class="git-phase">' + (c.Phase || '') + '</span>' +
-      '</div>';
-    }).join('');
-
-    // Show toggle if more than INITIAL_SHOW
-    if (commits.length > INITIAL_SHOW) {
-      var btn = document.getElementById('gitToggle');
-      btn.style.display = '';
-      btn.onclick = function() {
-        var rows = container.querySelectorAll('[data-git-row]');
-        var isHidden = rows[INITIAL_SHOW] && rows[INITIAL_SHOW].style.display === 'none';
-        rows.forEach(function(r, i) {
-          if (i >= INITIAL_SHOW) r.style.display = isHidden ? '' : 'none';
-        });
-        btn.textContent = isHidden ? 'Show less' : 'Show all';
-      };
-    }
-  } catch {}
-}
-
-async function loadDataStructure() {
-  try {
-    var resp = await fetch('docs/DATA_STRUCTURE.md');
-    if (!resp.ok) return;
-    var md = await resp.text();
-    var code = parseMermaidBlock(md,
-      '<!-- DASHBOARD:DATA_STRUCTURE:START -->',
-      '<!-- DASHBOARD:DATA_STRUCTURE:END -->');
-    if (!code) return;
-    renderMermaid('dataStructureDiagram', code, 'dataStructureSection');
-  } catch {}
-}
-
-function loadActionRequired() {
-  var items = [];
-
-  // Blocked tasks
-  (window._blockedTasks || []).forEach(function(t) {
-    items.push({
-      type: 'blocked',
-      title: t.Task || 'Unknown task',
-      detail: (t['Blocked By'] && t['Blocked By'] !== '-' ? 'Blocked by: ' + t['Blocked By'] : '') +
-              (t.Notes && t.Notes !== '-' ? (t['Blocked By'] && t['Blocked By'] !== '-' ? ' \u2014 ' : '') + t.Notes : ''),
-      source: 'Task Pipeline'
-    });
-  });
-
-  // Open questions from recent sessions
-  var sessions = window._sessions || [];
-  sessions.slice(0, 5).forEach(function(s) {
-    (s.openQuestions || []).forEach(function(q) {
-      var text = q.replace(/^-\s*/, '').trim();
-      if (text && text !== '[Anything unresolved]') {
-        items.push({
-          type: 'question',
-          title: text,
-          detail: 'From: ' + s.title,
-          source: 'Session Log'
-        });
-      }
-    });
-  });
-
-  if (items.length === 0) return;
-
-  document.getElementById('actionSection').style.display = '';
-  document.getElementById('actionCount').textContent = items.length;
-
-  var container = document.getElementById('actionList');
-  container.innerHTML = items.map(function(item, i) {
-    return '<div class="action-card fade-in ' + item.type + '" style="animation-delay:' + (i * 0.04) + 's">' +
-      '<div class="action-type">' + (item.type === 'blocked' ? '\uD83D\uDD34 Blocked Task' : '\u2753 Open Question') + '</div>' +
-      '<div class="action-title">' + mdInline(item.title) + '</div>' +
-      (item.detail ? '<div class="action-detail">' + mdInline(item.detail) + '</div>' : '') +
-      '<div class="action-source">' + item.source + '</div>' +
-    '</div>';
-  }).join('');
-}
-
-// ══════════════════════════════════════
-// INIT
-// ══════════════════════════════════════
-
-async function init() {
-  await Promise.all([
-    loadBrief(),
-    loadTasks(),
-    loadStack(),
-    loadSession(),
-    loadGitLog(),
-    loadDataStructure(),
-    loadSchedules(),
-    loadHealth(),
-    loadAudit(),
-    loadFeatureAudits()
-  ]);
-  loadActionRequired();
-}
-
-init();
+loadDashboard();
 </script>
+
 </body>
 </html>

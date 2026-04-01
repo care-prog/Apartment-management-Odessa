@@ -21,6 +21,16 @@
 <!-- DASHBOARD:STACK:START -->
 | Tool | Category | Version | Status | Notes |
 |---|---|---|---|---|
+| Python | Backend | 3.x | ✅ Ready | System Python available |
+| Flask | Backend | 3.x | 🔲 Not Set Up | Lightweight API framework |
+| SQLite | Database | 3.x | 🔲 Not Set Up | File-based DB, no server needed |
+| HTML/CSS/JS | Frontend | - | ✅ Ready | Vanilla, no framework |
+| Alpine.js | Frontend | 3.x | 🔲 Not Set Up | Lightweight reactivity |
+| Git | DevTools | 2.39 | ✅ Ready | Version control |
+| GitHub | Hosting | - | ✅ Ready | Repo + Pages for static |
+| GitHub Pages | Hosting | - | ✅ Ready | Static dashboard hosting |
+| Telegram Bot API | APIs | - | 🅿️ Parking Lot | Phase 2 - notifications |
+| PWA | Frontend | - | 🔲 Not Set Up | Progressive Web App for mobile |
 <!-- DASHBOARD:STACK:END -->
 
 ---
@@ -28,18 +38,41 @@
 ## Stack Details
 
 <!-- DASHBOARD:STACK_DETAILS:START -->
-<!--
-Add detail blocks for tools that use APIs or need extra tracking:
-
-### [Tool Name]
-- **Uses API:** Yes/No
-- **API Key Expires:** 2026-04-01 or N/A
-- **Account:** [email or username]
-- **Purpose:** [what it's used for]
+### Python
+- **Uses API:** No
+- **API Key Expires:** N/A
+- **Account:** System
+- **Purpose:** Backend API server
 - **Started:** 2026-04-01
-- **Ended:** - (or 2026-04-01 if no longer used)
-- **Monthly Cost:** [estimate or N/A]
--->
+- **Ended:** -
+- **Monthly Cost:** Free
+
+### Flask
+- **Uses API:** No
+- **API Key Expires:** N/A
+- **Account:** N/A
+- **Purpose:** REST API framework for CRUD operations
+- **Started:** 2026-04-01
+- **Ended:** -
+- **Monthly Cost:** Free
+
+### SQLite
+- **Uses API:** No
+- **API Key Expires:** N/A
+- **Account:** N/A
+- **Purpose:** Primary database - properties, tenants, payments, tasks
+- **Started:** 2026-04-01
+- **Ended:** -
+- **Monthly Cost:** Free
+
+### GitHub
+- **Uses API:** No
+- **API Key Expires:** N/A
+- **Account:** care-prog
+- **Purpose:** Code repository + static hosting via GitHub Pages
+- **Started:** 2026-04-01
+- **Ended:** -
+- **Monthly Cost:** Free
 <!-- DASHBOARD:STACK_DETAILS:END -->
 
 ---
@@ -47,11 +80,14 @@ Add detail blocks for tools that use APIs or need extra tracking:
 ## Schedules
 
 <!-- DASHBOARD:SCHEDULES:START -->
-<!--
 | Name | Type | Frequency | Last Run | Next Run | Status |
 |---|---|---|---|---|---|
-| [Job name] | Cron/Webhook/Worker | [frequency] | [2026-04-01 HH:MM] | [2026-04-01 HH:MM] | ✅ Active / ⏸️ Paused / ❌ Disabled |
--->
+| Meter reading reminder | Automation | Monthly (1st) | - | 2026-05-01 | 🔲 Not Set Up |
+| Rent due reminder | Automation | Monthly | - | - | 🔲 Not Set Up |
+| Owner report - Sam | Automation | Monthly (15-22) | - | 2026-04-15 | 🔲 Not Set Up |
+| Owner report - Natan/Push | Automation | Monthly (10-17) | - | 2026-04-10 | 🔲 Not Set Up |
+| Owner report - Kanatna | Automation | Monthly (10-15) | - | 2026-04-10 | 🔲 Not Set Up |
+| Lease expiry check | Automation | Daily | - | - | 🔲 Not Set Up |
 <!-- DASHBOARD:SCHEDULES:END -->
 
 ---
@@ -59,6 +95,13 @@ Add detail blocks for tools that use APIs or need extra tracking:
 ## Health
 
 <!-- DASHBOARD:HEALTH:START -->
+| Check | Status | Details |
+|---|---|---|
+| Git repo | ✅ Healthy | Connected to GitHub, SSH configured |
+| Database | ⚠️ Attention | Schema not yet created |
+| API server | ⚠️ Attention | Flask not yet installed |
+| Frontend | ✅ Healthy | Dashboard UI designed |
+| Tests | ⚠️ Attention | No tests yet |
 <!-- DASHBOARD:HEALTH:END -->
 
 ---
