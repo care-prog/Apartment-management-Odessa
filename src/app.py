@@ -5,8 +5,10 @@ from flask import Flask, send_from_directory, jsonify
 from src.models import init_db
 from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
+from src.auth import init_auth
 
 app = Flask(__name__, static_folder=None)
+init_auth(app)
 
 app.register_blueprint(properties.bp)
 app.register_blueprint(tenants.bp)
@@ -36,14 +38,16 @@ def index():
 def static_files(path):
     return send_from_directory(ROOT, path)
 
+# Auto-init DB on import (needed for gunicorn/Render)
+init_db()
+from src.models import query_db
+if not query_db('SELECT COUNT(*) as c FROM properties', one=True)['c']:
+    seed_path = os.path.join(ROOT, 'database', 'seeds', 'seed_data.py')
+    if os.path.exists(seed_path):
+        exec(open(seed_path).read())
+        print("Database seeded with initial data.")
+
 if __name__ == '__main__':
-    init_db()
-    # Seed if DB is empty
-    from src.models import query_db
-    if not query_db('SELECT COUNT(*) as c FROM properties', one=True)['c']:
-        seed_path = os.path.join(ROOT, 'database', 'seeds', 'seed_data.py')
-        if os.path.exists(seed_path):
-            exec(open(seed_path).read())
-            print("Database seeded with initial data.")
-    print("Starting server at http://localhost:5000")
-    app.run(debug=True, port=5050)
+    port = int(os.environ.get('PORT', 5050))
+    print(f"Starting server at http://localhost:{port}")
+    app.run(debug=True, port=port)

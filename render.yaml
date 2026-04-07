@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: apartment-mgmt-odessa
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn src.app:app --bind 0.0.0.0:$PORT
+    envVars:
+      - key: MONDAY_API_TOKEN
+        sync: false
+      - key: MONDAY_BOARD_ID
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
+      - key: PYTHON_VERSION
+        value: 3.11.0
