@@ -110,25 +110,25 @@ def parse_item(item):
     }
 
 def sync_to_db():
-    from src.models import get_db, init_db
+    from src.models import query_db, insert_db, execute_db, init_db
     items = fetch_board_items()
     if not items:
         return {'synced': 0, 'error': 'No items fetched'}
 
-    db = get_db()
-    db.execute("PRAGMA foreign_keys = OFF")
-
-    # Clear and rebuild from Monday.com data
-    db.execute("DELETE FROM apartments")
-    db.execute("DELETE FROM leases")
-    db.execute("DELETE FROM tenants")
+    # Delete in FK-safe order (leases → tenants → apartments)
+    execute_db("DELETE FROM leases")
+    execute_db("DELETE FROM tenants")
+    execute_db("DELETE FROM apartments")
 
     # Ensure we have a default property for Tower Chekalov
-    existing = db.execute("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'").fetchone()
+    existing = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
     if not existing:
         init_db()
-        existing = db.execute("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'").fetchone()
+        existing = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
     tower_id = existing['id'] if existing else 1
+
+    def find_property(pattern):
+        return query_db(f"SELECT id FROM properties WHERE name LIKE '%{pattern}%'", one=True)
 
     synced = []
     for item in items:
@@ -137,31 +137,29 @@ def sync_to_db():
         # Determine property_id based on name
         name_lower = p['name'].lower()
         if 'chkalov' in name_lower or 'chekalo' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'").fetchone()
+            prop = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
         elif 'pushkin' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Pushkin%'").fetchone()
+            prop = find_property('Pushkin')
         elif 'kanatn' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Kanat%'").fetchone()
+            prop = find_property('Kanat')
         elif 'voronz' in name_lower or 'voronts' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Voronts%'").fetchone()
+            prop = find_property('Voronts')
         elif 'arnaut' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Arnaut%'").fetchone()
+            prop = find_property('Arnaut')
         elif 'sofiev' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Sofiev%'").fetchone()
+            prop = find_property('Sofiev')
         elif 'fontank' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Fontank%'").fetchone()
+            prop = find_property('Fontank')
             if not prop:
-                db.execute("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
+                insert_db("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
                     ("Fontanka Townhouse", "Fontanka, Odessa", "residential", "active", None))
-                db.commit()
-                prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Fontank%'").fetchone()
+                prop = find_property('Fontank')
         elif 'platinum' in name_lower:
-            prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Platinum%'").fetchone()
+            prop = find_property('Platinum')
             if not prop:
-                db.execute("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
+                insert_db("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
                     ("Parking Platinum", "Odessa", "parking", "active", None))
-                db.commit()
-                prop = db.execute("SELECT id FROM properties WHERE name LIKE '%Platinum%'").fetchone()
+                prop = find_property('Platinum')
         else:
             prop = None
 
@@ -185,26 +183,20 @@ def sync_to_db():
             db_status = 'maintenance'
 
         # Insert apartment
-        cur = db.execute(
+        apt_id = insert_db(
             "INSERT INTO apartments (property_id, number, status, monthly_rent, currency, notes) VALUES (?, ?, ?, ?, ?, ?)",
             (property_id, apt_number, db_status, p['rent'], 'USD',
              json.dumps({'monday_id': p['monday_id'], 'group': p['group'], 'meters': p['meters'],
                          'code_box': p['code_box'], 'wifi_paid': p['wifi_paid'],
                          'sold': p['sold'], 'timeline': p['timeline']}, ensure_ascii=False)))
-        apt_id = cur.lastrowid
 
         # If occupied, create a placeholder tenant + lease
         if db_status == 'occupied' and p['rent'] > 0:
             tenant_name = f"Tenant {p['name']}"
-            cur2 = db.execute("INSERT INTO tenants (name, language) VALUES (?, ?)", (tenant_name, 'ru'))
-            tenant_id = cur2.lastrowid
-            db.execute(
+            tenant_id = insert_db("INSERT INTO tenants (name, language) VALUES (?, ?)", (tenant_name, 'ru'))
+            insert_db(
                 "INSERT INTO leases (apartment_id, tenant_id, start_date, end_date, rent_amount, status) VALUES (?, ?, ?, ?, ?, ?)",
                 (apt_id, tenant_id, p['date_start'] or '2025-01-01', p['date_finish'] or None, p['rent'], 'active'))
 
         synced.append({'name': p['name'], 'status': db_status, 'rent': p['rent']})
-
-    db.commit()
-    db.execute("PRAGMA foreign_keys = ON")
-    db.close()
     return {'synced': len(synced), 'items': synced}
