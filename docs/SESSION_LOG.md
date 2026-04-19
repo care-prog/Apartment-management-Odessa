@@ -5,6 +5,29 @@
 
 ---
 
+## Session 8 — 2026-04-19
+
+**Duration:** Continuation
+**Phase:** Phase 1
+**Focus:** Chat assistant — professionals directory integration
+
+### Done
+- `src/routes/chat.py` — `gather_context()` now includes full professionals list (id, name, phone, messenger, category, rating, total_paid, notes)
+- Added `find_professional` tool — search by category/name, returns matches sorted by rating
+- Added `log_professional_payment` tool — log a payment to a professional from the chat
+- Updated system prompt: Claude knows about the professionals directory, categories, and how to use the two new tools
+- Chat can now answer: "who do we use for plumbing?", "find me a cleaner", "log payment to Vasya $50"
+
+### Deployment
+- Trigger Render deploy after push
+
+### Next
+- Test chat: ask about professionals in Russian/Hebrew
+- Property owner filtered view
+- Alina Tasks board import (board 4735694190)
+
+---
+
 ## Session 7 — 2026-04-19
 
 **Duration:** Continuation session

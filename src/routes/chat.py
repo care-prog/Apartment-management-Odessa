@@ -72,6 +72,32 @@ def gather_context():
     expenses = query_db("SELECT id, description, amount, category, date FROM office_expenses ORDER BY date DESC LIMIT 20")
     team = query_db("SELECT name, role, language FROM team_members ORDER BY name")
 
+    # Professionals directory
+    professionals = query_db("""
+        SELECT p.id, p.name, p.phone, p.phone_2, p.messenger, p.category,
+               p.notes, p.apartments_worked, p.rating,
+               COALESCE(SUM(pp.amount), 0) AS total_paid
+        FROM professionals p
+        LEFT JOIN professional_payments pp ON pp.professional_id = p.id
+        WHERE p.is_active = 1
+        GROUP BY p.id
+        ORDER BY p.category, p.name
+    """)
+    pro_list = []
+    for p in professionals:
+        pro_list.append({
+            'id': p['id'],
+            'name': p['name'],
+            'phone': p['phone'] or '',
+            'phone_2': p.get('phone_2') or '',
+            'messenger': p.get('messenger') or 'Viber',
+            'category': p['category'],
+            'rating': p.get('rating') or 5,
+            'total_paid': round(float(p['total_paid'] or 0), 2),
+            'notes': p.get('notes') or '',
+            'apartments_worked': p.get('apartments_worked') or '',
+        })
+
     total_rent = query_db("SELECT COALESCE(SUM(rent_amount), 0) as s FROM leases WHERE status = 'active'", one=True)['s']
     fee = round(total_rent * 0.10)
 
@@ -90,6 +116,7 @@ def gather_context():
         'tasks': tasks,
         'open_maintenance': maintenance,
         'recent_expenses': expenses,
+        'professionals': pro_list,
     }
 
 
@@ -198,6 +225,32 @@ TOOLS = [
             'required': ['apartment_id', 'status'],
         },
     },
+    {
+        'name': 'log_professional_payment',
+        'description': 'Log a payment made to a professional/contractor (plumber, cleaner, realtor, electrician, etc.). Use when the user says they paid someone from the professionals directory.',
+        'input_schema': {
+            'type': 'object',
+            'properties': {
+                'professional_id': {'type': 'integer', 'description': 'ID of the professional from the professionals list'},
+                'amount': {'type': 'number', 'description': 'Amount paid'},
+                'currency': {'type': 'string', 'enum': ['USD', 'UAH'], 'description': 'Currency (default USD)'},
+                'description': {'type': 'string', 'description': 'What the payment was for'},
+                'payment_date': {'type': 'string', 'description': 'YYYY-MM-DD, defaults to today'},
+            },
+            'required': ['professional_id', 'amount'],
+        },
+    },
+    {
+        'name': 'find_professional',
+        'description': 'Search the professionals directory by category or name. Use when the user asks "who do we use for X?" or "find me a plumber/cleaner/electrician/etc." Returns matching professionals with contact details.',
+        'input_schema': {
+            'type': 'object',
+            'properties': {
+                'category': {'type': 'string', 'description': 'Category to filter by, e.g. Plumbing, Cleaning, Electrical, Realtor, Construction, etc.'},
+                'name_search': {'type': 'string', 'description': 'Partial name search'},
+            },
+        },
+    },
 ]
 
 
@@ -264,6 +317,47 @@ def execute_tool(name, args):
             execute_db('UPDATE apartments SET status = ? WHERE id = ?', (args['status'], args['apartment_id']))
             return {'success': True, 'message': f'Apartment #{args["apartment_id"]} → {args["status"]}'}
 
+        if name == 'log_professional_payment':
+            from datetime import date as _date
+            pro = query_db('SELECT * FROM professionals WHERE id = ?', (args['professional_id'],), one=True)
+            if not pro:
+                return {'success': False, 'error': f'Professional #{args["professional_id"]} not found'}
+            pay_id = insert_db(
+                'INSERT INTO professional_payments (professional_id, amount, currency, description, payment_date) VALUES (?, ?, ?, ?, ?)',
+                (args['professional_id'], float(args['amount']),
+                 args.get('currency', 'USD'), args.get('description', ''),
+                 args.get('payment_date') or _date.today().isoformat())
+            )
+            return {
+                'success': True,
+                'payment_id': pay_id,
+                'message': f'Payment logged: {pro["name"]} — {args.get("currency","USD")} {args["amount"]} ({args.get("description","")})',
+            }
+
+        if name == 'find_professional':
+            category = args.get('category', '').strip()
+            name_search = args.get('name_search', '').strip()
+            q = """
+                SELECT p.id, p.name, p.phone, p.phone_2, p.messenger, p.category,
+                       p.notes, p.rating, COALESCE(SUM(pp.amount),0) as total_paid
+                FROM professionals p
+                LEFT JOIN professional_payments pp ON pp.professional_id = p.id
+                WHERE p.is_active = 1
+            """
+            qargs = []
+            if category:
+                q += ' AND p.category ILIKE ?' if False else ' AND LOWER(p.category) LIKE LOWER(?)'
+                qargs.append(f'%{category}%')
+            if name_search:
+                q += ' AND LOWER(p.name) LIKE LOWER(?)'
+                qargs.append(f'%{name_search}%')
+            q += ' GROUP BY p.id ORDER BY p.rating DESC, p.name'
+            rows = query_db(q, qargs)
+            result = [dict(r) for r in rows]
+            for r in result:
+                r['total_paid'] = round(float(r['total_paid'] or 0), 2)
+            return {'success': True, 'count': len(result), 'professionals': result}
+
         return {'success': False, 'error': f'Unknown tool: {name}'}
     except Exception as e:
         return {'success': False, 'error': str(e)}
@@ -325,6 +419,8 @@ You have FULL access to the live database AND can take actions using tools. The 
 - Read/answer questions about properties, tenants, finances, tasks, maintenance
 - CREATE new tasks, expenses, payments, maintenance orders (use the appropriate tool)
 - UPDATE existing items (mark task done, change apartment status, etc.)
+- CONSULT about service providers / contractors — the professionals directory contains plumbers, cleaners, electricians, realtors, builders, etc. When the user asks "who do we use for X?" or "find me a Y" — use the find_professional tool to search by category or name, then return name + phone + rating + notes.
+- LOG payments to professionals — when David says he paid a contractor, use log_professional_payment.
 
 When the user asks you to do something (not just ask), USE THE APPROPRIATE TOOL. Don't just describe what should happen — actually do it.
 
@@ -346,6 +442,9 @@ Notes:
 - "management_fee_10pct_usd" is David's 10% fee
 - Tenant placeholders: "Tenant Apt 134" means real name not yet entered
 - For task assignment: use names from team_members (David, Amalia, Alina, Anya, Katya)
+- professionals[] is the full service-provider directory. Categories include: Plumbing, Electrical, Cleaning, Realtor, Construction, Tile Work, Painting, Furniture, A/C, Locksmith, IT/Tech, Legal, Materials/Supply, Utilities, Internet/TV, Photography, Design, Neighbor Contact, Documents/Printing, Building Admin, Laundry, Windows/Glass, Fire Safety, Doors, Other
+- Each professional has: id, name, phone, phone_2, messenger (WhatsApp/Viber/Telegram), category, rating (1-5), total_paid (historical), notes, apartments_worked
+- Use find_professional tool for targeted searches rather than scanning the full list yourself
 """
 
     messages = []

@@ -8,6 +8,7 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
+| pending | 2026-04-19 | [phase1] feat: chat assistant — professionals directory + payment tools | 1 | 1 file |
 | 316b5cb | 2026-04-19 | [fix] add requests to requirements.txt — fixes Render deploy crash | 1 | 1 file |
 | 37e166b | 2026-04-19 | [phase1] feat: activity logging for wallets + maintenance | 1 | 4 files |
 | pending | 2026-04-19 | [phase1] feat: Professionals module — contacts, payments, Monday sync | 1 | 4 files |
