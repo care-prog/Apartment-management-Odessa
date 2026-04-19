@@ -477,30 +477,32 @@ def wa_update_token():
 
     from src.models import set_setting, get_setting
 
-    # Use new phone_id for validation if provided, else use current
-    effective_phone_id = phone_id or _get_wa_phone_id()
-    effective_token    = token    or _get_wa_token()
+    # Phone ID only (no token change) — save without Meta validation, just a number
+    if phone_id and not token:
+        set_setting('whatsapp_phone_id', phone_id)
+        return _j({'ok': True, 'saved_phone_id': True,
+                   'note': 'Phone ID saved. Provide a token to fully validate.'})
 
-    # Validate the combination against Meta
+    # Token provided — validate against Meta using new or existing phone_id
+    effective_phone_id = phone_id or _get_wa_phone_id()
     try:
         r = _requests.get(
             f'{WA_API_URL}/{effective_phone_id}?fields=display_phone_number,verified_name',
-            headers={'Authorization': f'Bearer {effective_token}'}, timeout=8)
+            headers={'Authorization': f'Bearer {token}'}, timeout=8)
         data = r.json()
         if 'error' in data:
-            return _j({'error': 'Meta rejected credentials: ' + data['error'].get('message','')}), 400
+            return _j({'error': 'Meta rejected: ' + data['error'].get('message','')}), 400
     except Exception as e:
         return _j({'error': f'Could not verify with Meta: {e}'}), 400
 
-    if token:
-        set_setting('whatsapp_token', token)
+    set_setting('whatsapp_token', token)
     if phone_id:
         set_setting('whatsapp_phone_id', phone_id)
 
     return _j({'ok': True,
                'phone': data.get('display_phone_number',''),
                'name':  data.get('verified_name',''),
-               'saved_token': bool(token),
+               'saved_token': True,
                'saved_phone_id': bool(phone_id)})
 
 
