@@ -15,7 +15,7 @@ def list_tasks():
     if assigned:
         query += ' AND assigned_to = ?'
         args.append(assigned)
-    query += ' ORDER BY CASE priority WHEN "urgent" THEN 0 WHEN "high" THEN 1 WHEN "normal" THEN 2 WHEN "low" THEN 3 END, due_date'
+    query += " ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 WHEN 'normal' THEN 2 WHEN 'low' THEN 3 END, due_date"
     return jsonify(query_db(query, args))
 
 @bp.route('/api/tasks', methods=['POST'])
