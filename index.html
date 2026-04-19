@@ -560,6 +560,7 @@
           <option value="ru">🇷🇺 Русский</option>
         </select>
         <div class="topbar-date">Apr 16, 2026</div>
+        <span id="role-badge" style="font-size:11px;font-weight:600;padding:3px 8px;border-radius:20px;color:#fff;background:var(--accent)">Owner</span>
         <div class="topbar-avatar">D</div>
       </div>
     </div>
@@ -575,7 +576,7 @@
           <div class="section-head">
             <div class="section-title"><span class="icon">&#9872;</span> Properties</div>
             <div class="section-actions">
-              <button class="btn" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
+              <button class="btn owner-only" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
             </div>
           </div>
           <div id="property-grid" class="property-grid"></div>
@@ -615,7 +616,7 @@
         <div class="section">
           <div class="section-head">
             <div class="section-title"><span class="icon">&#9872;</span> All Properties</div>
-            <div class="section-actions"><button class="btn" onclick="syncMonday()" id="sync-btn2">Sync Monday.com</button></div>
+            <div class="section-actions"><button class="btn owner-only" onclick="syncMonday()" id="sync-btn2">Sync Monday.com</button></div>
           </div>
           <div id="properties-full"></div>
         </div>
@@ -1284,6 +1285,7 @@ async function openTaskModal(taskId) {
     const res = await fetch('/api/tasks/' + taskId + '/detail');
     const t = await res.json();
     renderTaskModal(t);
+    applyRoleUI(); // re-apply after modal HTML is injected
   } catch(e) {
     document.getElementById('tm-content').innerHTML = '<div style="color:var(--red)">Failed to load task</div>';
   }
@@ -1342,7 +1344,7 @@ function renderTaskModal(t) {
       <input type="file" id="tm-fileinput" style="display:none" multiple onchange="uploadTaskFiles(this.files)">
     </div>
     <div class="task-modal-actions">
-      <button class="btn" onclick="deleteCurrentTask()" style="color:var(--red)">Delete</button>
+      <button class="btn owner-only" onclick="deleteCurrentTask()" style="color:var(--red)">Delete</button>
       <button class="btn" onclick="closeTaskModal()">Cancel</button>
       <button class="btn btn-primary" onclick="saveTaskModal()">Save</button>
     </div>
@@ -1375,6 +1377,7 @@ async function saveTaskModal() {
 }
 
 async function deleteCurrentTask() {
+  if (!requireOwner('delete tasks')) return;
   if (!CURRENT_TASK_ID) return;
   if (!confirm('Delete this task?')) return;
   await fetch('/api/tasks/' + CURRENT_TASK_ID, {method: 'DELETE'});
@@ -1583,6 +1586,41 @@ async function syncMonday() {
   } catch(e) { btns.forEach(b => { b.textContent = 'Sync failed'; b.disabled = false; }); }
 }
 
+// ══════════ ROLE-BASED ACCESS ══════════
+let USER_ROLE = 'owner'; // default until loaded
+
+async function loadUserRole() {
+  try {
+    const res = await fetch('/api/me');
+    const me = await res.json();
+    USER_ROLE = me.role || 'guest';
+    applyRoleUI();
+  } catch(e) { /* keep default */ }
+}
+
+function applyRoleUI() {
+  const isOwner = USER_ROLE === 'owner';
+  // Hide/show all owner-only elements
+  document.querySelectorAll('.owner-only').forEach(el => {
+    el.style.display = isOwner ? '' : 'none';
+  });
+  // Show role badge in header
+  const badge = document.getElementById('role-badge');
+  if (badge) {
+    badge.textContent = isOwner ? 'Owner' : 'Manager';
+    badge.style.background = isOwner ? 'var(--accent)' : 'var(--text-muted)';
+  }
+}
+
+function requireOwner(action) {
+  if (USER_ROLE !== 'owner') {
+    alert('This action requires owner access.');
+    return false;
+  }
+  return true;
+}
+
+loadUserRole();
 loadDashboard();
 
 // ══════════ AI CHAT WIDGET ══════════

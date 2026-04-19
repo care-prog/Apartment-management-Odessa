@@ -74,6 +74,12 @@ def sync_push():
         import traceback
         return jsonify({'synced': 0, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
+@app.route('/api/me', methods=['GET'])
+def current_user():
+    from src.auth import get_current_role
+    role = get_current_role()
+    return jsonify({'role': role or 'guest', 'is_owner': role == 'owner'})
+
 @app.route('/api/sync/test', methods=['GET'])
 def sync_test():
     """Diagnostic endpoint — shows Monday API connection status."""

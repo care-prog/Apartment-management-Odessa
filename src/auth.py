@@ -1,4 +1,4 @@
-"""Cookie-based password protection for the dashboard."""
+"""Role-based auth: owner (full access) and manager (read + limited write)."""
 import os
 import hashlib
 from flask import request, Response, redirect, make_response, render_template_string
@@ -37,28 +37,66 @@ LOGIN_HTML = '''<!DOCTYPE html>
 </body>
 </html>'''
 
-def _get_app_password():
-    pw = os.environ.get('APP_PASSWORD', '')
-    if not pw:
-        env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
-        if os.path.exists(env_path):
-            for line in open(env_path):
-                line = line.strip()
-                if line.startswith('APP_PASSWORD='):
-                    pw = line.split('=', 1)[1].strip()
-    return pw
+def _get_passwords():
+    """Returns (owner_pw, manager_pw). Falls back to .env file."""
+    owner_pw = os.environ.get('APP_PASSWORD', '')
+    manager_pw = os.environ.get('MANAGER_PASSWORD', '')
+    env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), '.env')
+    if (not owner_pw or not manager_pw) and os.path.exists(env_path):
+        for line in open(env_path):
+            line = line.strip()
+            if line.startswith('APP_PASSWORD=') and not owner_pw:
+                owner_pw = line.split('=', 1)[1].strip()
+            if line.startswith('MANAGER_PASSWORD=') and not manager_pw:
+                manager_pw = line.split('=', 1)[1].strip()
+    return owner_pw, manager_pw
 
-def _cookie_value():
-    pw = _get_app_password()
-    return hashlib.sha256(('apt-mgmt-' + pw).encode()).hexdigest()[:32]
+def _get_app_password():
+    owner_pw, _ = _get_passwords()
+    return owner_pw
+
+def _make_cookie(role, password):
+    return hashlib.sha256(f'apt-mgmt-{role}-{password}'.encode()).hexdigest()[:32]
+
+def get_current_role():
+    """Returns 'owner', 'manager', or None."""
+    owner_pw, manager_pw = _get_passwords()
+    if not owner_pw:
+        return 'owner'  # No auth configured — full access in dev
+    cookie = request.cookies.get('auth', '')
+    if cookie == _make_cookie('owner', owner_pw):
+        return 'owner'
+    if manager_pw and cookie == _make_cookie('manager', manager_pw):
+        return 'manager'
+    return None
 
 def _is_authed():
-    pw = _get_app_password()
-    if not pw:
-        return True  # No password set — open access (local dev)
-    return request.cookies.get('auth') == _cookie_value()
+    return get_current_role() is not None
 
+def _is_owner():
+    return get_current_role() == 'owner'
+
+# Paths accessible without any login
 PUBLIC_PATHS = ['/api/whatsapp-query', '/whatsapp-bot.js', '/login', '/api/sync/push']
+
+# Paths that require owner role (managers get 403)
+OWNER_ONLY_RULES = [
+    ('DELETE', '/api/tasks/'),
+    ('DELETE', '/api/properties/'),
+    ('DELETE', '/api/apartments/'),
+    ('DELETE', '/api/tenants/'),
+    ('DELETE', '/api/leases/'),
+    ('DELETE', '/api/owners/'),
+    ('POST',   '/api/properties'),
+    ('POST',   '/api/owners'),
+    ('POST',   '/api/sync'),
+]
+
+def _is_owner_only_path(method, path):
+    for m, prefix in OWNER_ONLY_RULES:
+        if method == m and path.startswith(prefix):
+            return True
+    return False
 
 def init_auth(app):
     @app.route('/login', methods=['GET'])
@@ -69,11 +107,17 @@ def init_auth(app):
 
     @app.route('/login', methods=['POST'])
     def login_post():
-        pw = _get_app_password()
+        owner_pw, manager_pw = _get_passwords()
         entered = request.form.get('password', '')
-        if entered == pw:
+        if entered == owner_pw:
             resp = make_response(redirect('/'))
-            resp.set_cookie('auth', _cookie_value(), max_age=60*60*24*30, httponly=True, samesite='Lax')
+            resp.set_cookie('auth', _make_cookie('owner', owner_pw),
+                            max_age=60*60*24*30, httponly=True, samesite='Lax')
+            return resp
+        if manager_pw and entered == manager_pw:
+            resp = make_response(redirect('/'))
+            resp.set_cookie('auth', _make_cookie('manager', manager_pw),
+                            max_age=60*60*24*30, httponly=True, samesite='Lax')
             return resp
         return render_template_string(LOGIN_HTML, error=True)
 
@@ -82,4 +126,11 @@ def init_auth(app):
         if request.path in PUBLIC_PATHS:
             return
         if not _is_authed():
+            if request.path.startswith('/api/'):
+                from flask import jsonify
+                return jsonify({'error': 'Not authenticated'}), 401
             return redirect('/login')
+        # Owner-only check
+        if _is_owner_only_path(request.method, request.path) and not _is_owner():
+            from flask import jsonify
+            return jsonify({'error': 'Owner access required'}), 403

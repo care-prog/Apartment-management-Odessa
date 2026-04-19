@@ -72,6 +72,36 @@ def update_apartment(aid):
     )
     return jsonify({'ok': True})
 
+@bp.route('/api/properties/<int:pid>', methods=['DELETE'])
+def delete_property(pid):
+    # FK-safe: delete apartments (and their dependents) first
+    apts = query_db('SELECT id FROM apartments WHERE property_id = ?', (pid,))
+    for a in apts:
+        aid = a['id']
+        execute_db('DELETE FROM payments WHERE lease_id IN (SELECT id FROM leases WHERE apartment_id = ?)', (aid,))
+        execute_db('DELETE FROM leases WHERE apartment_id = ?', (aid,))
+        execute_db('DELETE FROM maintenance_orders WHERE apartment_id = ?', (aid,))
+        execute_db('DELETE FROM warranties WHERE apartment_id = ?', (aid,))
+        execute_db('DELETE FROM meter_readings WHERE apartment_id = ?', (aid,))
+        execute_db('DELETE FROM utility_bills WHERE apartment_id = ?', (aid,))
+        execute_db('DELETE FROM documents WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM apartments WHERE property_id = ?', (pid,))
+    execute_db('DELETE FROM documents WHERE property_id = ?', (pid,))
+    execute_db('DELETE FROM properties WHERE id = ?', (pid,))
+    return jsonify({'ok': True})
+
+@bp.route('/api/apartments/<int:aid>', methods=['DELETE'])
+def delete_apartment(aid):
+    execute_db('DELETE FROM payments WHERE lease_id IN (SELECT id FROM leases WHERE apartment_id = ?)', (aid,))
+    execute_db('DELETE FROM leases WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM maintenance_orders WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM warranties WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM meter_readings WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM utility_bills WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM documents WHERE apartment_id = ?', (aid,))
+    execute_db('DELETE FROM apartments WHERE id = ?', (aid,))
+    return jsonify({'ok': True})
+
 @bp.route('/api/owners', methods=['GET'])
 def list_owners():
     return jsonify(query_db('SELECT * FROM owners ORDER BY name'))
@@ -84,3 +114,8 @@ def create_owner():
         (data['name'], data.get('contact'), data.get('report_schedule'), data.get('notes'))
     )
     return jsonify({'id': oid}), 201
+
+@bp.route('/api/owners/<int:oid>', methods=['DELETE'])
+def delete_owner(oid):
+    execute_db('DELETE FROM owners WHERE id = ?', (oid,))
+    return jsonify({'ok': True})

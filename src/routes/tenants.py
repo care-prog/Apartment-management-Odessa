@@ -68,3 +68,16 @@ def update_lease(lid):
          data.get('deposit'), data.get('status'), data.get('notes'), lid)
     )
     return jsonify({'ok': True})
+
+@bp.route('/api/tenants/<int:tid>', methods=['DELETE'])
+def delete_tenant(tid):
+    execute_db('DELETE FROM payments WHERE lease_id IN (SELECT id FROM leases WHERE tenant_id = ?)', (tid,))
+    execute_db('DELETE FROM leases WHERE tenant_id = ?', (tid,))
+    execute_db('DELETE FROM tenants WHERE id = ?', (tid,))
+    return jsonify({'ok': True})
+
+@bp.route('/api/leases/<int:lid>', methods=['DELETE'])
+def delete_lease(lid):
+    execute_db('DELETE FROM payments WHERE lease_id = ?', (lid,))
+    execute_db('DELETE FROM leases WHERE id = ?', (lid,))
+    return jsonify({'ok': True})
