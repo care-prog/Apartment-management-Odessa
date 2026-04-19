@@ -59,7 +59,11 @@ def sync_monday():
 
 @app.route('/api/sync/push', methods=['POST'])
 def sync_push():
-    """Accepts raw Monday items from Make.com and syncs to DB."""
+    """Accepts raw Monday items from Make.com and syncs to DB. Requires X-Sync-Secret header."""
+    from src.auth import _get_app_password
+    secret = _get_app_password()
+    if secret and request.headers.get('X-Sync-Secret') != secret:
+        return jsonify({'error': 'Unauthorized'}), 401
     data = request.json
     if not data or 'items' not in data:
         return jsonify({'error': 'Expected {items: [...]}'}), 400

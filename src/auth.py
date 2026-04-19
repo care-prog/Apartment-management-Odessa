@@ -58,7 +58,7 @@ def _is_authed():
         return True  # No password set — open access (local dev)
     return request.cookies.get('auth') == _cookie_value()
 
-PUBLIC_PATHS = ['/api/whatsapp-query', '/whatsapp-bot.js', '/login']
+PUBLIC_PATHS = ['/api/whatsapp-query', '/whatsapp-bot.js', '/login', '/api/sync/push']
 
 def init_auth(app):
     @app.route('/login', methods=['GET'])
