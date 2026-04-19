@@ -544,6 +544,7 @@
       <div class="nav-group">
         <div class="nav-group-label" data-i18n="settings">Settings</div>
         <div class="nav-item" onclick="showPage('team')"><span class="icon">&#9998;</span> <span data-i18n="nav_team">Team</span></div>
+        <div class="nav-item owner-only" onclick="showPage('log')"><span class="icon">&#128203;</span> Activity Log</div>
       </div>
     </div>
 
@@ -790,6 +791,37 @@
         </div>
       </div>
 
+      <!-- ══════ PAGE: ACTIVITY LOG ══════ -->
+      <div id="page-log" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#128203;</span> Activity Log</div>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select id="log-filter-entity" onchange="loadActivityLog()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface)">
+                <option value="">All types</option>
+                <option value="task">Tasks</option>
+                <option value="expense">Expenses</option>
+                <option value="transaction">Transactions</option>
+                <option value="tenant">Tenants</option>
+              </select>
+              <select id="log-filter-action" onchange="loadActivityLog()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface)">
+                <option value="">All actions</option>
+                <option value="delete">Deleted</option>
+                <option value="create">Created</option>
+                <option value="restore">Restored</option>
+              </select>
+              <button class="btn" onclick="loadActivityLog()" style="font-size:12px">&#8635; Refresh</button>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead><tr><th>Time</th><th>Action</th><th>Type</th><th>Description</th><th>Role</th><th>Restore</th></tr></thead>
+              <tbody id="log-tbody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════ PAGE: TEAM ══════ -->
       <div id="page-team" class="page" style="display:none">
         <div class="section">
@@ -839,6 +871,7 @@ const I18N = {
     page_finance: 'דוחות',
     page_cash: 'קופה',
     page_team: 'צוות',
+    page_log: 'יומן פעולות',
     // Stats
     stat_total_units: 'סה"כ יחידות',
     stat_occupied: 'מאוכלסות',
@@ -974,6 +1007,7 @@ const I18N = {
     page_finance: 'Reports',
     page_cash: 'Cash',
     page_team: 'Team',
+    page_log: 'Activity Log',
     stat_total_units: 'Total Units',
     stat_occupied: 'Occupied',
     stat_vacant: 'Vacant',
@@ -1098,6 +1132,7 @@ const I18N = {
     page_finance: 'Отчёты',
     page_cash: 'Касса',
     page_team: 'Команда',
+    page_log: 'Журнал действий',
     stat_total_units: 'Всего квартир',
     stat_occupied: 'Заняты',
     stat_vacant: 'Свободны',
@@ -1225,7 +1260,7 @@ function applyTranslations() {
 
 
 // ── Navigation (with URL hash for refresh persistence) ──
-const PAGES = ['dashboard', 'properties', 'tenants', 'rent', 'maintenance', 'tasks', 'finance', 'cash', 'team'];
+const PAGES = ['dashboard', 'properties', 'tenants', 'rent', 'maintenance', 'tasks', 'finance', 'cash', 'team', 'log'];
 
 function showPage(page, fromHash) {
   if (!PAGES.includes(page)) page = 'dashboard';
@@ -1244,6 +1279,7 @@ function showPage(page, fromHash) {
   }
   if (DATA) renderPage(page, DATA);
   if (page === 'cash') loadWallets();
+  if (page === 'log') loadActivityLog();
 }
 
 // Restore page from hash on load + back/forward navigation
@@ -1915,8 +1951,66 @@ async function editCommission(mondayId, rentAmount) {
   loadWallets();
 }
 
-// Load wallets when cash page is shown
-const _origShowPage = typeof showPage !== 'undefined' ? showPage : null;
+// ══════════ ACTIVITY LOG ══════════
+async function loadActivityLog() {
+  const entityFilter = document.getElementById('log-filter-entity');
+  const actionFilter = document.getElementById('log-filter-action');
+  const tbody = document.getElementById('activity-log-body');
+  if (!tbody) return;
+
+  const entity = entityFilter ? entityFilter.value : '';
+  const action = actionFilter ? actionFilter.value : '';
+  let url = '/api/activity?limit=100';
+  if (entity) url += '&entity_type=' + entity;
+  if (action) url += '&action=' + action;
+
+  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Loading...</td></tr>';
+  try {
+    const res = await fetch(url);
+    const rows = await res.json();
+    if (!rows.length) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">No activity yet</td></tr>';
+      return;
+    }
+    const actionColors = {
+      delete: 'var(--red)', create: 'var(--green)', update: 'var(--accent)',
+      restore: 'var(--purple)', sync: 'var(--cyan)'
+    };
+    const entityIcons = {
+      task: '✓', expense: '$', tenant: '👤', lease: '📄', property: '🏠',
+      apartment: '🚪', transaction: '💰', owner: '👔', maintenance: '🔧'
+    };
+    tbody.innerHTML = rows.map(r => {
+      const color = actionColors[r.action] || 'var(--text-dim)';
+      const icon = entityIcons[r.entity_type] || '•';
+      const ts = r.created_at ? r.created_at.replace('T', ' ').slice(0, 16) : '—';
+      const hasSnapshot = r.before_data && r.before_data !== 'null';
+      const canRestore = r.action === 'delete' && hasSnapshot;
+      return `<tr>
+        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${ts}</td>
+        <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:${color};background:${color}18;text-transform:uppercase">${r.action}</span></td>
+        <td style="font-size:12px">${icon} ${r.entity_type}${r.entity_id ? ' #'+r.entity_id : ''}</td>
+        <td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description || '—'}</td>
+        <td style="font-size:11px;color:var(--text-muted)">${r.user_role || '—'}</td>
+        <td>${canRestore ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:var(--green);color:#fff;border:none" onclick="restoreAction(${r.id})">Restore</button>` : ''}</td>
+      </tr>`;
+    }).join('');
+  } catch(e) {
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">Error loading log</td></tr>';
+  }
+}
+
+async function restoreAction(logId) {
+  if (!confirm('Restore this deleted item?')) return;
+  const res = await fetch('/api/activity/' + logId + '/restore', { method: 'POST' });
+  const data = await res.json();
+  if (data.ok) {
+    alert('Restored successfully!');
+    loadActivityLog();
+  } else {
+    alert('Restore failed: ' + (data.error || 'unknown error'));
+  }
+}
 
 // ══════════ AI CHAT WIDGET ══════════
 const CHAT_HISTORY = [];

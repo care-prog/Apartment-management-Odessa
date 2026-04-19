@@ -205,3 +205,15 @@ CREATE TABLE IF NOT EXISTS commission_overrides (
     notes TEXT,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS activity_log (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    action TEXT NOT NULL,
+    entity_type TEXT NOT NULL,
+    entity_id TEXT,
+    description TEXT,
+    before_data TEXT,
+    user_role TEXT DEFAULT 'owner',
+    ip_address TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

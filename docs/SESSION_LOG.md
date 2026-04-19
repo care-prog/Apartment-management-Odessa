@@ -7,21 +7,26 @@
 
 ## Session 3 — 2026-04-18
 
-**Duration:** Ongoing
+**Duration:** Full session
 **Phase:** Phase 1
-**Focus:** Fix "Cannot connect to API server" — PostgreSQL compatibility for strftime
+**Focus:** Deploy fixes, RBAC, wallets, activity log, password change
 
 ### Done
-- Identified root cause: `strftime('%Y-%m', ...)` is SQLite-only; fails silently on PostgreSQL causing 500 → frontend shows "Cannot connect"
-- Added `month_str(col)` helper to `src/models.py` — returns `TO_CHAR(col, 'YYYY-MM')` for PG, `strftime('%Y-%m', col)` for SQLite
-- Fixed `src/routes/dashboard.py` overdue_rent query — replaced `strftime` with Python date range params
-- Fixed `src/routes/finance.py` cash-flow queries — replaced all 3 `strftime` calls with `month_str()`
-- Committed and pushed → Render redeploy triggered
+- Fixed "Cannot connect to API server": PostgreSQL strftime → month_str() helper
+- Fixed Monday sync: FK deletion order (maintenance_orders before warranties), HTTP errors caught
+- Fixed login: replaced HTTP Basic Auth with cookie-based form auth (sha256 hash)
+- Monday data pushed via Make.com relay to `/api/sync/push` (33 apartments loaded)
+- RBAC: owner vs manager roles, OWNER_ONLY_RULES enforced in before_request
+- Multi-currency wallets: cash_transactions table, USD+UAH balances, per-apartment commission overrides
+- Task priority colors: red=urgent, yellow=high, cyan=normal, green=low
+- Activity log: backend (activity.py), safe_migrate() tables, logging on task/expense delete
+- Activity log: frontend page with filters, loadActivityLog(), restoreAction()
+- Password changed: davdiko2020? → davidko2020? (.env + Render env var)
+- All schemas updated (SQLite + PostgreSQL) with new tables
 
 ### Next
-- Verify dashboard loads on Render after redeploy
-- User to click "Sync Monday.com" to reload 33 apartments from Monday into PostgreSQL
-- Address PostgreSQL free tier expiry (2026-05-19) — move to Neon or Supabase
+- Verify activity log works on deployed app
+- Monitor Render free tier expiry (PostgreSQL expires 2026-05-19)
 
 ---
 

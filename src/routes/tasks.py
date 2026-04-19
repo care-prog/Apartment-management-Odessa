@@ -41,5 +41,8 @@ def update_task(tid):
 
 @bp.route('/api/tasks/<int:tid>', methods=['DELETE'])
 def delete_task(tid):
+    task = query_db('SELECT * FROM tasks WHERE id = ?', (tid,), one=True)
     execute_db('DELETE FROM tasks WHERE id = ?', (tid,))
+    from src.routes.activity import log_action
+    log_action('delete', 'task', tid, f"Deleted task: {task['title'] if task else tid}", before_data=task)
     return jsonify({'ok': True})

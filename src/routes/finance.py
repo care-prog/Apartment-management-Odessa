@@ -26,7 +26,10 @@ def update_expense(eid):
 
 @bp.route('/api/expenses/<int:eid>', methods=['DELETE'])
 def delete_expense(eid):
+    exp = query_db('SELECT * FROM office_expenses WHERE id = ?', (eid,), one=True)
     execute_db('DELETE FROM office_expenses WHERE id = ?', (eid,))
+    from src.routes.activity import log_action
+    log_action('delete', 'expense', eid, f"Deleted expense: {exp['description'] if exp else eid}", before_data=exp)
     return jsonify({'ok': True})
 
 # ── Owner Payments ──
