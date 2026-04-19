@@ -895,19 +895,62 @@
       <!-- ══════ MODAL: PROPERTY DETAIL ══════ -->
       <div id="modal-property" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:200;overflow-y:auto;padding:24px 16px">
         <div style="max-width:820px;margin:0 auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden">
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
             <div id="modal-prop-title" style="font-size:18px;font-weight:700"></div>
             <button onclick="closePropertyModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
           </div>
+
+          <!-- ── Edit Property Fields (owner-only) ── -->
+          <div class="owner-only" style="padding:16px 24px;border-bottom:2px solid var(--accent);background:var(--accent-glow)">
+            <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">✏️ Edit Property</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Property Name</label>
+                <input id="prop-edit-name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Address</label>
+                <input id="prop-edit-address" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Status</label>
+                <select id="prop-edit-status" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="active">Active</option>
+                  <option value="inactive">Inactive</option>
+                  <option value="sold">Sold</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Owner</label>
+                <select id="prop-edit-owner" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="">— No owner —</option>
+                </select>
+              </div>
+              <div style="grid-column:1/-1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label>
+                <input id="prop-edit-notes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+            </div>
+            <button class="btn btn-primary" onclick="saveProperty()" style="font-size:12px">💾 Save Property</button>
+          </div>
+
           <!-- Financial KPIs -->
           <div id="modal-prop-financials" style="padding:20px 24px;border-bottom:1px solid var(--border)"></div>
-          <!-- Apartments / Leases -->
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Active Tenants</div>
+
+          <!-- Apartments list with edit -->
+          <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Apartments</div>
+            <div id="modal-prop-apartments"></div>
+          </div>
+
+          <!-- Active Tenants -->
+          <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Active Tenants</div>
             <div id="modal-prop-leases"></div>
           </div>
+
           <!-- Owner payments -->
-          <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
+          <div style="padding:16px 24px;border-bottom:1px solid var(--border)">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Payments to Owner</div>
             <div id="modal-prop-payments"></div>
             <div class="owner-only" style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
@@ -917,14 +960,70 @@
               <button class="btn btn-primary" onclick="addOwnerPayment()" style="font-size:12px">Record Payment</button>
             </div>
           </div>
+
           <!-- Documents -->
-          <div style="padding:20px 24px">
+          <div style="padding:16px 24px">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">Documents</div>
             <div id="modal-prop-docs"></div>
             <div class="owner-only" style="margin-top:12px;display:flex;gap:8px;align-items:center;flex-wrap:wrap">
               <input id="prop-doc-file" type="file" style="font-size:12px;flex:1">
               <input id="prop-doc-desc" placeholder="Description (optional)" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;flex:1;min-width:120px">
               <button class="btn btn-primary" onclick="uploadPropertyDoc()" style="font-size:12px">Upload</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: APARTMENT EDIT ══════ -->
+      <div id="modal-apt-edit" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.55);z-index:400;overflow-y:auto;padding:24px 16px" onclick="if(event.target===this)closeAptEdit()">
+        <div style="max-width:460px;margin:60px auto;background:var(--surface);border-radius:14px;box-shadow:var(--shadow-xl);overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:15px;font-weight:700">✏️ Edit Apartment</div>
+            <button onclick="closeAptEdit()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
+          </div>
+          <div style="padding:18px 20px">
+            <input type="hidden" id="apt-edit-id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Apt Number *</label>
+                <input id="apt-edit-number" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Floor</label>
+                <input id="apt-edit-floor" type="number" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Rooms</label>
+                <input id="apt-edit-rooms" type="number" step="0.5" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Status</label>
+                <select id="apt-edit-status" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="vacant">Vacant</option>
+                  <option value="occupied">Occupied</option>
+                  <option value="maintenance">Maintenance</option>
+                  <option value="reserved">Reserved</option>
+                </select>
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Monthly Rent</label>
+                <input id="apt-edit-rent" type="number" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Currency</label>
+                <select id="apt-edit-currency" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="USD">$ USD</option>
+                  <option value="UAH">₴ UAH</option>
+                </select>
+              </div>
+              <div style="grid-column:1/-1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label>
+                <input id="apt-edit-notes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+              </div>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end">
+              <button class="btn" onclick="closeAptEdit()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveApartmentEdit()">💾 Save</button>
             </div>
           </div>
         </div>
@@ -3323,10 +3422,28 @@ async function openPropertyModal(pid) {
   document.getElementById('modal-property').style.display = 'block';
   document.getElementById('modal-prop-title').textContent = 'Loading...';
 
-  const res = await fetch('/api/properties/' + pid + '/detail');
+  // Load owners for the dropdown in parallel with property data
+  const [res, ownersRes] = await Promise.all([
+    fetch('/api/properties/' + pid + '/detail'),
+    fetch('/api/owners')
+  ]);
   const data = await res.json();
+  const owners = await ownersRes.json();
   const prop = data.property;
   const fin = data.financials;
+
+  // ── Populate edit fields ──
+  const nameEl = document.getElementById('prop-edit-name');
+  if (nameEl) {
+    nameEl.value = prop.name || '';
+    document.getElementById('prop-edit-address').value = prop.address || '';
+    document.getElementById('prop-edit-notes').value = prop.notes || '';
+    const statusSel = document.getElementById('prop-edit-status');
+    statusSel.value = prop.status || 'active';
+    const ownerSel = document.getElementById('prop-edit-owner');
+    ownerSel.innerHTML = '<option value="">— No owner —</option>' +
+      owners.map(o => `<option value="${o.id}" ${o.id == prop.owner_id ? 'selected' : ''}>${o.name}</option>`).join('');
+  }
 
   document.getElementById('modal-prop-title').textContent = `${prop.name}${prop.owner_name ? ' · ' + prop.owner_name : ''}`;
 
@@ -3356,6 +3473,36 @@ async function openPropertyModal(pid) {
         <div style="font-size:20px;font-weight:700;color:${owedColor}">$${Math.abs(fin.balance_owed).toLocaleString()}</div>
       </div>
     </div>`;
+
+  // ── Apartments list with edit buttons ──
+  const aptsEl = document.getElementById('modal-prop-apartments');
+  if (aptsEl) {
+    const STATUS_COLOR = {occupied:'var(--green)',vacant:'var(--accent)',maintenance:'var(--red)',reserved:'var(--yellow)'};
+    aptsEl.innerHTML = data.apartments.length
+      ? `<table style="width:100%;font-size:12px;border-collapse:collapse">
+          <thead><tr style="background:var(--surface-2)">
+            <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Apt</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Floor</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Rooms</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Status</th>
+            <th style="text-align:right;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Rent</th>
+            <th style="padding:7px 10px" class="owner-only"></th>
+          </tr></thead>
+          <tbody>${data.apartments.map((a,i) => {
+            const sc = STATUS_COLOR[a.status] || 'var(--text-muted)';
+            const sym = a.currency === 'UAH' ? '₴' : '$';
+            return `<tr style="${i%2===0?'':'background:var(--surface-2)'}">
+              <td style="padding:8px 10px;font-weight:700">${a.number}</td>
+              <td style="padding:8px 10px;color:var(--text-muted)">${a.floor||'—'}</td>
+              <td style="padding:8px 10px">${a.rooms||'—'}</td>
+              <td style="padding:8px 10px"><span style="font-size:11px;font-weight:700;color:${sc}">${a.status}</span></td>
+              <td style="padding:8px 10px;text-align:right;font-weight:700">${a.monthly_rent ? sym + Number(a.monthly_rent).toLocaleString() : '—'}</td>
+              <td style="padding:8px 10px" class="owner-only"><button onclick="openAptEdit(${JSON.stringify(a).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--accent)">✏️ Edit</button></td>
+            </tr>`;
+          }).join('')}</tbody>
+        </table>`
+      : '<div style="color:var(--text-muted);font-size:13px">No apartments in this property.</div>';
+  }
 
   // Leases
   document.getElementById('modal-prop-leases').innerHTML = data.leases.length
@@ -3442,6 +3589,84 @@ async function uploadPropertyDoc() {
 function closePropertyModal() {
   document.getElementById('modal-property').style.display = 'none';
   _currentPropertyId = null;
+}
+
+async function saveProperty() {
+  if (!_currentPropertyId) return;
+  const name = document.getElementById('prop-edit-name').value.trim();
+  if (!name) { alert('Property name is required'); return; }
+  const payload = {
+    name,
+    address: document.getElementById('prop-edit-address').value.trim(),
+    status:   document.getElementById('prop-edit-status').value,
+    owner_id: document.getElementById('prop-edit-owner').value || null,
+    notes:    document.getElementById('prop-edit-notes').value.trim(),
+    type: 'residential',
+  };
+  const res = await fetch('/api/properties/' + _currentPropertyId, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    document.getElementById('modal-prop-title').textContent = name;
+    loadDashboard();
+    // Flash save confirmation
+    const btn = event.target;
+    btn.textContent = '✅ Saved!';
+    setTimeout(() => { btn.textContent = '💾 Save Property'; }, 1500);
+  } else {
+    alert('Save failed — try again');
+  }
+}
+
+// ── Apartment edit ──
+let _currentAptId = null;
+
+function openAptEdit(aptData) {
+  _currentAptId = aptData.id;
+  document.getElementById('apt-edit-id').value = aptData.id;
+  document.getElementById('apt-edit-number').value = aptData.number || '';
+  document.getElementById('apt-edit-floor').value = aptData.floor || '';
+  document.getElementById('apt-edit-rooms').value = aptData.rooms || '';
+  document.getElementById('apt-edit-status').value = aptData.status || 'vacant';
+  document.getElementById('apt-edit-rent').value = aptData.monthly_rent || '';
+  document.getElementById('apt-edit-currency').value = aptData.currency || 'USD';
+  document.getElementById('apt-edit-notes').value = aptData.notes || '';
+  document.getElementById('modal-apt-edit').style.display = 'block';
+}
+
+function closeAptEdit() {
+  document.getElementById('modal-apt-edit').style.display = 'none';
+  _currentAptId = null;
+}
+
+async function saveApartmentEdit() {
+  if (!_currentAptId) return;
+  const number = document.getElementById('apt-edit-number').value.trim();
+  if (!number) { alert('Apartment number is required'); return; }
+  const payload = {
+    number,
+    floor:        document.getElementById('apt-edit-floor').value || null,
+    rooms:        document.getElementById('apt-edit-rooms').value || null,
+    status:       document.getElementById('apt-edit-status').value,
+    monthly_rent: parseFloat(document.getElementById('apt-edit-rent').value) || 0,
+    currency:     document.getElementById('apt-edit-currency').value,
+    notes:        document.getElementById('apt-edit-notes').value.trim(),
+  };
+  const res = await fetch('/api/apartments/' + _currentAptId, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (res.ok) {
+    closeAptEdit();
+    // Refresh property modal
+    if (_currentPropertyId) openPropertyModal(_currentPropertyId);
+    loadDashboard();
+  } else {
+    alert('Save failed — try again');
+  }
 }
 
 // Close modals on backdrop click
