@@ -105,6 +105,8 @@ def safe_migrate():
             description TEXT, payment_date DATE,
             task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS paid_by TEXT DEFAULT 'office'")
+        execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -151,6 +153,10 @@ def safe_migrate():
             description TEXT, payment_date DATE,
             task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        try: execute_db("ALTER TABLE maintenance_orders ADD COLUMN paid_by TEXT DEFAULT 'office'")
+        except: pass
+        try: execute_db("ALTER TABLE maintenance_orders ADD COLUMN currency TEXT DEFAULT 'USD'")
+        except: pass
 
 
 def init_db():

@@ -81,6 +81,18 @@ def dashboard_stats():
         ORDER BY p.name, a.number
     ''')
 
+    from datetime import date as _date
+    today = _date.today()
+    for row in rent_status:
+        end = row.get('end_date') or ''
+        days = None
+        if isinstance(end, str) and len(end) >= 10 and end[4:5] == '-' and end[7:8] == '-':
+            try:
+                days = (_date.fromisoformat(end[:10]) - today).days
+            except Exception:
+                days = None
+        row['days_until_end'] = days
+
     owners = query_db('''
         SELECT o.*,
             (SELECT COALESCE(SUM(l.rent_amount), 0) FROM leases l JOIN apartments a ON l.apartment_id = a.id JOIN properties p ON a.property_id = p.id WHERE p.owner_id = o.id AND l.status = 'active') as monthly_income

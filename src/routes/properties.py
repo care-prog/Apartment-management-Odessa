@@ -262,3 +262,51 @@ def property_detail_page(pid):
 def delete_owner(oid):
     execute_db('DELETE FROM owners WHERE id = ?', (oid,))
     return jsonify({'ok': True})
+
+
+@bp.route('/api/properties/unassigned', methods=['GET'])
+def unassigned_properties():
+    """Return properties with no owner assigned."""
+    rows = query_db('''
+        SELECT p.id, p.name, p.address,
+               COUNT(a.id) as total_units
+        FROM properties p
+        LEFT JOIN apartments a ON a.property_id = p.id
+        WHERE p.owner_id IS NULL OR p.owner_id = 0
+        GROUP BY p.id ORDER BY p.name
+    ''')
+    return jsonify(rows)
+
+@bp.route('/api/owners/<int:oid>/assign-property', methods=['POST'])
+def assign_property_to_owner(oid):
+    """Assign a property to this owner."""
+    data = request.json or {}
+    pid = data.get('property_id')
+    if not pid:
+        return jsonify({'error': 'property_id required'}), 400
+    execute_db('UPDATE properties SET owner_id = ? WHERE id = ?', (oid, pid))
+    return jsonify({'ok': True})
+
+@bp.route('/api/owners/<int:oid>/remove-property/<int:pid>', methods=['DELETE'])
+def remove_property_from_owner(oid, pid):
+    """Remove owner assignment from a property."""
+    execute_db('UPDATE properties SET owner_id = NULL WHERE id = ? AND owner_id = ?', (pid, oid))
+    return jsonify({'ok': True})
+
+@bp.route('/api/leases/<int:lid>/collect', methods=['POST'])
+def collect_rent(lid):
+    """Mark rent as collected for this month and log payment."""
+    from datetime import date as _dt
+    data = request.json or {}
+    lease = query_db('SELECT * FROM leases WHERE id = ?', (lid,), one=True)
+    if not lease:
+        return jsonify({'error': 'Lease not found'}), 404
+    payment_date = data.get('payment_date') or _dt.today().isoformat()
+    amount = data.get('amount') or lease['rent_amount']
+    pid = insert_db(
+        'INSERT INTO payments (lease_id, type, amount, payment_date, method, status, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (lid, 'rent', amount, payment_date, data.get('method', 'cash'), 'paid', data.get('notes', ''))
+    )
+    from src.routes.activity import log_action
+    log_action('create', 'payment', pid, f'Rent collected: lease #{lid}, ${amount} on {payment_date}')
+    return jsonify({'ok': True, 'payment_id': pid})

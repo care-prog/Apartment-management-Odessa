@@ -26,23 +26,46 @@ def list_orders():
 @bp.route('/api/maintenance', methods=['POST'])
 def create_order():
     data = request.json
+    paid_by = data.get('paid_by', 'office')  # 'owner' or 'office'
+    cost = data.get('cost')
+    currency = data.get('currency', 'USD')
+    notes_detail = data.get('notes_detail', '')
+
     oid = insert_db(
-        'INSERT INTO maintenance_orders (apartment_id, description, status, assigned_to, cost, warranty_id) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO maintenance_orders (apartment_id, description, status, assigned_to, cost, warranty_id, paid_by, currency, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         (data['apartment_id'], data['description'], data.get('status', 'reported'),
-         data.get('assigned_to'), data.get('cost'), data.get('warranty_id'))
+         data.get('assigned_to'), cost, data.get('warranty_id'),
+         paid_by, currency, notes_detail)
     )
+
+    # Auto-create expense record
+    if cost and float(cost) > 0:
+        if paid_by == 'office':
+            from datetime import date as _d
+            insert_db(
+                'INSERT INTO cash_transactions (type, amount, currency, category, description, transaction_date, apartment_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                ('expense', float(cost), currency, 'maintenance',
+                 f"Maintenance: {data['description'][:80]}", _d.today().isoformat(),
+                 data.get('apartment_id'))
+            )
+
     log_action('create', 'maintenance', oid,
-               f"New maintenance order: {data['description'][:60]} (apt {data['apartment_id']})")
+               f"New maintenance order: {data['description'][:60]} (apt {data['apartment_id']}, paid by: {paid_by})")
     return jsonify({'id': oid}), 201
 
 @bp.route('/api/maintenance/<int:oid>', methods=['PUT'])
 def update_order(oid):
     data = request.json
     before = query_db('SELECT * FROM maintenance_orders WHERE id = ?', (oid,), one=True)
+
+    # Build update - only update fields that exist in the table
     execute_db(
-        'UPDATE maintenance_orders SET status=?, assigned_to=?, cost=?, completed_at=? WHERE id=?',
-        (data.get('status'), data.get('assigned_to'), data.get('cost'), data.get('completed_at'), oid)
+        'UPDATE maintenance_orders SET status=?, assigned_to=?, cost=?, completed_at=?, paid_by=?, currency=?, notes=? WHERE id=?',
+        (data.get('status'), data.get('assigned_to'), data.get('cost'),
+         data.get('completed_at'), data.get('paid_by', 'office'),
+         data.get('currency', 'USD'), data.get('notes_detail', ''), oid)
     )
+
     log_action('update', 'maintenance', oid,
                f"Maintenance order #{oid} → {data.get('status', 'updated')}",
                before_data=dict(before) if before else None)

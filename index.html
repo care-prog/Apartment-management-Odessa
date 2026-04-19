@@ -885,6 +885,20 @@
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Properties</div>
             <div id="modal-owner-properties"></div>
           </div>
+          <!-- Assign / remove properties -->
+          <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Manage Properties</div>
+            <div id="modal-owner-prop-manage"></div>
+            <div style="margin-top:12px;display:flex;gap:8px;align-items:flex-end">
+              <div style="flex:1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Add unassigned property</label>
+                <select id="ow-prop-select" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="">— select property —</option>
+                </select>
+              </div>
+              <button class="btn btn-primary" onclick="assignPropertyToOwner()" style="font-size:12px;white-space:nowrap">Add Property</button>
+            </div>
+          </div>
           <!-- Payment history -->
           <div style="padding:20px 24px">
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Payment History to Owner</div>
@@ -2033,14 +2047,17 @@ function rentRow(r) {
   try { const n=JSON.parse(r.apt_notes||'{}'); if(n.timeline){const p=n.timeline.split(' - ');if(p.length===2)payDue=p[1];} } catch(e){}
   let leaseEnd='—', renewHtml='';
   if(r.end_date){
-    leaseEnd=fmtDate(r.end_date);
-    const days=Math.floor((new Date(fmtDate(r.end_date))-Date.now())/86400000);
-    if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
-    else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
-    else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
-    else renewHtml='<span class="pill pill-active">'+days+' days</span>';
+    const ed = (r.end_date||'').trim();
+    leaseEnd = (ed.length===10 && ed[4]==='-') ? fmtDate(r.end_date) : (ed || '—');
+    const days = r.days_until_end;
+    if(days!=null){
+      if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
+      else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
+      else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
+      else renewHtml='<span class="pill pill-active">'+days+' days</span>';
+    }
   }
-  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r)})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit lease">✏️</button></td></tr>`;
+  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><button onclick="collectRent(${r.lease_id},${r.rent_amount})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-right:4px">✓ Collected</button><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r)})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit lease">✏️</button></td></tr>`;
 }
 
 // ── Task card builder (now draggable + clickable) ──
@@ -3409,11 +3426,16 @@ async function openOwnerModal(oid) {
   // Properties list
   document.getElementById('modal-owner-properties').innerHTML = data.properties.length
     ? `<div style="display:flex;flex-direction:column;gap:8px">${data.properties.map(p =>
-        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface-2);border-radius:8px;cursor:pointer" onclick="openPropertyModal(${p.id})">
-          <div><div style="font-weight:600;font-size:13px">${p.name}</div><div style="font-size:11px;color:var(--text-muted)">${p.address||''} · ${p.total_units} units · ${p.occupied_units} occupied</div></div>
-          <div style="text-align:right"><div style="font-weight:700;color:var(--green)">$${(p.monthly_rent||0).toLocaleString()}/mo</div><div style="font-size:11px;color:var(--accent)">View →</div></div>
+        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface-2);border-radius:8px">
+          <div style="cursor:pointer;flex:1" onclick="openPropertyModal(${p.id})"><div style="font-weight:600;font-size:13px">${p.name}</div><div style="font-size:11px;color:var(--text-muted)">${p.address||''} · ${p.total_units} units · ${p.occupied_units} occupied</div></div>
+          <div style="display:flex;align-items:center;gap:8px"><div style="text-align:right"><div style="font-weight:700;color:var(--green)">$${(p.monthly_rent||0).toLocaleString()}/mo</div><div style="font-size:11px;color:var(--accent)">View →</div></div><button onclick="removePropertyFromOwner(${oid}, ${p.id}, '${p.name.replace(/'/g, "\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px">✕ Remove</button></div>
         </div>`).join('')}</div>`
     : '<div style="color:var(--text-muted);font-size:13px">No properties assigned to this owner.</div>';
+
+  // Populate manage properties section
+  document.getElementById('modal-owner-prop-manage').innerHTML = '';
+  window._currentOwnerId = oid;
+  loadUnassignedProperties();
 
   // Payment history
   document.getElementById('modal-owner-payments').innerHTML = data.payments.length
@@ -3426,6 +3448,34 @@ async function openOwnerModal(oid) {
 function closeOwnerModal() {
   document.getElementById('modal-owner').style.display = 'none';
   _currentOwnerId = null;
+}
+
+async function loadUnassignedProperties() {
+  const r = await fetch('/api/properties/unassigned');
+  const props = await r.json();
+  const sel = document.getElementById('ow-prop-select');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">— select property —</option>' +
+    props.map(p => `<option value="${p.id}">${p.name}${p.address?' — '+p.address:''}</option>`).join('');
+}
+
+async function assignPropertyToOwner() {
+  const oid = window._currentOwnerId;
+  const pid = document.getElementById('ow-prop-select').value;
+  if (!pid) return showToast('Select a property first');
+  await fetch(`/api/owners/${oid}/assign-property`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({property_id: parseInt(pid)})
+  });
+  showToast('Property assigned ✓');
+  openOwnerModal(oid);
+}
+
+async function removePropertyFromOwner(oid, pid, propName) {
+  if (!confirm(`Remove "${propName}" from this owner?`)) return;
+  await fetch(`/api/owners/${oid}/remove-property/${pid}`, {method:'DELETE'});
+  showToast('Property removed');
+  openOwnerModal(oid);
 }
 
 async function saveOwner() {
@@ -3671,6 +3721,18 @@ function openAptEdit(aptData) {
 function closeAptEdit() {
   document.getElementById('modal-apt-edit').style.display = 'none';
   _currentAptId = null;
+}
+
+async function collectRent(leaseId, amount) {
+  if (!confirm(`Mark rent collected? $${amount}`)) return;
+  const today = new Date().toISOString().split('T')[0];
+  const r = await fetch(`/api/leases/${leaseId}/collect`, {
+    method:'POST', headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({payment_date: today, amount: amount})
+  });
+  const d = await r.json();
+  if (d.ok) { showToast('Rent marked as collected ✓'); loadDashboard(); }
+  else showToast('Error: ' + (d.error||'unknown'));
 }
 
 async function saveApartmentEdit() {
