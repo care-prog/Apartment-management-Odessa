@@ -1298,6 +1298,13 @@ document.addEventListener('DOMContentLoaded', () => {
   if (sw) sw.value = LANG;
 });
 
+// ── Date formatting helper — strips time portion from any ISO/PG timestamp ──
+function fmtDate(val) {
+  if (!val) return '—';
+  // Takes "2026-04-18T00:00:00+00:00", "2026-04-18 00:00:00 GMT", "2026-04-18", etc.
+  return String(val).slice(0, 10);
+}
+
 // ── Rent row builder (reused on dashboard + rent page) ──
 function rentRow(r) {
   let payPill='pill-overdue', payLabel='No payment';
@@ -1311,8 +1318,8 @@ function rentRow(r) {
   try { const n=JSON.parse(r.apt_notes||'{}'); if(n.timeline){const p=n.timeline.split(' - ');if(p.length===2)payDue=p[1];} } catch(e){}
   let leaseEnd='—', renewHtml='';
   if(r.end_date){
-    leaseEnd=r.end_date;
-    const days=Math.floor((new Date(r.end_date)-Date.now())/86400000);
+    leaseEnd=fmtDate(r.end_date);
+    const days=Math.floor((new Date(fmtDate(r.end_date))-Date.now())/86400000);
     if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
     else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
     else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
@@ -1433,7 +1440,7 @@ function renderTaskModal(t) {
       <span class="task-id-badge" style="font-size:13px;padding:3px 10px">#${idStr}</span>
       <h3 style="margin:0">${t.title || 'Untitled'}</h3>
     </div>
-    <div class="task-modal-meta">Created ${t.created_at || ''}</div>
+    <div class="task-modal-meta">Created ${fmtDate(t.created_at)}</div>
     <label>Title</label>
     <input id="tm-title" value="${(t.title || '').replace(/"/g, '&quot;')}">
     <label>Description</label>
@@ -1606,14 +1613,14 @@ function renderPage(page, d) {
     document.getElementById('tenants-tbody').innerHTML = (d.rent_status||[]).map(r => {
       let leaseEnd='—', renewHtml='<span class="pill pill-active">Active</span>';
       if(r.end_date){
-        leaseEnd=r.end_date;
-        const days=Math.floor((new Date(r.end_date)-Date.now())/86400000);
+        leaseEnd=fmtDate(r.end_date);
+        const days=Math.floor((new Date(fmtDate(r.end_date))-Date.now())/86400000);
         if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
         else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
         else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
         else renewHtml='<span class="pill pill-active">'+days+' days</span>';
       }
-      return `<tr><td>${r.tenant_name}</td><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${r.start_date||'—'}</td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><span class="pill pill-active">Active</span></td></tr>`;
+      return `<tr><td>${r.tenant_name}</td><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${fmtDate(r.start_date)}</td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><span class="pill pill-active">Active</span></td></tr>`;
     }).join('');
   }
 
@@ -1624,7 +1631,7 @@ function renderPage(page, d) {
   if (page === 'maintenance') {
     document.getElementById('maint-full-tbody').innerHTML = (d.maintenance||[]).map(o => {
       let pill='pill-pending',label=o.status;if(o.status==='in_progress'){pill='pill-progress';label='In Progress';}else if(o.status==='reported'){pill='pill-pending';label='Reported';}
-      return `<tr><td>${o.description}</td><td>${o.property_name}</td><td class="td-mono">${o.apt_number}</td><td>${o.assigned_to||'—'}</td><td><span class="pill ${pill}">${label}</span></td><td class="td-mono">${o.created_at||'—'}</td></tr>`;
+      return `<tr><td>${o.description}</td><td>${o.property_name}</td><td class="td-mono">${o.apt_number}</td><td>${o.assigned_to||'—'}</td><td><span class="pill ${pill}">${label}</span></td><td class="td-mono">${fmtDate(o.created_at)}</td></tr>`;
     }).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No maintenance orders</td></tr>';
   }
 
@@ -1693,7 +1700,7 @@ function renderPage(page, d) {
           <td>${e.description}</td>
           <td class="td-mono">${sym}${e.amount}</td>
           <td>${e.category || '—'}</td>
-          <td class="td-mono">${e.date || '—'}</td>
+          <td class="td-mono">${fmtDate(e.date)}</td>
           <td class="owner-only"><button onclick="deleteExpense(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px" title="Delete">&#10005;</button></td>
         </tr>`;
       }).join('');
@@ -1808,7 +1815,7 @@ async function loadWallets() {
       const sym = t.currency === 'USD' ? '$' : '₴';
       const isIncome = t.type === 'income';
       return `<tr>
-        <td class="td-mono">${t.transaction_date || '—'}</td>
+        <td class="td-mono">${fmtDate(t.transaction_date)}</td>
         <td><span style="color:${isIncome ? 'var(--green)' : 'var(--red)'};font-weight:600">${isIncome ? '▲ IN' : '▼ OUT'}</span></td>
         <td>${t.description || '—'}</td>
         <td><span class="pill" style="background:var(--surface-2)">${t.category || '—'}</span></td>
