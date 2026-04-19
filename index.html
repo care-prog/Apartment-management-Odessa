@@ -1509,6 +1509,8 @@ document.addEventListener('DOMContentLoaded', () => {
   applyTranslations();
   const sw = document.getElementById('lang-switcher');
   if (sw) sw.value = LANG;
+  // Restore page from URL hash immediately on load (before data arrives)
+  loadPageFromHash();
 });
 
 // ── Date formatting helper — strips time portion from any ISO/PG timestamp ──
@@ -1932,12 +1934,12 @@ async function loadDashboard() {
   try {
     const res = await fetch('/api/dashboard');
     DATA = await res.json();
-    // Render whichever page is currently active (from hash or default)
+    // Show the page from the URL hash (or dashboard), with data now available
     const page = (location.hash || '#dashboard').replace('#', '');
     const validPage = PAGES.includes(page) ? page : 'dashboard';
-    renderPage(validPage, DATA);
-    // Always update dashboard page in background so when user navigates to it, it's fresh
-    if (validPage !== 'dashboard' && document.getElementById('page-dashboard')) {
+    showPage(validPage, true);  // sets nav active, title, visibility, and renders data
+    // Pre-render dashboard in background so it's ready when user navigates to it
+    if (validPage !== 'dashboard') {
       renderPage('dashboard', DATA);
     }
   } catch(e) {
