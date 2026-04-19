@@ -5,6 +5,31 @@
 
 ---
 
+## Session 9 — 2026-04-19
+
+**Duration:** Continuation
+**Phase:** Phase 1
+**Focus:** Add New Owner UI, WhatsApp token expiry fix
+
+### Done
+- `index.html` — Added "➕ New Owner" button to Property Owners page section header
+- `index.html` — Added `modal-new-owner` full form modal (name, phone, email, bank, notes)
+- `index.html` — Added `openNewOwnerModal()`, `closeNewOwnerModal()`, `submitNewOwner()` JS functions
+- `index.html` — After creating owner, auto-opens the owner detail modal (so user can assign properties immediately)
+- `index.html` — Fixed empty state message in `loadOwners()` to mention the button
+- `src/routes/properties.py` — `create_owner()` now accepts `phone`, `email`, `bank_details` fields (not just `contact`)
+- WhatsApp token expired at 12:00 PDT today — identified root cause, instructed user on getting permanent system token
+
+### Deployment
+- Push + Render auto-deploy
+
+### Next
+- Eliyahu's phone number (still unknown)
+- Property assignments for Natan and Eliyahu
+- UptimeRobot ping to prevent Render sleep
+
+---
+
 ## Session 8 — 2026-04-19
 
 **Duration:** Continuation

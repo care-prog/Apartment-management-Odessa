@@ -108,10 +108,17 @@ def list_owners():
 
 @bp.route('/api/owners', methods=['POST'])
 def create_owner():
-    data = request.json
+    data = request.json or {}
+    name = (data.get('name') or '').strip()
+    if not name:
+        return jsonify({'error': 'name required'}), 400
+    # Accept both 'contact' (legacy) and 'phone' field
+    phone = data.get('phone') or data.get('contact') or ''
     oid = insert_db(
-        'INSERT INTO owners (name, contact, report_schedule, notes) VALUES (?, ?, ?, ?)',
-        (data['name'], data.get('contact'), data.get('report_schedule'), data.get('notes'))
+        'INSERT INTO owners (name, contact, phone, email, bank_details, report_schedule, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        (name, phone, phone,
+         data.get('email', ''), data.get('bank_details', ''),
+         data.get('report_schedule'), data.get('notes', ''))
     )
     return jsonify({'id': oid}), 201
 

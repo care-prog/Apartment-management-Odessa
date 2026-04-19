@@ -839,8 +839,50 @@
         <div class="section">
           <div class="section-head">
             <div class="section-title"><span class="icon">&#128084;</span> Property Owners</div>
+            <button class="btn btn-primary" onclick="openNewOwnerModal()" style="font-size:12px">+ New Owner</button>
           </div>
           <div id="owners-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:16px;padding:4px 0"></div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: NEW OWNER ══════ -->
+      <div id="modal-new-owner" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:300;align-items:center;justify-content:center;padding:20px">
+        <div style="background:var(--surface);border-radius:16px;box-shadow:var(--shadow-xl);width:100%;max-width:480px;overflow:hidden">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:17px;font-weight:700">➕ New Property Owner</div>
+            <button onclick="closeNewOwnerModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
+          </div>
+          <div style="padding:20px 24px">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div style="grid-column:1/-1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Name <span style="color:var(--red)">*</span></label>
+                <input id="new-ow-name" placeholder="Owner full name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Phone</label>
+                <input id="new-ow-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Email</label>
+                <input id="new-ow-email" type="email" placeholder="owner@email.com" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Bank / Payment Details</label>
+                <input id="new-ow-bank" placeholder="Card / IBAN..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Notes</label>
+                <input id="new-ow-notes" placeholder="Any notes..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+              </div>
+            </div>
+            <div style="margin-top:8px;padding:10px 12px;background:rgba(99,102,241,.06);border-radius:8px;font-size:12px;color:var(--text-muted)">
+              💡 After creating the owner you can assign properties from the owner card.
+            </div>
+          </div>
+          <div style="padding:16px 24px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end">
+            <button onclick="closeNewOwnerModal()" class="btn" style="font-size:12px">Cancel</button>
+            <button onclick="submitNewOwner()" class="btn btn-primary" style="font-size:12px">Create Owner</button>
+          </div>
         </div>
       </div>
 
@@ -3330,6 +3372,52 @@ document.addEventListener('click', function(e) {
 let _currentOwnerId = null;
 let _currentPropertyId = null;
 
+function openNewOwnerModal() {
+  ['new-ow-name','new-ow-phone','new-ow-email','new-ow-bank','new-ow-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.value = '';
+  });
+  const m = document.getElementById('modal-new-owner');
+  m.style.display = 'flex';
+  setTimeout(() => document.getElementById('new-ow-name').focus(), 50);
+}
+
+function closeNewOwnerModal() {
+  document.getElementById('modal-new-owner').style.display = 'none';
+}
+
+async function submitNewOwner() {
+  const name = (document.getElementById('new-ow-name').value || '').trim();
+  if (!name) { showToast('Name is required'); return; }
+  const btn = document.querySelector('#modal-new-owner .btn-primary');
+  if (btn) { btn.disabled = true; btn.textContent = 'Creating...'; }
+  try {
+    const res = await fetch('/api/owners', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        name,
+        contact: document.getElementById('new-ow-phone').value || '',
+        phone:   document.getElementById('new-ow-phone').value || '',
+        email:   document.getElementById('new-ow-email').value || '',
+        bank_details: document.getElementById('new-ow-bank').value || '',
+        notes:   document.getElementById('new-ow-notes').value || '',
+      })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || 'Failed');
+    closeNewOwnerModal();
+    showToast('Owner created ✓');
+    await loadOwners();
+    // Open the newly created owner modal so user can assign properties immediately
+    if (data.id) openOwnerModal(data.id);
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = 'Create Owner'; }
+  }
+}
+
 async function loadOwners() {
   const grid = document.getElementById('owners-grid');
   if (!grid) return;
@@ -3343,7 +3431,7 @@ async function loadOwners() {
     const props = await propsRes.json();
 
     if (!owners.length) {
-      grid.innerHTML = '<div style="color:var(--text-muted);padding:20px">No owners yet. Run a Monday.com sync to import data.</div>';
+      grid.innerHTML = '<div style="color:var(--text-muted);padding:20px">No owners yet. Click <strong>+ New Owner</strong> to add one, or sync from Monday.com.</div>';
       return;
     }
 
