@@ -115,9 +115,15 @@ def sync_to_db():
     if not items:
         return {'synced': 0, 'error': 'No items fetched'}
 
-    # Delete in FK-safe order (leases → tenants → apartments)
+    # Delete in FK-safe order (children before parents)
+    execute_db("DELETE FROM payments")
     execute_db("DELETE FROM leases")
     execute_db("DELETE FROM tenants")
+    execute_db("DELETE FROM meter_readings")
+    execute_db("DELETE FROM utility_bills")
+    execute_db("DELETE FROM warranties")
+    execute_db("DELETE FROM maintenance_orders")
+    execute_db("DELETE FROM documents WHERE apartment_id IS NOT NULL")
     execute_db("DELETE FROM apartments")
 
     # Ensure we have a default property for Tower Chekalov
