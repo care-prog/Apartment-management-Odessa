@@ -22,6 +22,13 @@ if USE_PG:
     from psycopg.rows import dict_row
 
 
+def month_str(col: str) -> str:
+    """Returns SQL to format a date column as 'YYYY-MM'. DB-agnostic."""
+    if USE_PG:
+        return f"TO_CHAR({col}, 'YYYY-MM')"
+    return f"strftime('%Y-%m', {col})"
+
+
 def _translate(query: str) -> str:
     """Translate SQLite-flavored SQL to PostgreSQL when needed."""
     if not USE_PG:

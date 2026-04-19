@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from src.models import query_db, insert_db, execute_db
+from src.models import query_db, insert_db, execute_db, month_str
 
 bp = Blueprint('finance', __name__)
 
@@ -56,18 +56,18 @@ def create_owner_payment():
 def cash_flow():
     """Returns last 12 months of income (rent) and expenses for charting."""
     # Income per month from rent payments
-    income = query_db('''
-        SELECT strftime('%Y-%m', payment_date) as period, COALESCE(SUM(amount), 0) as total
+    income = query_db(f'''
+        SELECT {month_str('payment_date')} as period, COALESCE(SUM(amount), 0) as total
         FROM payments WHERE type = 'rent' AND status = 'paid' AND payment_date IS NOT NULL
         GROUP BY period ORDER BY period
     ''')
-    expenses = query_db('''
-        SELECT strftime('%Y-%m', date) as period, COALESCE(SUM(amount), 0) as total, category
+    expenses = query_db(f'''
+        SELECT {month_str('date')} as period, COALESCE(SUM(amount), 0) as total, category
         FROM office_expenses WHERE date IS NOT NULL
         GROUP BY period, category ORDER BY period
     ''')
-    owner_payments = query_db('''
-        SELECT strftime('%Y-%m', payment_date) as period, COALESCE(SUM(amount), 0) as total
+    owner_payments = query_db(f'''
+        SELECT {month_str('payment_date')} as period, COALESCE(SUM(amount), 0) as total
         FROM owner_payments WHERE payment_date IS NOT NULL
         GROUP BY period ORDER BY period
     ''')

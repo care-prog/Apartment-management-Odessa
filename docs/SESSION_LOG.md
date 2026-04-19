@@ -5,6 +5,26 @@
 
 ---
 
+## Session 3 — 2026-04-18
+
+**Duration:** Ongoing
+**Phase:** Phase 1
+**Focus:** Fix "Cannot connect to API server" — PostgreSQL compatibility for strftime
+
+### Done
+- Identified root cause: `strftime('%Y-%m', ...)` is SQLite-only; fails silently on PostgreSQL causing 500 → frontend shows "Cannot connect"
+- Added `month_str(col)` helper to `src/models.py` — returns `TO_CHAR(col, 'YYYY-MM')` for PG, `strftime('%Y-%m', col)` for SQLite
+- Fixed `src/routes/dashboard.py` overdue_rent query — replaced `strftime` with Python date range params
+- Fixed `src/routes/finance.py` cash-flow queries — replaced all 3 `strftime` calls with `month_str()`
+- Committed and pushed → Render redeploy triggered
+
+### Next
+- Verify dashboard loads on Render after redeploy
+- User to click "Sync Monday.com" to reload 33 apartments from Monday into PostgreSQL
+- Address PostgreSQL free tier expiry (2026-05-19) — move to Neon or Supabase
+
+---
+
 ## Session 1 — 2026-04-01
 
 **Duration:** ~2 hours

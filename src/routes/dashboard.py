@@ -1,3 +1,4 @@
+from datetime import date
 from flask import Blueprint, jsonify
 from src.models import query_db
 
@@ -10,15 +11,22 @@ def dashboard_stats():
     vacant = query_db("SELECT COUNT(*) as c FROM apartments WHERE status = 'vacant'", one=True)['c']
     maintenance_count = query_db("SELECT COUNT(*) as c FROM apartments WHERE status = 'maintenance'", one=True)['c']
 
+    today = date.today()
+    month_start = today.replace(day=1).isoformat()
+    if today.month == 12:
+        month_end = date(today.year + 1, 1, 1).isoformat()
+    else:
+        month_end = date(today.year, today.month + 1, 1).isoformat()
+
     overdue_rent = query_db('''
         SELECT COUNT(DISTINCT l.id) as c FROM leases l
         WHERE l.status = 'active'
         AND l.id NOT IN (
             SELECT lease_id FROM payments
             WHERE type = 'rent' AND status = 'paid'
-            AND strftime('%Y-%m', payment_date) = strftime('%Y-%m', 'now')
+            AND payment_date >= ? AND payment_date < ?
         )
-    ''', one=True)['c']
+    ''', (month_start, month_end), one=True)['c']
 
     total_rent = query_db("SELECT COALESCE(SUM(rent_amount), 0) as s FROM leases WHERE status = 'active'", one=True)['s']
 
