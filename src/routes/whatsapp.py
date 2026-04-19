@@ -22,7 +22,7 @@ def normalize_phone(phone):
 
 
 def identify_sender(phone):
-    """Returns ('team'|'tenant'|'unknown', user_data)."""
+    """Returns ('team'|'property_owner'|'tenant'|'unknown', user_data)."""
     p = normalize_phone(phone)
     if not p:
         return ('unknown', None)
@@ -30,6 +30,26 @@ def identify_sender(phone):
     # Try team members first
     team = query_db("SELECT * FROM team_members WHERE REPLACE(REPLACE(REPLACE(phone, '+', ''), '-', ''), ' ', '') = ?", (p,), one=True)
     if team:
+        role = team.get('role', 'manager')
+        # property_owner gets their own role, everyone else is 'team'
+        if role == 'property_owner':
+            # Enrich with their properties from owners table
+            owner = query_db(
+                "SELECT * FROM owners WHERE REPLACE(REPLACE(REPLACE(contact, '+', ''), '-', ''), ' ', '') = ?",
+                (p,), one=True
+            )
+            user = dict(team)
+            if owner:
+                user['owner_id'] = owner['id']
+                props = query_db(
+                    'SELECT id, name, address FROM properties WHERE owner_id = ?',
+                    (owner['id'],)
+                )
+                user['properties'] = [dict(pr) for pr in props]
+            else:
+                user['owner_id'] = None
+                user['properties'] = []
+            return ('property_owner', user)
         return ('team', team)
 
     # Try tenants
@@ -298,6 +318,10 @@ def wa_webhook_receive():
                     "Please contact the system administrator. 🔒")
             return jsonify({'status': 'unknown_sender'}), 200
 
+        # Property owner → limited access, no write tools
+        if role == 'property_owner':
+            role = 'property_owner'  # keep explicit
+
         norm_phone = normalize_phone(from_phone) or from_phone
         now = _time.time()
         session = WA_SESSIONS.get(norm_phone)
@@ -321,6 +345,16 @@ def wa_webhook_receive():
         if role == 'team':
             access_note = (f"This user is a TEAM MEMBER. Name: {display_name}, role: {user.get('role','')}. "
                            "Full access — answer any question, take any action.")
+        elif role == 'property_owner':
+            prop_names = ', '.join(p['name'] for p in (user.get('properties') or []))
+            access_note = (
+                f"This user is a PROPERTY OWNER. Name: {display_name}. "
+                f"Their properties: {prop_names or 'none assigned yet'}. "
+                "Show them: rent collection status for their units, maintenance orders on their properties, "
+                "how much they are owed. "
+                "Do NOT show: other owners' data, office cash, team tasks, other tenants. "
+                "Do NOT use write tools (no creating tasks, no expenses)."
+            )
         else:  # tenant
             apt_no = user.get('apt_number', '?')
             prop   = user.get('property_name', '')
@@ -348,7 +382,7 @@ CURRENT DATA:
             messages_arr.append({'role': h['role'], 'content': h['content']})
         messages_arr.append({'role': 'user', 'content': message_body})
 
-        use_tools   = (role == 'team')
+        use_tools   = (role == 'team')  # property_owner and tenant cannot trigger write actions
         actions     = []
 
         for _ in range(4):
@@ -439,6 +473,10 @@ def whatsapp_query():
             'role': 'unknown', 'silent': False
         })
 
+    # Property owner → read-only
+    if role == 'property_owner':
+        role = 'property_owner'  # keep explicit for system prompt below
+
     # Session management
     session = WA_SESSIONS.get(norm_phone)
     is_new_session = (session is None or
@@ -465,6 +503,14 @@ def whatsapp_query():
     # Different system prompt per role
     if role == 'team':
         access_note = f"This user is a TEAM MEMBER. Name: {display_name}, role: {user.get('role','')}. Full access — answer any question, take any action."
+    elif role == 'property_owner':
+        prop_names = ', '.join(p['name'] for p in (user.get('properties') or []))
+        access_note = (
+            f"This user is a PROPERTY OWNER. Name: {display_name}. "
+            f"Their properties: {prop_names or 'none assigned yet'}. "
+            "Show rent status, maintenance orders, and balance owed for THEIR properties only. "
+            "Do NOT show other owners' data, office cash, or team tasks. No write actions."
+        )
     else:
         apt_no = user.get('apt_number', 'unknown')
         prop = user.get('property_name', '')
@@ -499,7 +545,7 @@ CURRENT DATABASE STATE:
         messages.append({'role': h['role'], 'content': h['content']})
     messages.append({'role': 'user', 'content': message})
 
-    # Tool use loop (team only — tenants can't trigger actions)
+    # Tool use loop (team only — property_owner and tenants are read-only)
     use_tools = (role == 'team')
     actions_taken = []
 
