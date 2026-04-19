@@ -133,22 +133,30 @@ TOOLS = [
                 'due_date': {'type': 'string', 'description': 'Due date YYYY-MM-DD (optional)'},
                 'priority': {'type': 'string', 'enum': ['low', 'normal', 'high', 'urgent'], 'description': 'Priority level'},
                 'description': {'type': 'string', 'description': 'Optional longer description'},
+                'notes': {'type': 'string', 'description': 'Short note or remark for this task'},
             },
             'required': ['title'],
         },
     },
     {
         'name': 'update_task',
-        'description': 'Update an existing task (mark done, change assignee, change due date, etc.)',
+        'description': (
+            'Update an existing task — mark done/in_progress, change assignee, due date, priority, title, '
+            'add/update notes or description. Can update ANY task regardless of status (including done/closed tasks). '
+            'Use notes for comments, remarks, closing notes. Use description for longer context. '
+            'Can also translate title/notes/description to any language — just pass the translated text.'
+        ),
         'input_schema': {
             'type': 'object',
             'properties': {
                 'task_id': {'type': 'integer', 'description': 'ID of the task to update'},
                 'status': {'type': 'string', 'enum': ['pending', 'in_progress', 'done'], 'description': 'New status'},
                 'assigned_to': {'type': 'string'},
-                'due_date': {'type': 'string'},
+                'due_date': {'type': 'string', 'description': 'YYYY-MM-DD'},
                 'priority': {'type': 'string', 'enum': ['low', 'normal', 'high', 'urgent']},
-                'title': {'type': 'string'},
+                'title': {'type': 'string', 'description': 'Task title — can be updated or translated'},
+                'notes': {'type': 'string', 'description': 'Short closing note / remark / comment about this task'},
+                'description': {'type': 'string', 'description': 'Longer description or context for the task'},
             },
             'required': ['task_id'],
         },
@@ -259,9 +267,9 @@ def execute_tool(name, args):
     try:
         if name == 'create_task':
             tid = insert_db(
-                'INSERT INTO tasks (title, description, assigned_to, due_date, status, priority) VALUES (?, ?, ?, ?, ?, ?)',
+                'INSERT INTO tasks (title, description, assigned_to, due_date, status, priority, notes) VALUES (?, ?, ?, ?, ?, ?, ?)',
                 (args['title'], args.get('description'), args.get('assigned_to'),
-                 args.get('due_date'), 'pending', args.get('priority', 'normal'))
+                 args.get('due_date'), 'pending', args.get('priority', 'normal'), args.get('notes'))
             )
             return {'success': True, 'task_id': tid, 'message': f'Task created: "{args["title"]}"'}
 
@@ -270,15 +278,21 @@ def execute_tool(name, args):
             if not current:
                 return {'success': False, 'error': f'Task {args["task_id"]} not found'}
             execute_db(
-                'UPDATE tasks SET title = ?, assigned_to = ?, due_date = ?, status = ?, priority = ? WHERE id = ?',
+                'UPDATE tasks SET title=?, assigned_to=?, due_date=?, status=?, priority=?, notes=?, description=? WHERE id=?',
                 (args.get('title', current['title']),
                  args.get('assigned_to', current['assigned_to']),
                  args.get('due_date', current['due_date']),
                  args.get('status', current['status']),
                  args.get('priority', current['priority']),
+                 args.get('notes', current['notes']),
+                 args.get('description', current['description']),
                  args['task_id'])
             )
-            return {'success': True, 'message': f'Task #{args["task_id"]} updated'}
+            changes = []
+            if 'status' in args: changes.append(f"status → {args['status']}")
+            if 'notes' in args: changes.append(f"note added")
+            if 'title' in args: changes.append(f"title updated")
+            return {'success': True, 'message': f'Task #{args["task_id"]} updated' + (': ' + ', '.join(changes) if changes else '')}
 
         if name == 'add_expense':
             from datetime import date
