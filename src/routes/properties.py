@@ -115,6 +115,149 @@ def create_owner():
     )
     return jsonify({'id': oid}), 201
 
+@bp.route('/api/owners/<int:oid>', methods=['PUT'])
+def update_owner(oid):
+    data = request.json
+    execute_db(
+        'UPDATE owners SET name=?, phone=?, email=?, bank_details=?, notes=? WHERE id=?',
+        (data.get('name'), data.get('phone'), data.get('email'),
+         data.get('bank_details'), data.get('notes'), oid)
+    )
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/owners/<int:oid>/detail', methods=['GET'])
+def owner_detail(oid):
+    owner = query_db('SELECT * FROM owners WHERE id = ?', (oid,), one=True)
+    if not owner:
+        return jsonify({'error': 'Not found'}), 404
+
+    properties = query_db('''
+        SELECT p.*,
+            (SELECT COUNT(*) FROM apartments WHERE property_id = p.id) as total_units,
+            (SELECT COUNT(*) FROM apartments WHERE property_id = p.id AND status = 'occupied') as occupied_units,
+            (SELECT COALESCE(SUM(l.rent_amount), 0) FROM leases l
+             JOIN apartments a ON l.apartment_id = a.id
+             WHERE a.property_id = p.id AND l.status = 'active') as monthly_rent
+        FROM properties p WHERE p.owner_id = ?
+    ''', (oid,))
+
+    payments = query_db(
+        'SELECT * FROM owner_payments WHERE owner_id = ? ORDER BY payment_date DESC',
+        (oid,)
+    )
+    total_paid = sum(p['amount'] for p in payments)
+
+    total_rent = sum(p['monthly_rent'] for p in properties)
+    fee_pct = 0.10
+    owner_monthly = round(total_rent * (1 - fee_pct), 2)
+
+    documents = query_db('''
+        SELECT d.* FROM documents d
+        JOIN properties p ON d.property_id = p.id
+        WHERE p.owner_id = ?
+        ORDER BY d.uploaded_at DESC
+    ''', (oid,))
+
+    return jsonify({
+        'owner': owner,
+        'properties': properties,
+        'payments': payments,
+        'documents': documents,
+        'financials': {
+            'total_monthly_rent': total_rent,
+            'management_fee': round(total_rent * fee_pct, 2),
+            'owner_monthly': owner_monthly,
+            'total_paid': total_paid,
+            'balance_owed': round(owner_monthly - total_paid, 2),
+        }
+    })
+
+
+@bp.route('/api/properties/<int:pid>/documents', methods=['GET'])
+def property_documents(pid):
+    docs = query_db(
+        'SELECT * FROM documents WHERE property_id = ? ORDER BY uploaded_at DESC',
+        (pid,)
+    )
+    return jsonify(docs)
+
+
+@bp.route('/api/properties/<int:pid>/documents', methods=['POST'])
+def upload_property_document(pid):
+    import os, uuid
+    if 'file' not in request.files:
+        return jsonify({'error': 'no file'}), 400
+    f = request.files['file']
+    if not f.filename:
+        return jsonify({'error': 'empty filename'}), 400
+    from src.routes.uploads import UPLOAD_DIR
+    safe_name = f.filename.replace('/', '_').replace('\\', '_')
+    unique = f"{uuid.uuid4().hex[:8]}_{safe_name}"
+    save_path = os.path.join(UPLOAD_DIR, unique)
+    f.save(save_path)
+    file_url = f'/uploads/{unique}'
+    doc_type = request.form.get('doc_type', 'document')
+    description = request.form.get('description', '')
+    did = insert_db(
+        'INSERT INTO documents (property_id, doc_type, file_url, description) VALUES (?, ?, ?, ?)',
+        (pid, doc_type, file_url, description)
+    )
+    return jsonify({'id': did, 'file_url': file_url, 'filename': safe_name}), 201
+
+
+@bp.route('/api/properties/<int:pid>/detail', methods=['GET'])
+def property_detail_page(pid):
+    prop = query_db('''
+        SELECT p.*, o.name as owner_name, o.id as owner_id
+        FROM properties p LEFT JOIN owners o ON p.owner_id = o.id
+        WHERE p.id = ?
+    ''', (pid,), one=True)
+    if not prop:
+        return jsonify({'error': 'Not found'}), 404
+
+    apartments = query_db('SELECT * FROM apartments WHERE property_id = ? ORDER BY number', (pid,))
+
+    leases = query_db('''
+        SELECT l.*, t.name as tenant_name, a.number as apt_number
+        FROM leases l JOIN tenants t ON l.tenant_id = t.id JOIN apartments a ON l.apartment_id = a.id
+        WHERE a.property_id = ? AND l.status = 'active' ORDER BY a.number
+    ''', (pid,))
+
+    owner_payments = []
+    if prop.get('owner_id'):
+        owner_payments = query_db(
+            'SELECT * FROM owner_payments WHERE owner_id = ? ORDER BY payment_date DESC',
+            (prop['owner_id'],)
+        )
+
+    documents = query_db(
+        'SELECT * FROM documents WHERE property_id = ? ORDER BY uploaded_at DESC',
+        (pid,)
+    )
+
+    total_rent = sum(l['rent_amount'] for l in leases)
+    fee_pct = 0.10
+    management_fee = round(total_rent * fee_pct, 2)
+    owner_receives = round(total_rent - management_fee, 2)
+    total_paid = sum(op['amount'] for op in owner_payments)
+
+    return jsonify({
+        'property': prop,
+        'apartments': apartments,
+        'leases': leases,
+        'owner_payments': owner_payments,
+        'documents': documents,
+        'financials': {
+            'monthly_rent': total_rent,
+            'management_fee': management_fee,
+            'owner_receives': owner_receives,
+            'total_paid_to_owner': total_paid,
+            'balance_owed': round(owner_receives - total_paid, 2),
+        }
+    })
+
+
 @bp.route('/api/owners/<int:oid>', methods=['DELETE'])
 def delete_owner(oid):
     execute_db('DELETE FROM owners WHERE id = ?', (oid,))

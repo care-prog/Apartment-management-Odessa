@@ -58,6 +58,9 @@ def safe_migrate():
     """Idempotent migrations — add missing columns and tables to existing DBs."""
     if USE_PG:
         execute_db("ALTER TABLE office_expenses ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS phone TEXT")
+        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS email TEXT")
+        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS bank_details TEXT")
         execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
             id SERIAL PRIMARY KEY, type TEXT NOT NULL DEFAULT 'expense',
             amount DOUBLE PRECISION NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',
@@ -75,6 +78,12 @@ def safe_migrate():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
+        except: pass
+        try: execute_db("ALTER TABLE owners ADD COLUMN phone TEXT")
+        except: pass
+        try: execute_db("ALTER TABLE owners ADD COLUMN email TEXT")
+        except: pass
+        try: execute_db("ALTER TABLE owners ADD COLUMN bank_details TEXT")
         except: pass
         execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT 'expense',
