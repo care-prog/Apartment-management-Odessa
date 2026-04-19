@@ -63,59 +63,72 @@ def get_db():
     return db
 
 
+def _pg_run(sql, args=()):
+    """Run a single PG migration statement, ignoring errors (idempotent)."""
+    try:
+        execute_db(sql, args)
+    except Exception as e:
+        print(f'[safe_migrate PG] ignored: {e!r} — SQL: {sql[:80]}')
+
+
 def safe_migrate():
     """Idempotent migrations — add missing columns and tables to existing DBs."""
     if USE_PG:
-        execute_db("ALTER TABLE office_expenses ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
-        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS phone TEXT")
-        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS email TEXT")
-        execute_db("ALTER TABLE owners ADD COLUMN IF NOT EXISTS bank_details TEXT")
-        execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
+        _pg_run("ALTER TABLE office_expenses ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS phone TEXT")
+        _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS email TEXT")
+        _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS bank_details TEXT")
+        _pg_run("""CREATE TABLE IF NOT EXISTS cash_transactions (
             id SERIAL PRIMARY KEY, type TEXT NOT NULL DEFAULT 'expense',
             amount DOUBLE PRECISION NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',
             category TEXT DEFAULT 'general', description TEXT, transaction_date DATE,
             apartment_id INTEGER REFERENCES apartments(id) ON DELETE SET NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("""CREATE TABLE IF NOT EXISTS commission_overrides (
+        _pg_run("""CREATE TABLE IF NOT EXISTS commission_overrides (
             monday_id TEXT PRIMARY KEY, commission_type TEXT NOT NULL DEFAULT 'percent',
             commission_value DOUBLE PRECISION NOT NULL DEFAULT 10,
             notes TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("""CREATE TABLE IF NOT EXISTS activity_log (
+        _pg_run("""CREATE TABLE IF NOT EXISTS activity_log (
             id SERIAL PRIMARY KEY, action TEXT NOT NULL, entity_type TEXT NOT NULL,
             entity_id TEXT, description TEXT, before_data TEXT,
             user_role TEXT DEFAULT 'owner', ip_address TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("""CREATE TABLE IF NOT EXISTS app_users (
+        _pg_run("""CREATE TABLE IF NOT EXISTS app_users (
             id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
             display_name TEXT NOT NULL, password_hash TEXT NOT NULL,
             role TEXT NOT NULL DEFAULT 'office', permissions TEXT NOT NULL DEFAULT '{}',
             property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'Owner'")
-        execute_db("""CREATE TABLE IF NOT EXISTS professionals (
+        _pg_run("ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'Owner'")
+        _pg_run("""CREATE TABLE IF NOT EXISTS professionals (
             id SERIAL PRIMARY KEY, name TEXT NOT NULL, phone TEXT, phone_2 TEXT,
             messenger TEXT DEFAULT 'Viber', category TEXT DEFAULT 'Other', notes TEXT,
             apartments_worked TEXT, total_paid DOUBLE PRECISION DEFAULT 0,
             rating INTEGER DEFAULT 5, is_active INTEGER DEFAULT 1, monday_id TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("""CREATE TABLE IF NOT EXISTS professional_payments (
+        _pg_run("""CREATE TABLE IF NOT EXISTS professional_payments (
             id SERIAL PRIMARY KEY,
             professional_id INTEGER REFERENCES professionals(id) ON DELETE CASCADE,
             amount DOUBLE PRECISION NOT NULL, currency TEXT DEFAULT 'USD',
             description TEXT, payment_date DATE,
             task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS paid_by TEXT DEFAULT 'office'")
-        execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
-        execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
+        _pg_run("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS paid_by TEXT DEFAULT 'office'")
+        _pg_run("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        _pg_run("""CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY, value TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
-        execute_db("""CREATE TABLE IF NOT EXISTS whatsapp_log (
+        _pg_run("""CREATE TABLE IF NOT EXISTS whatsapp_log (
             id SERIAL PRIMARY KEY,
             direction TEXT NOT NULL DEFAULT 'in',
             from_phone TEXT, to_phone TEXT,
             sender_name TEXT, sender_role TEXT,
             body TEXT, status TEXT DEFAULT 'ok',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        _pg_run("""CREATE TABLE IF NOT EXISTS team_members (
+            id SERIAL PRIMARY KEY, name TEXT NOT NULL, phone TEXT UNIQUE,
+            role TEXT DEFAULT 'manager', language TEXT DEFAULT 'ru',
+            access_level TEXT DEFAULT 'full',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
