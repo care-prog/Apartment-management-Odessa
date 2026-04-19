@@ -1509,16 +1509,24 @@
             <div id="wa-token-status" style="margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:13px;background:var(--surface-2)">
               Checking token status...
             </div>
-            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end">
+            <div style="display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:flex-end">
               <div>
                 <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">
-                  WhatsApp Access Token
-                  <span style="font-weight:400;color:var(--text-muted)"> — paste here to update without touching Render</span>
+                  Access Token
+                  <span style="font-weight:400;color:var(--text-muted)"> (EAAR... or permanent)</span>
                 </label>
-                <input id="wa-new-token" type="password" placeholder="EAAR... or permanent system user token"
+                <input id="wa-new-token" type="password" placeholder="EAAR..."
                   style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--surface)">
               </div>
-              <button class="btn btn-primary" onclick="updateWaToken()" style="white-space:nowrap;font-size:12px">Save Token</button>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">
+                  Phone Number ID
+                  <span style="font-weight:400;color:var(--text-muted)"> (optional)</span>
+                </label>
+                <input id="wa-new-phone-id" type="text" placeholder="903467186191052"
+                  style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--surface)">
+              </div>
+              <button class="btn btn-primary" onclick="updateWaToken()" style="white-space:nowrap;font-size:12px">Save</button>
             </div>
             <div style="margin-top:10px;padding:10px 12px;background:rgba(99,102,241,.06);border-radius:8px;font-size:12px;color:var(--text-muted)">
               💡 Get a new temporary token: <strong>developers.facebook.com → Your App → WhatsApp → API Setup → copy Temporary access token</strong>.<br>
@@ -2675,24 +2683,29 @@ async function checkWaTokenStatus() {
 }
 
 async function updateWaToken() {
-  const token = (document.getElementById('wa-new-token').value || '').trim();
-  if (!token) return showToast('Paste the token first');
+  const token   = (document.getElementById('wa-new-token').value    || '').trim();
+  const phoneId = (document.getElementById('wa-new-phone-id').value || '').trim();
+  if (!token && !phoneId) return showToast('Paste a token or Phone ID first');
   const btn = event.target;
   btn.disabled = true; btn.textContent = 'Saving...';
   try {
+    const body = {};
+    if (token)   body.token    = token;
+    if (phoneId) body.phone_id = phoneId;
     const r = await fetch('/api/whatsapp/update-token', {
       method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({token})
+      body: JSON.stringify(body)
     });
     const d = await r.json();
     if (!r.ok || d.error) { showToast('Error: ' + (d.error || 'Failed')); return; }
-    document.getElementById('wa-new-token').value = '';
-    showToast('✅ Token saved! WhatsApp bot is active again.');
+    document.getElementById('wa-new-token').value    = '';
+    document.getElementById('wa-new-phone-id').value = '';
+    showToast('✅ Saved! WhatsApp bot active: ' + (d.phone || ''));
     checkWaTokenStatus();
   } catch(e) {
     showToast('Error: ' + e.message);
   } finally {
-    btn.disabled = false; btn.textContent = 'Save Token';
+    btn.disabled = false; btn.textContent = 'Save';
   }
 }
 

@@ -252,12 +252,19 @@ def _get_wa_token():
     return get_setting('whatsapp_token') or WA_TOKEN
 
 
+def _get_wa_phone_id():
+    """Get WhatsApp Phone Number ID — DB override takes priority over env var."""
+    from src.models import get_setting
+    return get_setting('whatsapp_phone_id') or WA_PHONE_ID
+
+
 def wa_send(to_phone, text):
     """Send a WhatsApp text message via Meta Cloud API."""
-    token = _get_wa_token()
-    if not WA_PHONE_ID or not token:
+    token   = _get_wa_token()
+    phone_id = _get_wa_phone_id()
+    if not phone_id or not token:
         return {'error': 'WhatsApp credentials not set'}
-    url = f'{WA_API_URL}/{WA_PHONE_ID}/messages'
+    url = f'{WA_API_URL}/{phone_id}/messages'
     payload = {
         'messaging_product': 'whatsapp',
         'to': to_phone,
@@ -435,45 +442,66 @@ CURRENT DATA:
 @bp.route('/api/whatsapp/token-status', methods=['GET'])
 def wa_token_status():
     """Check if the current WhatsApp token is valid."""
-    token = _get_wa_token()
-    if not token or not WA_PHONE_ID:
+    token    = _get_wa_token()
+    phone_id = _get_wa_phone_id()
+    if not token or not phone_id:
         return jsonify({'valid': False, 'error': 'No credentials configured', 'source': 'none'})
     try:
         r = _requests.get(
-            f'{WA_API_URL}/{WA_PHONE_ID}?fields=display_phone_number,verified_name',
+            f'{WA_API_URL}/{phone_id}?fields=display_phone_number,verified_name',
             headers={'Authorization': f'Bearer {token}'}, timeout=8)
         data = r.json()
         if 'error' in data:
             return jsonify({'valid': False, 'error': data['error'].get('message', 'Token invalid'),
-                            'source': 'db' if _get_wa_token() != WA_TOKEN else 'env'})
-        return jsonify({'valid': True, 'phone': data.get('display_phone_number',''),
+                            'source': 'db' if _get_wa_token() != WA_TOKEN else 'env',
+                            'phone_id': phone_id})
+        return jsonify({'valid': True,
+                        'phone': data.get('display_phone_number',''),
                         'name': data.get('verified_name',''),
-                        'source': 'db' if _get_wa_token() != WA_TOKEN else 'env'})
+                        'source': 'db' if _get_wa_token() != WA_TOKEN else 'env',
+                        'phone_id': phone_id})
     except Exception as e:
         return jsonify({'valid': False, 'error': str(e)})
 
 
 @bp.route('/api/whatsapp/update-token', methods=['POST'])
 def wa_update_token():
-    """Owner-only: save a new WhatsApp token to DB (avoids Render env var update)."""
+    """Owner-only: save WhatsApp token and/or Phone Number ID to DB."""
     from flask import jsonify as _j
     d = request.json or {}
-    token = (d.get('token') or '').strip()
-    if not token:
-        return _j({'error': 'token required'}), 400
-    # Quick validation
+    token    = (d.get('token')    or '').strip()
+    phone_id = (d.get('phone_id') or '').strip()
+
+    if not token and not phone_id:
+        return _j({'error': 'token or phone_id required'}), 400
+
+    from src.models import set_setting, get_setting
+
+    # Use new phone_id for validation if provided, else use current
+    effective_phone_id = phone_id or _get_wa_phone_id()
+    effective_token    = token    or _get_wa_token()
+
+    # Validate the combination against Meta
     try:
         r = _requests.get(
-            f'{WA_API_URL}/{WA_PHONE_ID}?fields=display_phone_number',
-            headers={'Authorization': f'Bearer {token}'}, timeout=8)
+            f'{WA_API_URL}/{effective_phone_id}?fields=display_phone_number,verified_name',
+            headers={'Authorization': f'Bearer {effective_token}'}, timeout=8)
         data = r.json()
         if 'error' in data:
-            return _j({'error': 'Token rejected by Meta: ' + data['error'].get('message','')}), 400
+            return _j({'error': 'Meta rejected credentials: ' + data['error'].get('message','')}), 400
     except Exception as e:
-        return _j({'error': f'Could not verify: {e}'}), 400
-    from src.models import set_setting
-    set_setting('whatsapp_token', token)
-    return _j({'ok': True, 'phone': data.get('display_phone_number','')})
+        return _j({'error': f'Could not verify with Meta: {e}'}), 400
+
+    if token:
+        set_setting('whatsapp_token', token)
+    if phone_id:
+        set_setting('whatsapp_phone_id', phone_id)
+
+    return _j({'ok': True,
+               'phone': data.get('display_phone_number',''),
+               'name':  data.get('verified_name',''),
+               'saved_token': bool(token),
+               'saved_phone_id': bool(phone_id)})
 
 
 # ── ManyChat relay (legacy) ───────────────────────────────────────────────────
