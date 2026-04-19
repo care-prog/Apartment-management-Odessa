@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
-from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads
+from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
@@ -45,6 +45,7 @@ app.register_blueprint(finance.bp)
 app.register_blueprint(whatsapp.bp)
 app.register_blueprint(chat.bp)
 app.register_blueprint(uploads.bp)
+app.register_blueprint(wallets.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -106,6 +107,8 @@ def static_files(path):
 
 # Auto-init DB on import (needed for gunicorn/Render)
 init_db()
+from src.models import safe_migrate
+safe_migrate()
 from src.models import query_db
 if not query_db('SELECT COUNT(*) as c FROM properties', one=True)['c']:
     seed_path = os.path.join(ROOT, 'database', 'seeds', 'seed_data.py')

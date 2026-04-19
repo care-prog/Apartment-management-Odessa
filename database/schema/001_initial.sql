@@ -185,3 +185,23 @@ CREATE TABLE IF NOT EXISTS financial_transactions (
     category TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS cash_transactions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type TEXT NOT NULL DEFAULT 'expense',
+    amount REAL NOT NULL,
+    currency TEXT NOT NULL DEFAULT 'USD',
+    category TEXT DEFAULT 'general',
+    description TEXT,
+    transaction_date DATE,
+    apartment_id INTEGER REFERENCES apartments(id) ON DELETE SET NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS commission_overrides (
+    monday_id TEXT PRIMARY KEY,
+    commission_type TEXT NOT NULL DEFAULT 'percent',
+    commission_value REAL NOT NULL DEFAULT 10,
+    notes TEXT,
+    updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);

@@ -315,7 +315,12 @@
   .task-card {
     padding: 10px 14px; border-bottom: 1px solid var(--border);
     cursor: grab; transition: background 0.1s, opacity 0.15s, transform 0.1s;
+    border-left: 4px solid transparent; border-radius: 0 6px 6px 0;
   }
+  .task-card.pri-urgent { border-left-color: var(--red); background: rgba(239,68,68,0.03); }
+  .task-card.pri-high   { border-left-color: var(--yellow); background: rgba(245,158,11,0.03); }
+  .task-card.pri-normal { border-left-color: var(--cyan); }
+  .task-card.pri-low    { border-left-color: var(--green); }
   .task-card:hover { background: var(--surface-hover); }
   .task-card:active { cursor: grabbing; }
   .task-card:last-child { border-bottom: none; }
@@ -677,20 +682,107 @@
 
       <!-- ══════ PAGE: OFFICE CASH ══════ -->
       <div id="page-cash" class="page" style="display:none">
+
+        <!-- Wallet Cards -->
+        <div class="stats-row" id="wallet-cards" style="margin-bottom:20px"></div>
+
+        <!-- Add Transaction (owner only) -->
+        <div class="section owner-only" style="margin-bottom:20px">
+          <div class="section-head"><div class="section-title"><span class="icon">+</span> Add Transaction</div></div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;padding:0 0 12px 0;align-items:flex-end">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">TYPE</label>
+              <select id="txn-type" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                <option value="income">Income ▲</option>
+                <option value="expense">Expense ▼</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">AMOUNT</label>
+              <input id="txn-amount" type="number" min="0" step="0.01" placeholder="0.00" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:110px">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">CURRENCY</label>
+              <select id="txn-currency" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                <option value="USD">$ USD</option>
+                <option value="UAH">₴ UAH</option>
+              </select>
+            </div>
+            <div style="flex:1;min-width:140px">
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">DESCRIPTION</label>
+              <input id="txn-desc" type="text" placeholder="Description..." style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:100%">
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">CATEGORY</label>
+              <select id="txn-cat" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                <option value="rent">Rent</option>
+                <option value="commission">Commission</option>
+                <option value="repairs">Repairs</option>
+                <option value="utilities">Utilities</option>
+                <option value="salary">Salary</option>
+                <option value="office">Office</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div>
+              <label style="font-size:11px;font-weight:600;color:var(--text-dim);display:block;margin-bottom:4px">DATE</label>
+              <input id="txn-date" type="date" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            </div>
+            <button class="btn btn-primary" onclick="addTransaction()" style="white-space:nowrap">Add</button>
+          </div>
+        </div>
+
+        <!-- Transactions Table -->
+        <div class="section" style="margin-bottom:20px">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#8646;</span> Transactions</div>
+            <div style="display:flex;gap:8px">
+              <select id="txn-filter-cur" onchange="loadWallets()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface)">
+                <option value="">All currencies</option>
+                <option value="USD">USD</option>
+                <option value="UAH">UAH</option>
+              </select>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Date</th><th>Type</th><th>Description</th><th>Category</th><th>Currency</th><th>Amount</th><th class="owner-only"></th></tr></thead>
+            <tbody id="txn-tbody"></tbody></table>
+          </div>
+        </div>
+
+        <!-- Legacy income/expense sections -->
         <div id="cash-stats" class="stats-row" style="margin-bottom:20px"></div>
         <div class="two-col">
           <div class="section">
-            <div class="section-head"><div class="section-title" style="color:var(--green)"><span class="icon">&#8593;</span> Income (Collected Rent)</div></div>
+            <div class="section-head"><div class="section-title" style="color:var(--green)"><span class="icon">&#8593;</span> Rent Income</div></div>
             <div class="table-wrap">
-              <table><thead><tr><th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th><th>10% Fee</th><th>Owner Gets</th></tr></thead>
+              <table><thead><tr><th>Property</th><th>Apt</th><th>Tenant</th><th>Rent</th><th>Commission</th><th>Owner Gets</th></tr></thead>
               <tbody id="cash-income-tbody"></tbody>
               <tfoot id="cash-income-total"></tfoot></table>
             </div>
           </div>
           <div class="section">
-            <div class="section-head"><div class="section-title" style="color:var(--red)"><span class="icon">&#8595;</span> Office Expenses</div></div>
+            <div class="section-head">
+              <div class="section-title" style="color:var(--red)"><span class="icon">&#8595;</span> Office Expenses</div>
+              <button class="btn owner-only" onclick="showAddExpense()" style="font-size:12px">+ Add</button>
+            </div>
+            <div id="add-expense-form" style="display:none;padding:0 0 12px 0">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+                <input id="exp-desc" placeholder="Description" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;flex:1;min-width:120px">
+                <input id="exp-amount" type="number" placeholder="Amount" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:90px">
+                <select id="exp-currency" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="USD">USD</option><option value="UAH">UAH</option>
+                </select>
+                <select id="exp-cat" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="general">General</option><option value="repairs">Repairs</option><option value="utilities">Utilities</option><option value="salary">Salary</option><option value="office">Office</option>
+                </select>
+                <input id="exp-date" type="date" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <button class="btn btn-primary" onclick="saveExpense()" style="font-size:12px">Save</button>
+                <button class="btn" onclick="document.getElementById('add-expense-form').style.display='none'" style="font-size:12px">Cancel</button>
+              </div>
+            </div>
             <div class="table-wrap">
-              <table><thead><tr><th>Expense</th><th>Amount</th><th>Category</th><th>Date</th></tr></thead>
+              <table><thead><tr><th>Expense</th><th>Amount</th><th>Category</th><th>Date</th><th class="owner-only"></th></tr></thead>
               <tbody id="cash-expense-tbody"></tbody>
               <tfoot id="cash-expense-total"></tfoot></table>
             </div>
@@ -1151,6 +1243,7 @@ function showPage(page, fromHash) {
     location.hash = '#' + page;
   }
   if (DATA) renderPage(page, DATA);
+  if (page === 'cash') loadWallets();
 }
 
 // Restore page from hash on load + back/forward navigation
@@ -1195,7 +1288,8 @@ function rentRow(r) {
 // ── Task card builder (now draggable + clickable) ──
 function taskCard(task) {
   const idStr = String(task.id).padStart(4, '0').slice(-5);
-  return `<div class="task-card" draggable="true" data-task-id="${task.id}" ondragstart="onTaskDragStart(event)" ondragend="onTaskDragEnd(event)" onclick="openTaskModal(${task.id})">
+  const priClass = {urgent:'pri-urgent', high:'pri-high', normal:'pri-normal', low:'pri-low'}[task.priority] || 'pri-normal';
+  return `<div class="task-card ${priClass}" draggable="true" data-task-id="${task.id}" ondragstart="onTaskDragStart(event)" ondragend="onTaskDragEnd(event)" onclick="openTaskModal(${task.id})">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
       <div class="task-title" style="margin:0;flex:1">${task.title}</div>
       <span class="task-id-badge">#${idStr}</span>
@@ -1546,13 +1640,30 @@ function renderPage(page, d) {
       return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono" style="color:var(--accent)">$${fee}</td><td class="td-mono" style="color:var(--green)">$${r.rent_amount - fee}</td></tr>`;
     }).join('');
     document.getElementById('cash-income-total').innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Total</td><td class="td-mono">$${totalCollected}</td><td class="td-mono" style="color:var(--accent)">$${totalFee}</td><td class="td-mono" style="color:var(--green)">$${totalToOwners}</td></tr>`;
-    // Expenses (placeholder - no expense data yet)
-    document.getElementById('cash-expense-tbody').innerHTML = `
-      <tr><td>Alina salary</td><td class="td-mono">—</td><td>Staff</td><td class="td-mono">Monthly</td></tr>
-      <tr><td>Anya salary</td><td class="td-mono">—</td><td>Staff</td><td class="td-mono">Monthly</td></tr>
-      <tr><td>Office supplies</td><td class="td-mono">—</td><td>Office</td><td class="td-mono">—</td></tr>
-      <tr style="color:var(--text-muted);font-style:italic"><td colspan="4" style="text-align:center;padding:10px">Add real expenses to populate this table</td></tr>`;
-    document.getElementById('cash-expense-total').innerHTML = '';
+    // Expenses — load from API
+    fetch('/api/expenses').then(r => r.json()).then(exps => {
+      const tbody = document.getElementById('cash-expense-tbody');
+      const tfoot = document.getElementById('cash-expense-total');
+      if (!exps.length) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:16px">No expenses yet — click "+ Add" to add one</td></tr>';
+        tfoot.innerHTML = '';
+        return;
+      }
+      let total = 0;
+      tbody.innerHTML = exps.map(e => {
+        total += e.amount || 0;
+        const sym = e.currency === 'UAH' ? '₴' : '$';
+        return `<tr>
+          <td>${e.description}</td>
+          <td class="td-mono">${sym}${e.amount}</td>
+          <td>${e.category || '—'}</td>
+          <td class="td-mono">${e.date || '—'}</td>
+          <td class="owner-only"><button onclick="deleteExpense(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px" title="Delete">&#10005;</button></td>
+        </tr>`;
+      }).join('');
+      tfoot.innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="2">Total: $${total.toFixed(2)}</td><td colspan="3"></td></tr>`;
+      applyRoleUI();
+    });
   }
 }
 
@@ -1622,6 +1733,190 @@ function requireOwner(action) {
 
 loadUserRole();
 loadDashboard();
+
+// ══════════ WALLETS & EXPENSES ══════════
+
+async function loadWallets() {
+  const [walletRes, txnRes, commRes] = await Promise.all([
+    fetch('/api/wallets'),
+    fetch('/api/transactions' + (document.getElementById('txn-filter-cur')?.value ? '?currency=' + document.getElementById('txn-filter-cur').value : '')),
+    fetch('/api/commission')
+  ]);
+  const wallets = await walletRes.json();
+  const txns = await txnRes.json();
+  const commissions = await commRes.json();
+
+  // Wallet cards
+  const wc = document.getElementById('wallet-cards');
+  if (wc) {
+    wc.innerHTML = ['USD', 'UAH'].map(cur => {
+      const w = wallets[cur] || {income:0, expenses:0, balance:0};
+      const sym = cur === 'USD' ? '$' : '₴';
+      const balColor = w.balance >= 0 ? 'var(--green)' : 'var(--red)';
+      return `<div class="stat-card">
+        <div class="stat-label">${sym} ${cur} Wallet</div>
+        <div class="stat-value" style="color:${balColor}">${sym}${w.balance.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
+          <span style="color:var(--green)">▲ ${sym}${w.income.toLocaleString()}</span>
+          &nbsp;
+          <span style="color:var(--red)">▼ ${sym}${w.expenses.toLocaleString()}</span>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Transactions table
+  const tbody = document.getElementById('txn-tbody');
+  if (tbody) {
+    tbody.innerHTML = txns.length ? txns.map(t => {
+      const sym = t.currency === 'USD' ? '$' : '₴';
+      const isIncome = t.type === 'income';
+      return `<tr>
+        <td class="td-mono">${t.transaction_date || '—'}</td>
+        <td><span style="color:${isIncome ? 'var(--green)' : 'var(--red)'};font-weight:600">${isIncome ? '▲ IN' : '▼ OUT'}</span></td>
+        <td>${t.description || '—'}</td>
+        <td><span class="pill" style="background:var(--surface-2)">${t.category || '—'}</span></td>
+        <td><strong>${t.currency}</strong></td>
+        <td class="td-mono" style="color:${isIncome ? 'var(--green)' : 'var(--red)'}"><strong>${sym}${Number(t.amount).toLocaleString()}</strong></td>
+        <td class="owner-only"><button onclick="deleteTransaction(${t.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px" title="Delete">&#10005;</button></td>
+      </tr>`;
+    }).join('') : '<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:20px">No transactions yet</td></tr>';
+    applyRoleUI();
+  }
+
+  // Commission map for rent status
+  window.COMMISSIONS = commissions;
+  renderCashIncome(DATA, commissions);
+}
+
+async function addTransaction() {
+  if (!requireOwner('add transactions')) return;
+  const type = document.getElementById('txn-type').value;
+  const amount = parseFloat(document.getElementById('txn-amount').value);
+  const currency = document.getElementById('txn-currency').value;
+  const desc = document.getElementById('txn-desc').value.trim();
+  const cat = document.getElementById('txn-cat').value;
+  const date = document.getElementById('txn-date').value;
+  if (!amount || !desc) { alert('Amount and description are required'); return; }
+  await fetch('/api/transactions', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({type, amount, currency, description: desc, category: cat, transaction_date: date || new Date().toISOString().slice(0,10)})
+  });
+  document.getElementById('txn-amount').value = '';
+  document.getElementById('txn-desc').value = '';
+  loadWallets();
+}
+
+async function deleteTransaction(id) {
+  if (!requireOwner('delete transactions')) return;
+  if (!confirm('Delete this transaction?')) return;
+  await fetch('/api/transactions/' + id, {method: 'DELETE'});
+  loadWallets();
+}
+
+function showAddExpense() {
+  const f = document.getElementById('add-expense-form');
+  if (f) f.style.display = f.style.display === 'none' ? '' : 'none';
+  const d = document.getElementById('exp-date');
+  if (d && !d.value) d.value = new Date().toISOString().slice(0,10);
+}
+
+async function saveExpense() {
+  if (!requireOwner('add expenses')) return;
+  const desc = document.getElementById('exp-desc').value.trim();
+  const amount = parseFloat(document.getElementById('exp-amount').value);
+  const currency = document.getElementById('exp-currency').value;
+  const cat = document.getElementById('exp-cat').value;
+  const date = document.getElementById('exp-date').value;
+  if (!desc || !amount) { alert('Description and amount required'); return; }
+  await fetch('/api/expenses', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({description: desc, amount, currency, category: cat, date: date || new Date().toISOString().slice(0,10)})
+  });
+  document.getElementById('exp-desc').value = '';
+  document.getElementById('exp-amount').value = '';
+  document.getElementById('add-expense-form').style.display = 'none';
+  loadWallets(); loadDashboard();
+}
+
+async function deleteExpense(id) {
+  if (!requireOwner('delete expenses')) return;
+  if (!confirm('Delete this expense?')) return;
+  await fetch('/api/expenses/' + id, {method: 'DELETE'});
+  loadWallets(); loadDashboard();
+}
+
+function renderCashIncome(data, commissions) {
+  if (!data) return;
+  const tbody = document.getElementById('cash-income-tbody');
+  if (!tbody) return;
+  const rentStatus = (data.rent_status || []);
+  if (!rentStatus.length) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;color:var(--text-muted);padding:16px">No active leases</td></tr>'; return; }
+  let totalRent = 0, totalFee = 0;
+  tbody.innerHTML = rentStatus.map(r => {
+    const notes = (() => { try { return JSON.parse(r.apt_notes || '{}'); } catch(e) { return {}; } })();
+    const mondayId = notes.monday_id || '';
+    const comm = commissions && commissions[mondayId];
+    let fee, feeLabel;
+    if (comm) {
+      if (comm.commission_type === 'fixed') {
+        fee = comm.commission_value;
+        feeLabel = `$${fee} fixed`;
+      } else {
+        fee = Math.round(r.rent_amount * comm.commission_value / 100);
+        feeLabel = `${comm.commission_value}%`;
+      }
+    } else {
+      fee = Math.round(r.rent_amount * 0.10);
+      feeLabel = '10%';
+    }
+    totalRent += r.rent_amount; totalFee += fee;
+    const ownerGets = r.rent_amount - fee;
+    return `<tr>
+      <td>${r.property_name}</td><td>${r.apt_number}</td><td>${r.tenant_name}</td>
+      <td class="td-mono">$${r.rent_amount}</td>
+      <td class="td-mono" style="color:var(--accent)">
+        $${fee} <span style="font-size:10px;color:var(--text-muted)">(${feeLabel})</span>
+        <button class="owner-only" onclick="editCommission('${mondayId}',${r.rent_amount})"
+          style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:11px;padding:0 2px" title="Edit commission">&#9998;</button>
+      </td>
+      <td class="td-mono" style="color:var(--green)">$${ownerGets}</td>
+    </tr>`;
+  }).join('');
+  document.getElementById('cash-income-total').innerHTML =
+    `<tr style="font-weight:700;border-top:2px solid var(--border)">
+      <td colspan="3">Total</td><td class="td-mono">$${totalRent}</td>
+      <td class="td-mono" style="color:var(--accent)">$${totalFee}</td>
+      <td class="td-mono" style="color:var(--green)">$${totalRent - totalFee}</td>
+    </tr>`;
+  applyRoleUI();
+}
+
+async function editCommission(mondayId, rentAmount) {
+  if (!requireOwner('edit commission')) return;
+  if (!mondayId) { alert('No Monday ID for this apartment'); return; }
+  const res = await fetch('/api/commission/' + mondayId);
+  const curr = await res.json();
+  const typeChoice = prompt(`Commission type for this apartment:\n1 = Percentage (%)\n2 = Fixed amount ($)\n\nCurrent: ${curr.commission_type} = ${curr.commission_value}`, curr.commission_type === 'percent' ? '1' : '2');
+  if (!typeChoice) return;
+  const type = typeChoice.trim() === '2' ? 'fixed' : 'percent';
+  const defVal = type === 'percent' ? '10' : String(Math.round(rentAmount * 0.10));
+  const valStr = prompt(`Enter ${type === 'percent' ? 'percentage (e.g. 10 for 10%)' : 'fixed amount in $'}:`, String(curr.commission_value) || defVal);
+  if (!valStr) return;
+  const value = parseFloat(valStr);
+  if (isNaN(value) || value < 0) { alert('Invalid value'); return; }
+  await fetch('/api/commission/' + mondayId, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({commission_type: type, commission_value: value})
+  });
+  loadWallets();
+}
+
+// Load wallets when cash page is shown
+const _origShowPage = typeof showPage !== 'undefined' ? showPage : null;
 
 // ══════════ AI CHAT WIDGET ══════════
 const CHAT_HISTORY = [];

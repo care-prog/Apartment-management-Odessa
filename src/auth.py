@@ -90,6 +90,14 @@ OWNER_ONLY_RULES = [
     ('POST',   '/api/properties'),
     ('POST',   '/api/owners'),
     ('POST',   '/api/sync'),
+    # Wallets + expenses: owner only for write
+    ('POST',   '/api/transactions'),
+    ('PUT',    '/api/transactions/'),
+    ('DELETE', '/api/transactions/'),
+    ('PUT',    '/api/commission/'),
+    ('POST',   '/api/expenses'),
+    ('PUT',    '/api/expenses/'),
+    ('DELETE', '/api/expenses/'),
 ]
 
 def _is_owner_only_path(method, path):

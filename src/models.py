@@ -54,6 +54,35 @@ def get_db():
     return db
 
 
+def safe_migrate():
+    """Idempotent migrations — add missing columns and tables to existing DBs."""
+    if USE_PG:
+        execute_db("ALTER TABLE office_expenses ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
+            id SERIAL PRIMARY KEY, type TEXT NOT NULL DEFAULT 'expense',
+            amount DOUBLE PRECISION NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',
+            category TEXT DEFAULT 'general', description TEXT, transaction_date DATE,
+            apartment_id INTEGER REFERENCES apartments(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS commission_overrides (
+            monday_id TEXT PRIMARY KEY, commission_type TEXT NOT NULL DEFAULT 'percent',
+            commission_value DOUBLE PRECISION NOT NULL DEFAULT 10,
+            notes TEXT, updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+    else:
+        try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
+        except: pass
+        execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT 'expense',
+            amount REAL NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',
+            category TEXT DEFAULT 'general', description TEXT, transaction_date DATE,
+            apartment_id INTEGER REFERENCES apartments(id) ON DELETE SET NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS commission_overrides (
+            monday_id TEXT PRIMARY KEY, commission_type TEXT NOT NULL DEFAULT 'percent',
+            commission_value REAL NOT NULL DEFAULT 10, notes TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+
+
 def init_db():
     schema_path = SCHEMA_PG if USE_PG else SCHEMA_SQLITE
     if not USE_PG:
