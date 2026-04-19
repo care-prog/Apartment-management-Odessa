@@ -1,13 +1,37 @@
 import sys, os
 sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
-from flask import Flask, send_from_directory, jsonify
+from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
-from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard
+from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
 app = Flask(__name__, static_folder=None)
+
+# CORS for /api/whatsapp-query (called from browser console on WhatsApp Web)
+@app.after_request
+def add_cors(response):
+    if request.path == '/api/whatsapp-query':
+        response.headers['Access-Control-Allow-Origin'] = 'https://web.whatsapp.com'
+        response.headers['Access-Control-Allow-Methods'] = 'POST, OPTIONS'
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type'
+    return response
+
+@app.route('/api/whatsapp-query', methods=['OPTIONS'])
+def whatsapp_options():
+    return '', 204
+
+@app.route('/whatsapp-bot.js')
+def serve_bot_script():
+    bot_path = os.path.join(ROOT, 'whatsapp-bot', 'browser-script.js')
+    with open(bot_path) as f:
+        body = f.read()
+    return body, 200, {
+        'Content-Type': 'application/javascript',
+        'Access-Control-Allow-Origin': '*',
+    }
+
 init_auth(app)
 
 app.register_blueprint(properties.bp)
@@ -17,6 +41,10 @@ app.register_blueprint(utilities.bp)
 app.register_blueprint(maintenance.bp)
 app.register_blueprint(tasks.bp)
 app.register_blueprint(dashboard.bp)
+app.register_blueprint(finance.bp)
+app.register_blueprint(whatsapp.bp)
+app.register_blueprint(chat.bp)
+app.register_blueprint(uploads.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 

@@ -35,7 +35,11 @@ def dashboard_stats():
         FROM properties p LEFT JOIN owners o ON p.owner_id = o.id ORDER BY p.name
     ''')
 
-    recent_tasks = query_db("SELECT * FROM tasks WHERE status != 'done' ORDER BY CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 ELSE 2 END, due_date LIMIT 10")
+    recent_tasks = query_db("""SELECT * FROM tasks
+        ORDER BY
+          CASE status WHEN 'pending' THEN 0 WHEN 'in_progress' THEN 1 WHEN 'done' THEN 2 ELSE 3 END,
+          CASE priority WHEN 'urgent' THEN 0 WHEN 'high' THEN 1 ELSE 2 END,
+          due_date""")
 
     active_orders = query_db('''
         SELECT mo.*, a.number as apt_number, p.name as property_name
@@ -58,14 +62,15 @@ def dashboard_stats():
 
     rent_status = query_db('''
         SELECT l.id as lease_id, t.name as tenant_name, a.number as apt_number,
-               p.name as property_name, l.rent_amount,
+               p.name as property_name, l.rent_amount, l.start_date, l.end_date,
+               a.notes as apt_notes,
                (SELECT MAX(payment_date) FROM payments WHERE lease_id = l.id AND type = 'rent' AND status = 'paid') as last_paid
         FROM leases l
         JOIN tenants t ON l.tenant_id = t.id
         JOIN apartments a ON l.apartment_id = a.id
         JOIN properties p ON a.property_id = p.id
         WHERE l.status = 'active'
-        ORDER BY last_paid NULLS FIRST
+        ORDER BY p.name, a.number
     ''')
 
     owners = query_db('''

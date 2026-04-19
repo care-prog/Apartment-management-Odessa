@@ -1,5 +1,17 @@
 from src.models import insert_db
 
+# === TEAM MEMBERS ===
+insert_db("INSERT OR IGNORE INTO team_members (name, phone, role, language, access_level) VALUES (?, ?, ?, ?, ?)",
+    ("David", "972543006771", "owner", "he", "full"))
+insert_db("INSERT OR IGNORE INTO team_members (name, phone, role, language, access_level) VALUES (?, ?, ?, ?, ?)",
+    ("Amalia", "", "owner", "he", "full"))
+insert_db("INSERT OR IGNORE INTO team_members (name, phone, role, language, access_level) VALUES (?, ?, ?, ?, ?)",
+    ("Alina", "", "manager", "ru", "full"))
+insert_db("INSERT OR IGNORE INTO team_members (name, phone, role, language, access_level) VALUES (?, ?, ?, ?, ?)",
+    ("Anya", "", "manager", "ru", "full"))
+insert_db("INSERT OR IGNORE INTO team_members (name, phone, role, language, access_level) VALUES (?, ?, ?, ?, ?)",
+    ("Katya", "", "supervisor", "ru", "full"))
+
 # === OWNERS ===
 sam = insert_db("INSERT INTO owners (name, contact, report_schedule, notes) VALUES (?, ?, ?, ?)",
     ("Sam", "", "15-22 monthly", "Parking #1, Apt 25, 179, 134, 138"))

@@ -14,3 +14,10 @@ coverage/
 
 # ProjectOS multi-session lock file
 .claude/active-sessions.json
+
+# Build artifacts not to commit
+database/apartment_mgmt.db
+uploads/
+whatsapp-bot/
+.netlify/
+.claude/plans/

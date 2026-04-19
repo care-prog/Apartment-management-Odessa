@@ -4,130 +4,202 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Apartment Management Odessa</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
   :root {
-    --bg: #f5f6fa;
+    --bg: #fafbfc;
     --surface: #ffffff;
-    --surface-2: #f0f1f5;
-    --surface-hover: #f0f2f8;
-    --border: #e2e5f0;
-    --border-accent: #d0d4e4;
-    --text: #1a1d2e;
-    --text-dim: #5f6580;
-    --text-muted: #9499b0;
-    --accent: #3b6cff;
-    --accent-glow: rgba(59, 108, 255, 0.08);
-    --green: #16a34a;
-    --green-dim: rgba(22, 163, 74, 0.08);
-    --red: #dc2626;
-    --red-dim: rgba(220, 38, 38, 0.06);
-    --yellow: #d97706;
-    --yellow-dim: rgba(217, 119, 6, 0.06);
-    --orange: #ea580c;
-    --purple: #7c3aed;
-    --cyan: #0891b2;
-    --radius: 10px;
-    --shadow: 0 1px 4px rgba(0,0,0,0.06);
+    --surface-2: #f7f8fa;
+    --surface-hover: #f0f2f5;
+    --border: #ebedf0;
+    --border-accent: #d8dce3;
+    --text: #0f1419;
+    --text-dim: #56606b;
+    --text-muted: #8b95a1;
+    --accent: #5e6ad2;
+    --accent-2: #4651b8;
+    --accent-glow: rgba(94, 106, 210, 0.08);
+    --green: #00a86b;
+    --green-glow: rgba(0, 168, 107, 0.08);
+    --red: #ef4444;
+    --red-glow: rgba(239, 68, 68, 0.06);
+    --yellow: #f59e0b;
+    --yellow-glow: rgba(245, 158, 11, 0.08);
+    --orange: #f97316;
+    --purple: #a855f7;
+    --cyan: #06b6d4;
+    --radius: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 1px 2px rgba(15, 20, 25, 0.04);
+    --shadow: 0 1px 3px rgba(15, 20, 25, 0.06), 0 1px 2px rgba(15, 20, 25, 0.04);
+    --shadow-lg: 0 4px 12px rgba(15, 20, 25, 0.08), 0 2px 4px rgba(15, 20, 25, 0.04);
+    --shadow-xl: 0 12px 32px rgba(15, 20, 25, 0.10), 0 4px 8px rgba(15, 20, 25, 0.04);
   }
 
   * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: 'Inter', sans-serif; min-height: 100vh; }
+  body {
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', sans-serif; min-height: 100vh;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #d8dce3; border-radius: 6px; border: 2px solid var(--bg); }
+  ::-webkit-scrollbar-thumb:hover { background: #b8bcc3; }
 
   /* ── Layout ── */
   .app { display: flex; min-height: 100vh; }
 
   /* ── Sidebar ── */
   .sidebar {
-    width: 240px; background: var(--surface); border-right: 1px solid var(--border);
+    width: 248px; background: var(--surface); border-right: 1px solid var(--border);
     display: flex; flex-direction: column; position: fixed; height: 100vh; z-index: 10;
   }
   .sidebar-brand {
-    padding: 20px 16px; border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 10px;
+    padding: 18px 18px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 11px;
   }
   .brand-icon {
-    width: 34px; height: 34px; border-radius: 8px;
-    background: linear-gradient(135deg, var(--accent), #2b5ae0);
+    width: 36px; height: 36px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--accent) 0%, var(--accent-2) 100%);
     display: flex; align-items: center; justify-content: center;
-    font-size: 16px; font-weight: 700; color: #fff;
+    font-size: 15px; font-weight: 700; color: #fff;
+    box-shadow: 0 2px 6px rgba(94, 106, 210, 0.25);
+    letter-spacing: -0.3px;
   }
-  .brand-text { font-size: 13px; font-weight: 600; line-height: 1.3; }
-  .brand-sub { font-size: 10px; color: var(--text-dim); font-weight: 400; }
+  .brand-text { font-size: 13.5px; font-weight: 600; line-height: 1.2; letter-spacing: -0.2px; }
+  .brand-sub { font-size: 11px; color: var(--text-dim); font-weight: 400; margin-top: 1px; }
 
-  .sidebar-nav { flex: 1; padding: 12px 8px; overflow-y: auto; }
-  .nav-group { margin-bottom: 16px; }
+  .sidebar-nav { flex: 1; padding: 14px 10px; overflow-y: auto; }
+  .nav-group { margin-bottom: 18px; }
   .nav-group-label {
-    font-size: 9px; text-transform: uppercase; letter-spacing: 1.5px;
-    color: var(--text-muted); padding: 6px 12px; font-weight: 600;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 1.2px;
+    color: var(--text-muted); padding: 4px 12px 6px; font-weight: 600;
   }
   .nav-item {
-    display: flex; align-items: center; gap: 10px; padding: 8px 12px;
-    border-radius: 7px; cursor: pointer; transition: all 0.15s;
-    font-size: 13px; color: var(--text-dim); position: relative;
+    display: flex; align-items: center; gap: 10px; padding: 7px 12px;
+    border-radius: 7px; cursor: pointer; transition: all 0.12s ease;
+    font-size: 13px; color: var(--text-dim); position: relative; font-weight: 500;
+    margin-bottom: 1px;
   }
   .nav-item:hover { background: var(--surface-hover); color: var(--text); }
-  .nav-item.active { background: var(--accent-glow); color: var(--accent); }
-  .nav-item .icon { width: 18px; text-align: center; font-size: 14px; }
-  .nav-badge {
-    margin-left: auto; font-size: 10px; font-weight: 600;
-    padding: 1px 6px; border-radius: 8px;
-    font-family: 'JetBrains Mono', monospace;
+  .nav-item.active { background: var(--accent-glow); color: var(--accent); font-weight: 600; }
+  .nav-item.active::before {
+    content: ''; position: absolute; left: 0; top: 50%; transform: translateY(-50%);
+    width: 3px; height: 18px; background: var(--accent); border-radius: 0 2px 2px 0;
   }
-  .nav-badge.red { background: var(--red-dim); color: var(--red); }
-  .nav-badge.yellow { background: var(--yellow-dim); color: var(--yellow); }
-  .nav-badge.green { background: var(--green-dim); color: var(--green); }
+  .nav-item .icon { width: 18px; text-align: center; font-size: 14px; opacity: 0.7; }
+  .nav-item.active .icon { opacity: 1; }
+  .nav-badge {
+    margin-inline-start: auto; font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 10px;
+    font-family: 'JetBrains Mono', monospace; min-width: 22px; text-align: center;
+  }
+  .nav-badge.red { background: var(--red-glow); color: var(--red); }
+  .nav-badge.yellow { background: var(--yellow-glow); color: var(--yellow); }
+  .nav-badge.green { background: var(--green-glow); color: var(--green); }
 
   .sidebar-footer {
-    padding: 12px 16px; border-top: 1px solid var(--border);
-    font-size: 11px; color: var(--text-muted);
+    padding: 12px 18px; border-top: 1px solid var(--border);
+    font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace;
   }
 
   /* ── Main Content ── */
-  .main { flex: 1; margin-left: 240px; }
+  .main { flex: 1; margin-left: 248px; }
 
   /* ── Top Bar ── */
   .topbar {
     position: sticky; top: 0; z-index: 5;
-    background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px);
+    background: rgba(250, 251, 252, 0.85); backdrop-filter: blur(20px);
     border-bottom: 1px solid var(--border);
-    padding: 12px 28px; display: flex; align-items: center; justify-content: space-between;
+    padding: 14px 32px; display: flex; align-items: center; justify-content: space-between;
   }
-  .topbar-title { font-size: 16px; font-weight: 600; }
-  .topbar-right { display: flex; align-items: center; gap: 16px; }
+  .topbar-title { font-size: 17px; font-weight: 600; letter-spacing: -0.3px; }
+  .topbar-right { display: flex; align-items: center; gap: 14px; }
   .topbar-date {
     font-size: 12px; color: var(--text-dim);
-    font-family: 'JetBrains Mono', monospace;
+    font-family: 'JetBrains Mono', monospace; font-weight: 500;
   }
   .topbar-avatar {
-    width: 30px; height: 30px; border-radius: 50%;
-    background: linear-gradient(135deg, var(--accent), #2b5ae0);
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
     display: flex; align-items: center; justify-content: center;
-    font-size: 12px; font-weight: 700; color: #fff;
+    font-size: 13px; font-weight: 600; color: #fff;
+    box-shadow: 0 2px 6px rgba(94, 106, 210, 0.25);
   }
 
   /* ── Content ── */
-  .content { padding: 24px 28px; }
+  .content { padding: 28px 32px; max-width: 1500px; }
 
-  /* ── Stats Row ── */
-  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 24px; }
+  /* ── Stats Row (premium hero cards) ── */
+  .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 28px; }
   .stat-card {
     background: var(--surface); border: 1px solid var(--border);
-    border-radius: var(--radius); padding: 16px 18px;
+    border-radius: var(--radius); padding: 18px 20px;
+    transition: all 0.2s ease; position: relative; overflow: hidden;
+    box-shadow: var(--shadow-sm);
   }
+  .stat-card:hover { box-shadow: var(--shadow-lg); transform: translateY(-1px); border-color: var(--border-accent); }
+  .stat-card-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .stat-icon {
+    width: 32px; height: 32px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 15px;
+  }
+  .stat-icon.accent { background: var(--accent-glow); color: var(--accent); }
+  .stat-icon.green { background: var(--green-glow); color: var(--green); }
+  .stat-icon.yellow { background: var(--yellow-glow); color: var(--yellow); }
+  .stat-icon.red { background: var(--red-glow); color: var(--red); }
+  .stat-trend {
+    font-size: 11px; font-weight: 600; padding: 2px 7px; border-radius: 10px;
+    display: inline-flex; align-items: center; gap: 3px;
+  }
+  .stat-trend.up { background: var(--green-glow); color: var(--green); }
+  .stat-trend.down { background: var(--red-glow); color: var(--red); }
+  .stat-trend.flat { background: var(--surface-2); color: var(--text-muted); }
   .stat-label {
-    font-size: 11px; color: var(--text-dim); text-transform: uppercase;
-    letter-spacing: 0.5px; margin-bottom: 6px; font-weight: 500;
+    font-size: 12px; color: var(--text-dim);
+    margin-bottom: 6px; font-weight: 500; letter-spacing: -0.1px;
   }
   .stat-value {
-    font-size: 26px; font-weight: 700;
-    font-family: 'JetBrains Mono', monospace;
+    font-size: 28px; font-weight: 700; letter-spacing: -0.8px;
+    font-family: 'Inter', sans-serif; line-height: 1.1;
   }
   .stat-value.green { color: var(--green); }
   .stat-value.red { color: var(--red); }
   .stat-value.yellow { color: var(--yellow); }
   .stat-value.accent { color: var(--accent); }
-  .stat-sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .stat-sub { font-size: 12px; color: var(--text-muted); margin-top: 6px; font-weight: 500; }
+
+  /* ── Chart Container ── */
+  .chart-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 24px;
+    margin-bottom: 24px; box-shadow: var(--shadow-sm);
+  }
+  .chart-head {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 20px;
+  }
+  .chart-title { font-size: 16px; font-weight: 600; letter-spacing: -0.2px; margin-bottom: 4px; }
+  .chart-subtitle { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .chart-tabs { display: flex; gap: 4px; background: var(--surface-2); padding: 3px; border-radius: 8px; }
+  .chart-tab {
+    padding: 5px 12px; font-size: 12px; font-weight: 500; color: var(--text-dim);
+    border-radius: 6px; cursor: pointer; transition: all 0.15s; border: none;
+    background: transparent; font-family: inherit;
+  }
+  .chart-tab:hover { color: var(--text); }
+  .chart-tab.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow-sm); }
+  .chart-canvas-wrap { position: relative; height: 280px; }
+  .chart-grid-2 { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-bottom: 24px; }
+  @media (max-width: 1200px) { .chart-grid-2 { grid-template-columns: 1fr; } }
 
   /* ── Section ── */
   .section { margin-bottom: 28px; }
@@ -242,16 +314,60 @@
   }
   .task-card {
     padding: 10px 14px; border-bottom: 1px solid var(--border);
-    cursor: pointer; transition: background 0.1s;
+    cursor: grab; transition: background 0.1s, opacity 0.15s, transform 0.1s;
   }
   .task-card:hover { background: var(--surface-hover); }
+  .task-card:active { cursor: grabbing; }
   .task-card:last-child { border-bottom: none; }
+  .task-card.dragging { opacity: 0.4; transform: scale(0.97); }
+  .task-column.drag-over { background: var(--accent-glow); border-color: var(--accent); }
+  .task-column.drag-over .task-col-head { background: var(--accent-glow); color: var(--accent); }
   .task-title { font-size: 12px; font-weight: 500; margin-bottom: 4px; }
   .task-meta { font-size: 10px; color: var(--text-muted); display: flex; gap: 8px; align-items: center; }
   .task-assignee {
     font-size: 9px; font-weight: 600; padding: 1px 5px; border-radius: 3px;
     background: rgba(167, 139, 250, 0.1); color: var(--purple);
   }
+  .task-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 11px; font-style: italic; }
+  .task-id-badge {
+    font-family: 'JetBrains Mono', monospace; font-size: 10px; font-weight: 600;
+    padding: 1px 6px; border-radius: 4px; background: var(--surface-2);
+    color: var(--text-muted); white-space: nowrap; flex-shrink: 0;
+  }
+
+  /* ── Task Detail Modal ── */
+  .task-modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 200;
+    display: none; align-items: center; justify-content: center;
+  }
+  .task-modal-overlay.show { display: flex; }
+  .task-modal {
+    background: var(--surface); border-radius: 14px; padding: 24px;
+    width: 90%; max-width: 600px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.2);
+  }
+  .task-modal h3 { font-size: 18px; margin-bottom: 4px; }
+  .task-modal-meta { font-size: 11px; color: var(--text-muted); margin-bottom: 16px; }
+  .task-modal label { display: block; font-size: 11px; font-weight: 600; color: var(--text-dim); margin: 12px 0 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+  .task-modal input, .task-modal select, .task-modal textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: var(--surface-2);
+  }
+  .task-modal textarea { min-height: 100px; resize: vertical; }
+  .task-modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .task-attachments { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
+  .task-attachment {
+    display: flex; align-items: center; gap: 8px; padding: 8px 10px;
+    background: var(--surface-2); border-radius: 6px; font-size: 12px;
+  }
+  .task-attachment a { color: var(--accent); text-decoration: none; }
+  .task-attachment a:hover { text-decoration: underline; }
+  .file-drop {
+    border: 2px dashed var(--border); border-radius: 8px; padding: 16px;
+    text-align: center; color: var(--text-muted); font-size: 12px;
+    cursor: pointer; transition: all 0.15s;
+  }
+  .file-drop:hover, .file-drop.drag-over { border-color: var(--accent); background: var(--accent-glow); color: var(--accent); }
 
   /* ── Finance Mini Cards ── */
   .finance-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
@@ -277,6 +393,94 @@
   .meter-fill.ok { background: var(--green); }
   .meter-fill.warn { background: var(--yellow); }
   .meter-fill.danger { background: var(--red); }
+
+  /* ── AI Chat Widget ── */
+  .chat-fab {
+    position: fixed; bottom: 24px; right: 24px; z-index: 50;
+    width: 56px; height: 56px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), #2b5ae0);
+    border: none; color: #fff; font-size: 24px; cursor: pointer;
+    box-shadow: 0 4px 16px rgba(59, 108, 255, 0.3);
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+  }
+  .chat-fab:hover { transform: scale(1.05); }
+  .chat-window {
+    position: fixed; bottom: 96px; right: 24px; z-index: 50;
+    width: 400px; max-width: calc(100vw - 32px); height: 600px; max-height: calc(100vh - 120px);
+    background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+    display: none; flex-direction: column; overflow: hidden;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+  }
+  .chat-window.show { display: flex; }
+  .chat-header {
+    padding: 14px 16px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, var(--accent), #2b5ae0); color: #fff;
+  }
+  .chat-header-info { display: flex; align-items: center; gap: 10px; }
+  .chat-header-title { font-size: 14px; font-weight: 600; }
+  .chat-header-sub { font-size: 11px; opacity: 0.85; }
+  .chat-close { background: none; border: none; color: #fff; font-size: 20px; cursor: pointer; padding: 4px 8px; }
+  .chat-messages { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+  .chat-msg {
+    max-width: 85%; padding: 10px 14px; border-radius: 14px;
+    font-size: 13px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word;
+  }
+  .chat-msg.user {
+    align-self: flex-end; background: var(--accent); color: #fff;
+    border-bottom-right-radius: 4px;
+  }
+  .chat-msg.assistant {
+    align-self: flex-start; background: var(--surface-2); color: var(--text);
+    border-bottom-left-radius: 4px;
+  }
+  .chat-msg.thinking { color: var(--text-muted); font-style: italic; }
+  .chat-input-area {
+    padding: 12px; border-top: 1px solid var(--border);
+    display: flex; gap: 8px;
+  }
+  .chat-input {
+    flex: 1; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px;
+    font-size: 13px; font-family: inherit; resize: none; max-height: 100px;
+  }
+  .chat-input:focus { outline: none; border-color: var(--accent); }
+  .chat-send {
+    padding: 10px 16px; border-radius: 8px; border: none;
+    background: var(--accent); color: #fff; font-weight: 600; cursor: pointer;
+    font-size: 13px;
+  }
+  .chat-send:hover { opacity: 0.9; }
+  .chat-send:disabled { opacity: 0.5; cursor: not-allowed; }
+  .chat-suggestions {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 0 16px 12px;
+  }
+  .chat-suggestion {
+    font-size: 11px; padding: 4px 10px; border-radius: 12px;
+    background: var(--accent-glow); color: var(--accent); cursor: pointer;
+    border: 1px solid var(--border);
+  }
+  .chat-suggestion:hover { background: var(--accent); color: #fff; }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 100; align-items: center; justify-content: center;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--surface); border-radius: 12px; padding: 24px;
+    width: 90%; max-width: 500px; max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.15);
+  }
+  .modal h3 { font-size: 16px; margin-bottom: 16px; }
+  .modal label { display: block; font-size: 12px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; margin-top: 10px; }
+  .modal input, .modal select, .modal textarea {
+    width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 13px; font-family: inherit; background: var(--surface-2);
+  }
+  .modal textarea { min-height: 60px; resize: vertical; }
+  .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
 
   /* ── Mobile Responsive ── */
   @media (max-width: 768px) {
@@ -313,30 +517,28 @@
 
     <div class="sidebar-nav">
       <div class="nav-group">
-        <div class="nav-group-label">Overview</div>
-        <div class="nav-item active"><span class="icon">&#9632;</span> Dashboard</div>
-        <div class="nav-item"><span class="icon">&#9872;</span> Properties <span class="nav-badge green">19</span></div>
+        <div class="nav-group-label" data-i18n="overview">Overview</div>
+        <div class="nav-item active" onclick="showPage('dashboard')"><span class="icon">&#9632;</span> <span data-i18n="nav_dashboard">Dashboard</span></div>
+        <div class="nav-item" onclick="showPage('properties')"><span class="icon">&#9872;</span> <span data-i18n="nav_properties">Properties</span> <span class="nav-badge green" id="nav-prop-count">—</span></div>
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">Operations</div>
-        <div class="nav-item"><span class="icon">&#9783;</span> Tenants &amp; Leases</div>
-        <div class="nav-item"><span class="icon">&#8382;</span> Rent Collection <span class="nav-badge red">3</span></div>
-        <div class="nav-item"><span class="icon">&#9889;</span> Utilities <span class="nav-badge yellow">!</span></div>
-        <div class="nav-item"><span class="icon">&#9881;</span> Maintenance <span class="nav-badge yellow">4</span></div>
-        <div class="nav-item"><span class="icon">&#9745;</span> Tasks</div>
+        <div class="nav-group-label" data-i18n="operations">Operations</div>
+        <div class="nav-item" onclick="showPage('tenants')"><span class="icon">&#9783;</span> <span data-i18n="nav_tenants">Tenants &amp; Leases</span></div>
+        <div class="nav-item" onclick="showPage('rent')"><span class="icon">&#8382;</span> <span data-i18n="nav_rent">Rent Collection</span></div>
+        <div class="nav-item" onclick="showPage('maintenance')"><span class="icon">&#9881;</span> <span data-i18n="nav_maintenance">Maintenance</span> <span class="nav-badge yellow" id="nav-maint-count">—</span></div>
+        <div class="nav-item" onclick="showPage('tasks')"><span class="icon">&#9745;</span> <span data-i18n="nav_tasks">Tasks</span></div>
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">Finance</div>
-        <div class="nav-item"><span class="icon">&#36;</span> Financial Reports</div>
-        <div class="nav-item"><span class="icon">&#128196;</span> Documents</div>
+        <div class="nav-group-label" data-i18n="finance">Finance</div>
+        <div class="nav-item" onclick="showPage('finance')"><span class="icon">&#36;</span> <span data-i18n="nav_finance">Owner Reports</span></div>
+        <div class="nav-item" onclick="showPage('cash')"><span class="icon">&#128176;</span> <span data-i18n="nav_cash">Office Cash</span></div>
       </div>
 
       <div class="nav-group">
-        <div class="nav-group-label">Settings</div>
-        <div class="nav-item"><span class="icon">&#9998;</span> Team</div>
-        <div class="nav-item"><span class="icon">&#9881;</span> Settings</div>
+        <div class="nav-group-label" data-i18n="settings">Settings</div>
+        <div class="nav-item" onclick="showPage('team')"><span class="icon">&#9998;</span> <span data-i18n="nav_team">Team</span></div>
       </div>
     </div>
 
@@ -352,112 +554,161 @@
     <div class="topbar">
       <div class="topbar-title">Dashboard</div>
       <div class="topbar-right">
-        <div class="topbar-date">Apr 01, 2026</div>
+        <select id="lang-switcher" onchange="setLang(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:12px;cursor:pointer;font-family:inherit">
+          <option value="he">🇮🇱 עברית</option>
+          <option value="en">🇬🇧 English</option>
+          <option value="ru">🇷🇺 Русский</option>
+        </select>
+        <div class="topbar-date">Apr 16, 2026</div>
         <div class="topbar-avatar">D</div>
       </div>
     </div>
 
     <div class="content">
 
-      <!-- Action Items for David -->
-      <div id="david-tasks" class="section" style="margin-bottom:20px">
-        <div class="section-head">
-          <div class="section-title" style="color:var(--yellow)"><span class="icon">&#9889;</span> Action Items for David</div>
-          <div class="section-actions"><button class="btn" onclick="document.getElementById('david-tasks').style.display='none'" style="font-size:10px">Dismiss</button></div>
+      <!-- ══════ PAGE: DASHBOARD ══════ -->
+      <div id="page-dashboard" class="page">
+        <div id="alerts" class="alerts"></div>
+        <div id="stats-row" class="stats-row"></div>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9872;</span> Properties</div>
+            <div class="section-actions">
+              <button class="btn" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
+            </div>
+          </div>
+          <div id="property-grid" class="property-grid"></div>
         </div>
-        <div class="table-wrap">
-          <table>
-            <thead><tr><th>#</th><th>What I Need</th><th>Why</th><th>Priority</th></tr></thead>
+
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#127968;</span> All Rented Units</div>
+          </div>
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th>
+              <th>Payment Due</th><th>Payment Status</th>
+              <th>Lease Ends</th><th>Renewal</th>
+            </tr></thead>
+            <tbody id="rented-tbody"></tbody></table>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="section">
+            <div class="section-head"><div class="section-title"><span class="icon">&#9745;</span> Tasks</div></div>
+            <div id="task-columns" class="task-columns"></div>
+          </div>
+          <div class="section">
+            <div class="section-head"><div class="section-title"><span class="icon">&#9881;</span> Maintenance</div></div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Issue</th><th>Location</th><th>Status</th></tr></thead>
+              <tbody id="maint-tbody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: PROPERTIES ══════ -->
+      <div id="page-properties" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9872;</span> All Properties</div>
+            <div class="section-actions"><button class="btn" onclick="syncMonday()" id="sync-btn2">Sync Monday.com</button></div>
+          </div>
+          <div id="properties-full"></div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: TENANTS ══════ -->
+      <div id="page-tenants" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#9783;</span> Tenants &amp; Leases</div></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Tenant</th><th>Property</th><th>Apt</th><th>Rent $</th><th>Lease Start</th><th>Lease End</th><th>Renewal</th><th>Status</th></tr></thead>
+            <tbody id="tenants-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: RENT ══════ -->
+      <div id="page-rent" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#8382;</span> Rent Collection</div></div>
+          <div class="table-wrap">
+            <table><thead><tr>
+              <th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th>
+              <th>Payment Due</th><th>Payment Status</th>
+              <th>Lease Ends</th><th>Renewal</th>
+            </tr></thead>
+            <tbody id="rent-full-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: MAINTENANCE ══════ -->
+      <div id="page-maintenance" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#9881;</span> Maintenance Orders</div></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Issue</th><th>Property</th><th>Apt</th><th>Assigned To</th><th>Status</th><th>Created</th></tr></thead>
+            <tbody id="maint-full-tbody"></tbody></table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: TASKS ══════ -->
+      <div id="page-tasks" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#9745;</span> Task Board</div></div>
+          <div id="task-columns-full" class="task-columns"></div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: FINANCE ══════ -->
+      <div id="page-finance" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#36;</span> Owner Financial Reports</div></div>
+          <div id="finance-full" class="finance-grid"></div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: OFFICE CASH ══════ -->
+      <div id="page-cash" class="page" style="display:none">
+        <div id="cash-stats" class="stats-row" style="margin-bottom:20px"></div>
+        <div class="two-col">
+          <div class="section">
+            <div class="section-head"><div class="section-title" style="color:var(--green)"><span class="icon">&#8593;</span> Income (Collected Rent)</div></div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th><th>10% Fee</th><th>Owner Gets</th></tr></thead>
+              <tbody id="cash-income-tbody"></tbody>
+              <tfoot id="cash-income-total"></tfoot></table>
+            </div>
+          </div>
+          <div class="section">
+            <div class="section-head"><div class="section-title" style="color:var(--red)"><span class="icon">&#8595;</span> Office Expenses</div></div>
+            <div class="table-wrap">
+              <table><thead><tr><th>Expense</th><th>Amount</th><th>Category</th><th>Date</th></tr></thead>
+              <tbody id="cash-expense-tbody"></tbody>
+              <tfoot id="cash-expense-total"></tfoot></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ PAGE: TEAM ══════ -->
+      <div id="page-team" class="page" style="display:none">
+        <div class="section">
+          <div class="section-head"><div class="section-title"><span class="icon">&#9998;</span> Team</div></div>
+          <div class="table-wrap">
+            <table><thead><tr><th>Person</th><th>Role</th><th>Schedule</th><th>Status</th></tr></thead>
             <tbody>
-              <tr><td>1</td><td>Confirm Vercel account (or create one at vercel.com)</td><td>Deploy the dashboard online so you can access it from anywhere</td><td><span class="pill pill-urgent">Now</span></td></tr>
-              <tr><td>2</td><td>Set a password for dashboard access</td><td>Protect your data — only you should see rent/financial info</td><td><span class="pill pill-urgent">Now</span></td></tr>
-              <tr><td>3</td><td>Real tenant names for all 16 occupied apartments</td><td>Replace "Tenant Apt 216" placeholders with real names</td><td><span class="pill pill-due">Soon</span></td></tr>
-              <tr><td>4</td><td>Actual rent payment dates per tenant</td><td>So the system can accurately track who paid and who's overdue</td><td><span class="pill pill-due">Soon</span></td></tr>
-              <tr><td>5</td><td>Split app export (or screenshots)</td><td>Migrate financial history into the new system</td><td><span class="pill pill-pending">Later</span></td></tr>
-              <tr><td>6</td><td>Which Monday.com automations are critical?</td><td>So I can replicate the most important ones in our system</td><td><span class="pill pill-pending">Later</span></td></tr>
-              <tr><td>7</td><td>Handyman contact list (Yura, Kirill, etc.)</td><td>Store contractor info with typical price ranges</td><td><span class="pill pill-pending">Later</span></td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Alerts -->
-      <div id="alerts" class="alerts"></div>
-
-      <!-- Stats -->
-      <div id="stats-row" class="stats-row"></div>
-
-      <!-- Properties -->
-      <div class="section">
-        <div class="section-head">
-          <div class="section-title"><span class="icon">&#9872;</span> Properties</div>
-          <div class="section-actions">
-            <button class="btn" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
+              <tr><td><strong>Alina</strong></td><td>Weekday Manager</td><td class="td-mono">Mon-Fri 10:00-18:00</td><td><span class="pill pill-active">Active</span></td></tr>
+              <tr><td><strong>Anya</strong></td><td>Weekend Manager</td><td class="td-mono">Sat-Sun 10:00-18:00</td><td><span class="pill pill-pending">Off today</span></td></tr>
+              <tr><td><strong>Katya</strong></td><td>Supervisor (departing)</td><td class="td-mono">Remote</td><td><span class="pill pill-due">Transitioning</span></td></tr>
+            </tbody></table>
           </div>
-        </div>
-        <div id="property-grid" class="property-grid"></div>
-      </div>
-
-      <!-- Rent + Tasks -->
-      <div class="two-col">
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title"><span class="icon">&#8382;</span> Rent Collection</div>
-          </div>
-          <div class="table-wrap">
-            <table><thead><tr><th>Apartment</th><th>Tenant</th><th>Amount</th><th>Status</th></tr></thead>
-            <tbody id="rent-tbody"></tbody></table>
-          </div>
-        </div>
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title"><span class="icon">&#9745;</span> Tasks</div>
-          </div>
-          <div id="task-columns" class="task-columns"></div>
-        </div>
-      </div>
-
-      <!-- Maintenance + Owners -->
-      <div class="two-col">
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title"><span class="icon">&#9881;</span> Maintenance</div>
-          </div>
-          <div class="table-wrap">
-            <table><thead><tr><th>Issue</th><th>Location</th><th>Status</th></tr></thead>
-            <tbody id="maint-tbody"></tbody></table>
-          </div>
-        </div>
-        <div class="section">
-          <div class="section-head">
-            <div class="section-title"><span class="icon">&#36;</span> Owner Reports</div>
-          </div>
-          <div id="finance-grid" class="finance-grid"></div>
-        </div>
-      </div>
-
-      <!-- Leases -->
-      <div class="section">
-        <div class="section-head">
-          <div class="section-title"><span class="icon">&#128196;</span> Upcoming Lease Expirations</div>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Apartment</th><th>Tenant</th><th>Lease End</th><th>Rent</th><th>Status</th></tr></thead>
-          <tbody id="lease-tbody"></tbody></table>
-        </div>
-      </div>
-
-      <!-- Team -->
-      <div class="section">
-        <div class="section-head">
-          <div class="section-title"><span class="icon">&#9998;</span> Team</div>
-        </div>
-        <div class="table-wrap">
-          <table><thead><tr><th>Person</th><th>Role</th><th>Schedule</th><th>Status</th></tr></thead>
-          <tbody>
-            <tr><td><strong>Alina</strong></td><td>Weekday Manager</td><td class="td-mono">Mon-Fri 10-18</td><td><span class="pill pill-active">Active</span></td></tr>
-            <tr><td><strong>Anya</strong></td><td>Weekend Manager</td><td class="td-mono">Sat-Sun 10-18</td><td><span class="pill pill-pending">Off today</span></td></tr>
-          </tbody></table>
         </div>
       </div>
 
@@ -466,89 +717,991 @@
 </div>
 
 <script>
-async function loadDashboard() {
-  try {
-    const res = await fetch('/api/dashboard');
-    const d = await res.json();
-    const s = d.stats;
+let DATA = null;
 
+// ══════════ I18N (Hebrew / English / Russian) ══════════
+const I18N = {
+  he: {
+    // Sidebar
+    overview: 'סקירה כללית',
+    operations: 'תפעול',
+    finance: 'כספים',
+    settings: 'הגדרות',
+    nav_dashboard: 'דאשבורד',
+    nav_properties: 'נכסים',
+    nav_tenants: 'דיירים וחוזים',
+    nav_rent: 'גביית שכירות',
+    nav_maintenance: 'תחזוקה',
+    nav_tasks: 'משימות',
+    nav_finance: 'דוחות בעלים',
+    nav_cash: 'קופת משרד',
+    nav_team: 'צוות',
+    // Topbar / pages
+    page_dashboard: 'דאשבורד',
+    page_properties: 'נכסים',
+    page_tenants: 'דיירים',
+    page_rent: 'שכירות',
+    page_maintenance: 'תחזוקה',
+    page_tasks: 'משימות',
+    page_finance: 'דוחות',
+    page_cash: 'קופה',
+    page_team: 'צוות',
+    // Stats
+    stat_total_units: 'סה"כ יחידות',
+    stat_occupied: 'מאוכלסות',
+    stat_vacant: 'פנויות',
+    stat_monthly_rent: 'שכירות חודשית',
+    properties_label: 'נכסים',
+    occupancy: 'תפוסה',
+    in_maintenance: 'בתחזוקה',
+    pending_tasks: 'משימות ממתינות',
+    units: 'יחידות',
+    rent_short: 'שכר"ד',
+    // Buttons
+    btn_sync: 'סנכרן Monday.com',
+    btn_save: 'שמור',
+    btn_cancel: 'ביטול',
+    btn_delete: 'מחק',
+    btn_close: 'סגור',
+    // Sections
+    sec_all_properties: 'כל הנכסים',
+    sec_all_rented: 'כל הדירות המושכרות',
+    sec_tenants_leases: 'דיירים וחוזים',
+    sec_rent_collection: 'גביית שכירות',
+    sec_maintenance: 'תחזוקה',
+    sec_tasks_board: 'לוח משימות',
+    sec_owner_reports: 'דוחות לבעלים',
+    sec_office_cash: 'קופת משרד',
+    // Tables
+    th_property: 'נכס',
+    th_apt: 'דירה',
+    th_tenant: 'דייר',
+    th_rent: 'שכ"ד',
+    th_payment_due: 'תשלום עד',
+    th_payment_status: 'סטטוס תשלום',
+    th_lease_ends: 'סוף חוזה',
+    th_renewal: 'חידוש',
+    th_status: 'סטטוס',
+    th_assigned: 'אחראי',
+    th_created: 'נוצר',
+    th_issue: 'בעיה',
+    th_lease_start: 'תחילת חוזה',
+    th_lease_end: 'סוף חוזה',
+    th_role: 'תפקיד',
+    th_schedule: 'משמרת',
+    th_person: 'אדם',
+    // Task columns
+    col_pending: 'ממתינות',
+    col_in_progress: 'בתהליך',
+    col_done: 'הושלמו',
+    drop_here: 'גרור משימות לכאן',
+    // Pills
+    paid: 'שולם',
+    overdue: 'באיחור',
+    due_soon: 'תשלום בקרוב',
+    no_payment: 'לא שולם',
+    expired: 'פג',
+    renew_now: 'חדש עכשיו!',
+    days: 'ימים',
+    active_st: 'פעיל',
+    in_progress_st: 'בתהליך',
+    reported_st: 'דווח',
+    pending_st: 'ממתין',
+    // Chat
+    chat_title: 'עוזר דאשבורד',
+    chat_subtitle: 'שאל אותי כל דבר על הדירות',
+    chat_welcome: 'שלום! 👋\nאני העוזר של מערכת ניהול הדירות.\nתשאל אותי כל שאלה על הדירות, הדיירים, הכספים, או המשימות — אני אענה ואפילו אפתח משימות חדשות.',
+    chat_send: 'שלח',
+    chat_placeholder: 'שאל שאלה או בקש פעולה...',
+    suggest_occupied: 'כמה דירות מאוכלסות?',
+    suggest_leases: 'חוזים שמסתיימים',
+    suggest_income: 'הכנסה חודשית',
+    suggest_vacant: 'דירות פנויות',
+    // Misc
+    no_open_orders: 'אין הזמנות פתוחות',
+    no_active_leases: 'אין חוזים פעילים',
+    no_tenants: 'אין דיירים פעילים',
+    cannot_connect: 'לא ניתן להתחבר לשרת',
+    // Cash page
+    cash_total_collected: 'סה"כ נגבה',
+    cash_mgmt_fee: 'עמלת ניהול (10%)',
+    cash_to_owners: 'לבעלים',
+    cash_office_balance: 'יתרת קופה',
+    cash_income: 'הכנסה (שכירות שנגבתה)',
+    cash_expenses: 'הוצאות משרד',
+    th_expense: 'הוצאה',
+    th_amount: 'סכום',
+    th_category: 'קטגוריה',
+    th_date: 'תאריך',
+    th_fee_10: 'עמלה 10%',
+    th_owner_gets: 'בעלים מקבל',
+    add_real_expenses: 'הוסף הוצאות אמיתיות לטבלה זו',
+    // Owner card
+    monthly_income: 'הכנסה חודשית',
+    total_rent: 'סה"כ שכ"ד',
+    owner_receives: 'בעלים מקבל',
+    report_schedule: 'תזמון דוח',
+    payment_method: 'אמצעי תשלום',
+    cash_courier: 'מזומן (שליח)',
+    // Task modal
+    tm_title: 'כותרת',
+    tm_description: 'תיאור',
+    tm_priority: 'עדיפות',
+    tm_assigned_to: 'אחראי',
+    tm_due_date: 'תאריך יעד',
+    tm_notes: 'הערות',
+    tm_attachments: 'קבצים מצורפים',
+    tm_no_files: 'אין קבצים מצורפים',
+    tm_drop_files: '📎 לחץ או גרור קבצים להעלאה',
+    priority_low: 'נמוך',
+    priority_normal: 'רגיל',
+    priority_high: 'גבוה',
+    priority_urgent: 'דחוף',
+  },
+  en: {
+    overview: 'Overview',
+    operations: 'Operations',
+    finance: 'Finance',
+    settings: 'Settings',
+    nav_dashboard: 'Dashboard',
+    nav_properties: 'Properties',
+    nav_tenants: 'Tenants & Leases',
+    nav_rent: 'Rent Collection',
+    nav_maintenance: 'Maintenance',
+    nav_tasks: 'Tasks',
+    nav_finance: 'Owner Reports',
+    nav_cash: 'Office Cash',
+    nav_team: 'Team',
+    page_dashboard: 'Dashboard',
+    page_properties: 'Properties',
+    page_tenants: 'Tenants',
+    page_rent: 'Rent',
+    page_maintenance: 'Maintenance',
+    page_tasks: 'Tasks',
+    page_finance: 'Reports',
+    page_cash: 'Cash',
+    page_team: 'Team',
+    stat_total_units: 'Total Units',
+    stat_occupied: 'Occupied',
+    stat_vacant: 'Vacant',
+    stat_monthly_rent: 'Monthly Rent',
+    properties_label: 'properties',
+    occupancy: 'occupancy',
+    in_maintenance: 'in maintenance',
+    pending_tasks: 'tasks pending',
+    units: 'Units',
+    rent_short: 'Rent',
+    btn_sync: 'Sync Monday.com',
+    btn_save: 'Save',
+    btn_cancel: 'Cancel',
+    btn_delete: 'Delete',
+    btn_close: 'Close',
+    sec_all_properties: 'All Properties',
+    sec_all_rented: 'All Rented Units',
+    sec_tenants_leases: 'Tenants & Leases',
+    sec_rent_collection: 'Rent Collection',
+    sec_maintenance: 'Maintenance Orders',
+    sec_tasks_board: 'Task Board',
+    sec_owner_reports: 'Owner Financial Reports',
+    sec_office_cash: 'Office Cash',
+    th_property: 'Property',
+    th_apt: 'Apt',
+    th_tenant: 'Tenant',
+    th_rent: 'Rent',
+    th_payment_due: 'Payment Due',
+    th_payment_status: 'Payment Status',
+    th_lease_ends: 'Lease Ends',
+    th_renewal: 'Renewal',
+    th_status: 'Status',
+    th_assigned: 'Assigned To',
+    th_created: 'Created',
+    th_issue: 'Issue',
+    th_lease_start: 'Lease Start',
+    th_lease_end: 'Lease End',
+    th_role: 'Role',
+    th_schedule: 'Schedule',
+    th_person: 'Person',
+    col_pending: 'Pending',
+    col_in_progress: 'In Progress',
+    col_done: 'Done',
+    drop_here: 'Drop tasks here',
+    paid: 'Paid',
+    overdue: 'Overdue',
+    due_soon: 'Due soon',
+    no_payment: 'No payment',
+    expired: 'EXPIRED',
+    renew_now: 'Renew now!',
+    days: 'days',
+    active_st: 'Active',
+    in_progress_st: 'In Progress',
+    reported_st: 'Reported',
+    pending_st: 'Pending',
+    chat_title: 'Dashboard Assistant',
+    chat_subtitle: 'Ask me anything about the properties',
+    chat_welcome: 'Hi! 👋\nI\'m your apartment management assistant.\nAsk me anything about properties, tenants, finances, or tasks — I can answer AND create new tasks.',
+    chat_send: 'Send',
+    chat_placeholder: 'Ask a question or request an action...',
+    suggest_occupied: 'How many units are occupied?',
+    suggest_leases: 'Leases ending soon',
+    suggest_income: 'Monthly income',
+    suggest_vacant: 'Vacant apartments',
+    no_open_orders: 'No open orders',
+    no_active_leases: 'No active leases',
+    no_tenants: 'No active tenants',
+    cannot_connect: 'Cannot connect to API server',
+    cash_total_collected: 'Total Collected',
+    cash_mgmt_fee: 'Management Fee (10%)',
+    cash_to_owners: 'To Owners',
+    cash_office_balance: 'Office Balance',
+    cash_income: 'Income (Collected Rent)',
+    cash_expenses: 'Office Expenses',
+    th_expense: 'Expense',
+    th_amount: 'Amount',
+    th_category: 'Category',
+    th_date: 'Date',
+    th_fee_10: '10% Fee',
+    th_owner_gets: 'Owner Gets',
+    add_real_expenses: 'Add real expenses to populate this table',
+    monthly_income: 'Monthly Income',
+    total_rent: 'Total Rent',
+    owner_receives: 'Owner Receives',
+    report_schedule: 'Report Schedule',
+    payment_method: 'Payment Method',
+    cash_courier: 'Cash (courier)',
+    tm_title: 'Title',
+    tm_description: 'Description',
+    tm_priority: 'Priority',
+    tm_assigned_to: 'Assigned To',
+    tm_due_date: 'Due Date',
+    tm_notes: 'Notes',
+    tm_attachments: 'Attachments',
+    tm_no_files: 'No files attached',
+    tm_drop_files: '📎 Click or drag files here to upload',
+    priority_low: 'Low',
+    priority_normal: 'Normal',
+    priority_high: 'High',
+    priority_urgent: 'Urgent',
+  },
+  ru: {
+    overview: 'Обзор',
+    operations: 'Операции',
+    finance: 'Финансы',
+    settings: 'Настройки',
+    nav_dashboard: 'Дашборд',
+    nav_properties: 'Объекты',
+    nav_tenants: 'Жильцы и договоры',
+    nav_rent: 'Сбор аренды',
+    nav_maintenance: 'Обслуживание',
+    nav_tasks: 'Задачи',
+    nav_finance: 'Отчёты владельцам',
+    nav_cash: 'Касса офиса',
+    nav_team: 'Команда',
+    page_dashboard: 'Дашборд',
+    page_properties: 'Объекты',
+    page_tenants: 'Жильцы',
+    page_rent: 'Аренда',
+    page_maintenance: 'Обслуживание',
+    page_tasks: 'Задачи',
+    page_finance: 'Отчёты',
+    page_cash: 'Касса',
+    page_team: 'Команда',
+    stat_total_units: 'Всего квартир',
+    stat_occupied: 'Заняты',
+    stat_vacant: 'Свободны',
+    stat_monthly_rent: 'Аренда в месяц',
+    properties_label: 'объектов',
+    occupancy: 'заполненность',
+    in_maintenance: 'на обслуживании',
+    pending_tasks: 'задач ожидают',
+    units: 'Квартиры',
+    rent_short: 'Аренда',
+    btn_sync: 'Синхр. Monday.com',
+    btn_save: 'Сохранить',
+    btn_cancel: 'Отмена',
+    btn_delete: 'Удалить',
+    btn_close: 'Закрыть',
+    sec_all_properties: 'Все объекты',
+    sec_all_rented: 'Все сданные квартиры',
+    sec_tenants_leases: 'Жильцы и договоры',
+    sec_rent_collection: 'Сбор аренды',
+    sec_maintenance: 'Заявки на обслуживание',
+    sec_tasks_board: 'Доска задач',
+    sec_owner_reports: 'Финансовые отчёты',
+    sec_office_cash: 'Касса офиса',
+    th_property: 'Объект',
+    th_apt: 'Кв.',
+    th_tenant: 'Жилец',
+    th_rent: 'Аренда',
+    th_payment_due: 'Срок оплаты',
+    th_payment_status: 'Статус оплаты',
+    th_lease_ends: 'Конец договора',
+    th_renewal: 'Продление',
+    th_status: 'Статус',
+    th_assigned: 'Ответственный',
+    th_created: 'Создано',
+    th_issue: 'Проблема',
+    th_lease_start: 'Начало договора',
+    th_lease_end: 'Конец договора',
+    th_role: 'Роль',
+    th_schedule: 'График',
+    th_person: 'Человек',
+    col_pending: 'Ожидают',
+    col_in_progress: 'В работе',
+    col_done: 'Завершены',
+    drop_here: 'Перетащите задачи сюда',
+    paid: 'Оплачено',
+    overdue: 'Просрочено',
+    due_soon: 'Скоро срок',
+    no_payment: 'Нет оплаты',
+    expired: 'ИСТЁК',
+    renew_now: 'Продлить сейчас!',
+    days: 'дн.',
+    active_st: 'Активен',
+    in_progress_st: 'В работе',
+    reported_st: 'Заявлено',
+    pending_st: 'Ожидает',
+    chat_title: 'Помощник дашборда',
+    chat_subtitle: 'Спросите меня о квартирах',
+    chat_welcome: 'Привет! 👋\nЯ помощник системы управления квартирами.\nЗадайте мне любой вопрос — я отвечу и могу создавать задачи.',
+    chat_send: 'Отправить',
+    chat_placeholder: 'Задайте вопрос или попросите действие...',
+    suggest_occupied: 'Сколько квартир занято?',
+    suggest_leases: 'Истекающие договоры',
+    suggest_income: 'Доход за месяц',
+    suggest_vacant: 'Свободные квартиры',
+    no_open_orders: 'Нет открытых заявок',
+    no_active_leases: 'Нет активных договоров',
+    no_tenants: 'Нет активных жильцов',
+    cannot_connect: 'Не удаётся подключиться',
+    cash_total_collected: 'Собрано всего',
+    cash_mgmt_fee: 'Комиссия (10%)',
+    cash_to_owners: 'Владельцам',
+    cash_office_balance: 'Баланс офиса',
+    cash_income: 'Доход (собранная аренда)',
+    cash_expenses: 'Расходы офиса',
+    th_expense: 'Расход',
+    th_amount: 'Сумма',
+    th_category: 'Категория',
+    th_date: 'Дата',
+    th_fee_10: 'Комиссия 10%',
+    th_owner_gets: 'Владелец получает',
+    add_real_expenses: 'Добавьте реальные расходы',
+    monthly_income: 'Доход за месяц',
+    total_rent: 'Всего аренды',
+    owner_receives: 'Владелец получает',
+    report_schedule: 'График отчётов',
+    payment_method: 'Способ оплаты',
+    cash_courier: 'Наличные (курьер)',
+    tm_title: 'Название',
+    tm_description: 'Описание',
+    tm_priority: 'Приоритет',
+    tm_assigned_to: 'Ответственный',
+    tm_due_date: 'Срок',
+    tm_notes: 'Заметки',
+    tm_attachments: 'Вложения',
+    tm_no_files: 'Нет вложений',
+    tm_drop_files: '📎 Кликните или перетащите файлы',
+    priority_low: 'Низкий',
+    priority_normal: 'Обычный',
+    priority_high: 'Высокий',
+    priority_urgent: 'Срочно',
+  },
+};
+
+let LANG = localStorage.getItem('lang') || 'he';
+function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+function setLang(lang) {
+  LANG = lang;
+  localStorage.setItem('lang', lang);
+  document.documentElement.lang = lang;
+  document.documentElement.dir = (lang === 'he') ? 'rtl' : 'ltr';
+  applyTranslations();
+  if (DATA) {
+    const page = (location.hash || '#dashboard').replace('#', '');
+    renderPage(PAGES.includes(page) ? page : 'dashboard', DATA);
+  }
+}
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    el.textContent = t(el.getAttribute('data-i18n'));
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    el.placeholder = t(el.getAttribute('data-i18n-placeholder'));
+  });
+}
+
+
+// ── Navigation (with URL hash for refresh persistence) ──
+const PAGES = ['dashboard', 'properties', 'tenants', 'rent', 'maintenance', 'tasks', 'finance', 'cash', 'team'];
+
+function showPage(page, fromHash) {
+  if (!PAGES.includes(page)) page = 'dashboard';
+  document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
+  const pageEl = document.getElementById('page-' + page);
+  if (pageEl) pageEl.style.display = 'block';
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  // Mark active nav item
+  document.querySelectorAll('.nav-item').forEach(n => {
+    const onclick = n.getAttribute('onclick') || '';
+    if (onclick.includes("'" + page + "'")) n.classList.add('active');
+  });
+  document.querySelector('.topbar-title').textContent = t('page_' + page);
+  if (!fromHash) {
+    location.hash = '#' + page;
+  }
+  if (DATA) renderPage(page, DATA);
+}
+
+// Restore page from hash on load + back/forward navigation
+function loadPageFromHash() {
+  const page = (location.hash || '#dashboard').replace('#', '');
+  showPage(page, true);
+}
+window.addEventListener('hashchange', loadPageFromHash);
+
+// Initialize language ASAP
+document.documentElement.lang = LANG;
+document.documentElement.dir = (LANG === 'he') ? 'rtl' : 'ltr';
+document.addEventListener('DOMContentLoaded', () => {
+  applyTranslations();
+  const sw = document.getElementById('lang-switcher');
+  if (sw) sw.value = LANG;
+});
+
+// ── Rent row builder (reused on dashboard + rent page) ──
+function rentRow(r) {
+  let payPill='pill-overdue', payLabel='No payment';
+  if(r.last_paid){
+    const diff=Math.floor((Date.now()-new Date(r.last_paid))/86400000);
+    if(diff>35){payPill='pill-overdue';payLabel=Math.floor(diff/30)+'mo late';}
+    else if(diff>25){payPill='pill-due';payLabel='Due soon';}
+    else{payPill='pill-paid';payLabel='Paid';}
+  }
+  let payDue = '—';
+  try { const n=JSON.parse(r.apt_notes||'{}'); if(n.timeline){const p=n.timeline.split(' - ');if(p.length===2)payDue=p[1];} } catch(e){}
+  let leaseEnd='—', renewHtml='';
+  if(r.end_date){
+    leaseEnd=r.end_date;
+    const days=Math.floor((new Date(r.end_date)-Date.now())/86400000);
+    if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
+    else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
+    else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
+    else renewHtml='<span class="pill pill-active">'+days+' days</span>';
+  }
+  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td></tr>`;
+}
+
+// ── Task card builder (now draggable + clickable) ──
+function taskCard(task) {
+  const idStr = String(task.id).padStart(4, '0').slice(-5);
+  return `<div class="task-card" draggable="true" data-task-id="${task.id}" ondragstart="onTaskDragStart(event)" ondragend="onTaskDragEnd(event)" onclick="openTaskModal(${task.id})">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;margin-bottom:4px">
+      <div class="task-title" style="margin:0;flex:1">${task.title}</div>
+      <span class="task-id-badge">#${idStr}</span>
+    </div>
+    <div class="task-meta">
+      ${task.assigned_to?'<span class="task-assignee">'+task.assigned_to+'</span>':''}
+      ${task.due_date?'<span>'+task.due_date+'</span>':''}
+      ${task.priority==='urgent'?'<span style="color:var(--red)">'+t('priority_urgent')+'</span>':''}
+      ${task.priority==='high'?'<span style="color:var(--orange)">'+t('priority_high')+'</span>':''}
+    </div>
+  </div>`;
+}
+
+function taskColumns(targetId, tasks) {
+  const pending=(tasks||[]).filter(t=>t.status==='pending'),
+        progress=(tasks||[]).filter(t=>t.status==='in_progress'),
+        done=(tasks||[]).filter(t=>t.status==='done');
+  const empty = `<div class="task-empty">${t('drop_here')}</div>`;
+  document.getElementById(targetId).innerHTML = `
+    <div class="task-column" data-status="pending" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event)">
+      <div class="task-col-head" style="color:var(--yellow)">${t('col_pending')} <span class="count">${pending.length}</span></div>
+      ${pending.length ? pending.map(taskCard).join('') : empty}
+    </div>
+    <div class="task-column" data-status="in_progress" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event)">
+      <div class="task-col-head" style="color:var(--accent)">${t('col_in_progress')} <span class="count">${progress.length}</span></div>
+      ${progress.length ? progress.map(taskCard).join('') : empty}
+    </div>
+    <div class="task-column" data-status="done" ondragover="onColDragOver(event)" ondragleave="onColDragLeave(event)" ondrop="onColDrop(event)">
+      <div class="task-col-head" style="color:var(--green)">${t('col_done')} <span class="count">${done.length}</span></div>
+      ${done.length ? done.map(taskCard).join('') : empty}
+    </div>`;
+}
+
+// ── Drag & Drop handlers ──
+let DRAG_TASK_ID = null;
+function onTaskDragStart(e) {
+  DRAG_TASK_ID = e.currentTarget.dataset.taskId;
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed = 'move';
+}
+function onTaskDragEnd(e) {
+  e.currentTarget.classList.remove('dragging');
+  document.querySelectorAll('.task-column.drag-over').forEach(c => c.classList.remove('drag-over'));
+}
+function onColDragOver(e) {
+  e.preventDefault();
+  e.currentTarget.classList.add('drag-over');
+  e.dataTransfer.dropEffect = 'move';
+}
+function onColDragLeave(e) {
+  if (!e.currentTarget.contains(e.relatedTarget)) {
+    e.currentTarget.classList.remove('drag-over');
+  }
+}
+async function onColDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  const newStatus = e.currentTarget.dataset.status;
+  if (!DRAG_TASK_ID || !newStatus) return;
+  const taskId = DRAG_TASK_ID;
+  DRAG_TASK_ID = null;
+  // Optimistic UI - update local data and re-render immediately
+  if (DATA && DATA.tasks) {
+    const t = DATA.tasks.find(x => x.id == taskId);
+    if (t) t.status = newStatus;
+    taskColumns('task-columns', DATA.tasks);
+    if (document.getElementById('task-columns-full')) taskColumns('task-columns-full', DATA.tasks);
+  }
+  try {
+    await fetch('/api/tasks/' + taskId + '/status', {
+      method: 'PATCH',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({status: newStatus}),
+    });
+  } catch(err) { console.error('Update failed:', err); }
+}
+
+// ── Task Detail Modal ──
+let CURRENT_TASK_ID = null;
+
+async function openTaskModal(taskId) {
+  if (DRAG_TASK_ID) return; // ignore click after drag
+  CURRENT_TASK_ID = taskId;
+  document.getElementById('task-modal').classList.add('show');
+  document.getElementById('tm-content').innerHTML = '<div style="padding:40px;text-align:center;color:var(--text-muted)">Loading...</div>';
+  try {
+    const res = await fetch('/api/tasks/' + taskId + '/detail');
+    const t = await res.json();
+    renderTaskModal(t);
+  } catch(e) {
+    document.getElementById('tm-content').innerHTML = '<div style="color:var(--red)">Failed to load task</div>';
+  }
+}
+
+function renderTaskModal(t) {
+  const attachments = (t.attachments || []).map(a => {
+    const fn = a.file_url.split('/').pop().replace(/^[a-f0-9]{8}_/, '');
+    return `<div class="task-attachment">📎 <a href="${a.file_url}" target="_blank">${fn}</a></div>`;
+  }).join('') || '<div style="color:var(--text-muted);font-size:12px">No files attached</div>';
+
+  const idStr = String(t.id).padStart(4, '0').slice(-5);
+  document.getElementById('tm-content').innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px">
+      <span class="task-id-badge" style="font-size:13px;padding:3px 10px">#${idStr}</span>
+      <h3 style="margin:0">${t.title || 'Untitled'}</h3>
+    </div>
+    <div class="task-modal-meta">Created ${t.created_at || ''}</div>
+    <label>Title</label>
+    <input id="tm-title" value="${(t.title || '').replace(/"/g, '&quot;')}">
+    <label>Description</label>
+    <textarea id="tm-desc" placeholder="Add a longer description...">${t.description || ''}</textarea>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div>
+        <label>Status</label>
+        <select id="tm-status">
+          <option value="pending" ${t.status==='pending'?'selected':''}>Pending</option>
+          <option value="in_progress" ${t.status==='in_progress'?'selected':''}>In Progress</option>
+          <option value="done" ${t.status==='done'?'selected':''}>Done</option>
+        </select>
+      </div>
+      <div>
+        <label>Priority</label>
+        <select id="tm-priority">
+          <option value="low" ${t.priority==='low'?'selected':''}>Low</option>
+          <option value="normal" ${t.priority==='normal'?'selected':''}>Normal</option>
+          <option value="high" ${t.priority==='high'?'selected':''}>High</option>
+          <option value="urgent" ${t.priority==='urgent'?'selected':''}>Urgent</option>
+        </select>
+      </div>
+      <div>
+        <label>Assigned To</label>
+        <input id="tm-assigned" value="${(t.assigned_to || '').replace(/"/g, '&quot;')}">
+      </div>
+      <div>
+        <label>Due Date</label>
+        <input id="tm-due" type="date" value="${t.due_date || ''}">
+      </div>
+    </div>
+    <label>Notes</label>
+    <textarea id="tm-notes" style="min-height:60px">${t.notes || ''}</textarea>
+    <label>Attachments</label>
+    <div class="task-attachments" id="tm-attachments">${attachments}</div>
+    <div class="file-drop" id="tm-filedrop" onclick="document.getElementById('tm-fileinput').click()" ondragover="event.preventDefault();this.classList.add('drag-over')" ondragleave="this.classList.remove('drag-over')" ondrop="onFileDrop(event)">
+      📎 Click or drag files here to upload
+      <input type="file" id="tm-fileinput" style="display:none" multiple onchange="uploadTaskFiles(this.files)">
+    </div>
+    <div class="task-modal-actions">
+      <button class="btn" onclick="deleteCurrentTask()" style="color:var(--red)">Delete</button>
+      <button class="btn" onclick="closeTaskModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveTaskModal()">Save</button>
+    </div>
+  `;
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').classList.remove('show');
+  CURRENT_TASK_ID = null;
+}
+
+async function saveTaskModal() {
+  if (!CURRENT_TASK_ID) return;
+  const body = {
+    title: document.getElementById('tm-title').value,
+    description: document.getElementById('tm-desc').value,
+    status: document.getElementById('tm-status').value,
+    priority: document.getElementById('tm-priority').value,
+    assigned_to: document.getElementById('tm-assigned').value,
+    due_date: document.getElementById('tm-due').value || null,
+    notes: document.getElementById('tm-notes').value,
+  };
+  await fetch('/api/tasks/' + CURRENT_TASK_ID, {
+    method: 'PUT',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body),
+  });
+  closeTaskModal();
+  loadDashboard();
+}
+
+async function deleteCurrentTask() {
+  if (!CURRENT_TASK_ID) return;
+  if (!confirm('Delete this task?')) return;
+  await fetch('/api/tasks/' + CURRENT_TASK_ID, {method: 'DELETE'});
+  closeTaskModal();
+  loadDashboard();
+}
+
+async function uploadTaskFiles(files) {
+  if (!CURRENT_TASK_ID || !files.length) return;
+  for (const f of files) {
+    const fd = new FormData();
+    fd.append('file', f);
+    await fetch('/api/tasks/' + CURRENT_TASK_ID + '/attachments', {
+      method: 'POST',
+      body: fd,
+    });
+  }
+  // Refresh modal
+  openTaskModal(CURRENT_TASK_ID);
+}
+
+function onFileDrop(e) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  uploadTaskFiles(e.dataTransfer.files);
+}
+
+// ── Render each page ──
+function renderPage(page, d) {
+  const s = d.stats;
+
+  if (page === 'dashboard') {
     // Alerts
     const alerts = [];
-    if (s.overdue_rent > 0) alerts.push(`<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text"><strong>${s.overdue_rent} tenants</strong> with no recorded payment this month</div></div>`);
-    if (s.active_maintenance > 0) alerts.push(`<div class="alert alert-yellow"><span class="alert-icon">&#9881;</span><div class="alert-text"><strong>${s.active_maintenance} maintenance</strong> orders open</div></div>`);
-    document.getElementById('alerts').innerHTML = alerts.join('') || '';
-
+    if(s.overdue_rent>0) alerts.push(`<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text"><strong>${s.overdue_rent} tenants</strong> with no recorded payment this month</div></div>`);
+    if(s.active_maintenance>0) alerts.push(`<div class="alert alert-yellow"><span class="alert-icon">&#9881;</span><div class="alert-text"><strong>${s.active_maintenance} maintenance</strong> orders open</div></div>`);
+    document.getElementById('alerts').innerHTML = alerts.join('');
     // Stats
     document.getElementById('stats-row').innerHTML = `
-      <div class="stat-card"><div class="stat-label">Total Units</div><div class="stat-value accent">${s.total_units}</div><div class="stat-sub">${d.properties.length} properties</div></div>
-      <div class="stat-card"><div class="stat-label">Occupied</div><div class="stat-value green">${s.occupied}</div><div class="stat-sub">${Math.round(s.occupied/s.total_units*100)}% occupancy</div></div>
-      <div class="stat-card"><div class="stat-label">Vacant</div><div class="stat-value yellow">${s.vacant}</div><div class="stat-sub">${s.maintenance || 0} in maintenance</div></div>
-      <div class="stat-card"><div class="stat-label">Monthly Rent</div><div class="stat-value accent">$${s.total_monthly_rent.toLocaleString()}</div><div class="stat-sub">${s.pending_tasks} tasks pending</div></div>`;
-
-    // Properties
+      <div class="stat-card"><div class="stat-label">${t('stat_total_units')}</div><div class="stat-value accent">${s.total_units}</div><div class="stat-sub">${d.properties.length} ${t('properties_label')}</div></div>
+      <div class="stat-card"><div class="stat-label">${t('stat_occupied')}</div><div class="stat-value green">${s.occupied}</div><div class="stat-sub">${Math.round(s.occupied/s.total_units*100)}% ${t('occupancy')}</div></div>
+      <div class="stat-card"><div class="stat-label">${t('stat_vacant')}</div><div class="stat-value yellow">${s.vacant}</div><div class="stat-sub">${s.maintenance||0} ${t('in_maintenance')}</div></div>
+      <div class="stat-card"><div class="stat-label">${t('stat_monthly_rent')}</div><div class="stat-value accent">$${s.total_monthly_rent.toLocaleString()}</div><div class="stat-sub">${s.pending_tasks} ${t('pending_tasks')}</div></div>`;
+    // Properties grid
     document.getElementById('property-grid').innerHTML = d.properties.map(p => {
-      let sc = 'status-occupied', st = p.occupied_units+'/'+p.total_units;
-      if (p.status==='maintenance'){sc='status-maintenance';st='Maint.';}
-      else if (p.status==='inactive'){sc='status-vacant';st='Inactive';}
-      else if (p.total_units===0){sc='status-maintenance';st=p.status;}
-      else if (p.occupied_units===0){sc='status-vacant';st='Vacant';}
-      return `<div class="property-card"><div class="property-card-head"><div class="property-name">${p.name}</div><span class="property-status ${sc}">${st}</span></div><div class="property-address">${p.address||''} ${p.owner_name?'&bull; '+p.owner_name:''}</div><div class="property-stats"><div class="property-stat">Units: <span>${p.total_units}</span></div><div class="property-stat">Rent: <span>$${p.monthly_rent||0}</span></div></div></div>`;
+      let sc='status-occupied',st=p.occupied_units+'/'+p.total_units;
+      if(p.status==='maintenance'){sc='status-maintenance';st='Maint.';}
+      else if(p.status==='inactive'){sc='status-vacant';st='Inactive';}
+      else if(p.total_units===0){sc='status-maintenance';st=p.status;}
+      else if(p.occupied_units===0){sc='status-vacant';st='Vacant';}
+      return `<div class="property-card" onclick="showPage('properties')"><div class="property-card-head"><div class="property-name">${p.name}</div><span class="property-status ${sc}">${st}</span></div><div class="property-address">${p.address||''} ${p.owner_name?'&bull; '+p.owner_name:''}</div><div class="property-stats"><div class="property-stat">Units: <span>${p.total_units}</span></div><div class="property-stat">Rent: <span>$${p.monthly_rent||0}</span></div></div></div>`;
     }).join('');
-
-    // Rent
-    document.getElementById('rent-tbody').innerHTML = (d.rent_status||[]).map(r => {
-      let pill='pill-overdue', label='No payment';
-      if(r.last_paid){const diff=Math.floor((Date.now()-new Date(r.last_paid))/86400000);if(diff>35){pill='pill-overdue';label=Math.floor(diff/30)+'mo late';}else if(diff>25){pill='pill-due';label='Due soon';}else{pill='pill-paid';label='Paid';}}
-      return `<tr><td>${r.property_name} #${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td><span class="pill ${pill}">${label}</span></td></tr>`;
-    }).join('');
-
-    // Tasks
-    const pending=(d.tasks||[]).filter(t=>t.status==='pending'), progress=(d.tasks||[]).filter(t=>t.status==='in_progress'), done=(d.tasks||[]).filter(t=>t.status==='done');
-    const tc=t=>`<div class="task-card"><div class="task-title">${t.title}</div><div class="task-meta">${t.assigned_to?'<span class="task-assignee">'+t.assigned_to+'</span>':''}${t.due_date?'<span>'+t.due_date+'</span>':''}${t.priority==='urgent'?'<span style="color:var(--red)">Urgent</span>':''}</div></div>`;
-    document.getElementById('task-columns').innerHTML = `
-      <div class="task-column"><div class="task-col-head" style="color:var(--yellow)">Pending <span class="count">${pending.length}</span></div>${pending.map(tc).join('')}</div>
-      <div class="task-column"><div class="task-col-head" style="color:var(--accent)">In Progress <span class="count">${progress.length}</span></div>${progress.map(tc).join('')}</div>
-      <div class="task-column"><div class="task-col-head" style="color:var(--green)">Done <span class="count">${done.length}</span></div>${done.map(tc).join('')}</div>`;
-
-    // Maintenance
+    // Rented units
+    document.getElementById('rented-tbody').innerHTML = (d.rent_status||[]).map(rentRow).join('') || '<tr><td colspan="8" style="color:var(--text-muted);text-align:center">No active leases</td></tr>';
+    // Tasks + Maintenance
+    taskColumns('task-columns', d.tasks);
     document.getElementById('maint-tbody').innerHTML = (d.maintenance||[]).map(o => {
       let pill='pill-pending',label=o.status;if(o.status==='in_progress'){pill='pill-progress';label='In Progress';}
       return `<tr><td>${o.description}</td><td>${o.property_name} #${o.apt_number}</td><td><span class="pill ${pill}">${label}</span></td></tr>`;
     }).join('') || '<tr><td colspan="3" style="color:var(--text-muted);text-align:center">No open orders</td></tr>';
+    // Nav badges
+    document.getElementById('nav-prop-count').textContent = s.total_units;
+    document.getElementById('nav-maint-count').textContent = s.active_maintenance || '0';
+  }
 
-    // Owners
-    document.getElementById('finance-grid').innerHTML = (d.owners||[]).map(o => `
-      <div class="finance-card"><div class="finance-owner">${o.name}</div>
-      <div class="finance-row"><span class="label">${o.notes||''}</span></div>
-      <div class="finance-row"><span class="label">Monthly</span><span class="val green">$${o.monthly_income||0}</span></div>
-      ${o.report_schedule?'<div class="finance-row"><span class="label">Report</span><span class="val">'+o.report_schedule+'</span></div>':''}</div>`).join('');
+  if (page === 'properties') {
+    document.getElementById('properties-full').innerHTML = d.properties.map(p => {
+      let sc='status-occupied',st=p.occupied_units+'/'+p.total_units;
+      if(p.status==='maintenance'){sc='status-maintenance';st='Maint.';}
+      else if(p.status==='inactive'){sc='status-vacant';st='Inactive';}
+      else if(p.total_units===0){sc='status-maintenance';st=p.status;}
+      else if(p.occupied_units===0){sc='status-vacant';st='Vacant';}
+      // Find apartments for this property
+      const propUnits = (d.rent_status||[]).filter(r => r.property_name === p.name);
+      const unitRows = propUnits.map(r => rentRow(r)).join('');
+      return `<div class="table-wrap" style="margin-bottom:16px">
+        <div style="padding:14px 16px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)">
+          <div><strong>${p.name}</strong> <span style="color:var(--text-dim);font-size:12px">${p.address||''}</span></div>
+          <div style="display:flex;gap:12px;align-items:center">
+            <span style="font-size:12px;color:var(--text-dim)">Owner: <strong>${p.owner_name||'—'}</strong></span>
+            <span class="property-status ${sc}">${st}</span>
+          </div>
+        </div>
+        <div style="padding:10px 16px;display:flex;gap:20px;font-size:12px;color:var(--text-dim);border-bottom:1px solid var(--border)">
+          <span>Units: <strong style="color:var(--text)">${p.total_units}</strong></span>
+          <span>Occupied: <strong style="color:var(--green)">${p.occupied_units}</strong></span>
+          <span>Vacant: <strong style="color:var(--yellow)">${p.total_units - p.occupied_units}</strong></span>
+          <span>Monthly Rent: <strong style="color:var(--text)">$${p.monthly_rent||0}</strong></span>
+        </div>
+        ${propUnits.length > 0 ? `<table><thead><tr><th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th><th>Payment Due</th><th>Payment Status</th><th>Lease Ends</th><th>Renewal</th></tr></thead><tbody>${unitRows}</tbody></table>` : '<div style="padding:14px 16px;color:var(--text-muted);font-size:13px">No active tenants</div>'}
+      </div>`;
+    }).join('');
+  }
 
-    // Leases
-    document.getElementById('lease-tbody').innerHTML = (d.upcoming_leases||[]).map(l => {
-      if(!l.end_date) return '';
-      const days=Math.floor((new Date(l.end_date)-Date.now())/86400000);
-      let pill='pill-active';if(days<30)pill='pill-expiring';else if(days<60)pill='pill-due';
-      return `<tr><td>${l.property_name} #${l.apt_number}</td><td>${l.tenant_name}</td><td class="td-mono">${l.end_date}</td><td class="td-mono">$${l.rent_amount}</td><td><span class="pill ${pill}">${days} days</span></td></tr>`;
-    }).join('') || '<tr><td colspan="5" style="color:var(--text-muted);text-align:center">No upcoming expirations</td></tr>';
+  if (page === 'tenants') {
+    document.getElementById('tenants-tbody').innerHTML = (d.rent_status||[]).map(r => {
+      let leaseEnd='—', renewHtml='<span class="pill pill-active">Active</span>';
+      if(r.end_date){
+        leaseEnd=r.end_date;
+        const days=Math.floor((new Date(r.end_date)-Date.now())/86400000);
+        if(days<=0) renewHtml='<span class="pill pill-overdue">EXPIRED</span>';
+        else if(days<=30) renewHtml='<span class="pill pill-expiring">Renew now!</span>';
+        else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
+        else renewHtml='<span class="pill pill-active">'+days+' days</span>';
+      }
+      return `<tr><td>${r.tenant_name}</td><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${r.start_date||'—'}</td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><span class="pill pill-active">Active</span></td></tr>`;
+    }).join('');
+  }
 
+  if (page === 'rent') {
+    document.getElementById('rent-full-tbody').innerHTML = (d.rent_status||[]).map(rentRow).join('');
+  }
+
+  if (page === 'maintenance') {
+    document.getElementById('maint-full-tbody').innerHTML = (d.maintenance||[]).map(o => {
+      let pill='pill-pending',label=o.status;if(o.status==='in_progress'){pill='pill-progress';label='In Progress';}else if(o.status==='reported'){pill='pill-pending';label='Reported';}
+      return `<tr><td>${o.description}</td><td>${o.property_name}</td><td class="td-mono">${o.apt_number}</td><td>${o.assigned_to||'—'}</td><td><span class="pill ${pill}">${label}</span></td><td class="td-mono">${o.created_at||'—'}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No maintenance orders</td></tr>';
+  }
+
+  if (page === 'tasks') {
+    taskColumns('task-columns-full', d.tasks);
+  }
+
+  if (page === 'finance') {
+    document.getElementById('finance-full').innerHTML = (d.owners||[]).map(o => {
+      const ownerUnits = (d.rent_status||[]).filter(r => {
+        const prop = d.properties.find(p => p.name === r.property_name);
+        return prop && prop.owner_name === o.name;
+      });
+      const totalRent = ownerUnits.reduce((s,r) => s + (r.rent_amount||0), 0);
+      const fee = Math.round(totalRent * 0.10);
+      const ownerGets = totalRent - fee;
+      const unitRows = ownerUnits.map(r => `<div class="finance-row"><span class="label">${r.property_name} #${r.apt_number}</span><span class="val">$${r.rent_amount}</span></div>`).join('');
+      return `<div class="finance-card" style="grid-column:span 1">
+        <div class="finance-owner">${o.name}</div>
+        <div class="finance-row"><span class="label" style="font-size:10px;color:var(--text-muted)">${o.notes||''}</span></div>
+        <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:8px">
+          ${unitRows || '<div class="finance-row"><span class="label">No active units</span></div>'}
+        </div>
+        <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
+          <div class="finance-row"><span class="label"><strong>Total Rent</strong></span><span class="val"><strong>$${totalRent}</strong></span></div>
+          <div class="finance-row"><span class="label">Management Fee (10%)</span><span class="val red">-$${fee}</span></div>
+          <div class="finance-row"><span class="label"><strong>Owner Receives</strong></span><span class="val green"><strong>$${ownerGets}</strong></span></div>
+        </div>
+        ${o.report_schedule?'<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px"><div class="finance-row"><span class="label">Report Schedule</span><span class="val">'+o.report_schedule+'</span></div></div>':''}
+        <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px"><div class="finance-row"><span class="label">Payment Method</span><span class="val">Cash (courier)</span></div></div>
+      </div>`;
+    }).join('');
+  }
+
+  if (page === 'cash') {
+    const rents = d.rent_status || [];
+    const totalCollected = rents.reduce((s,r) => s + (r.rent_amount||0), 0);
+    const totalFee = Math.round(totalCollected * 0.10);
+    const totalToOwners = totalCollected - totalFee;
+    // Stats
+    document.getElementById('cash-stats').innerHTML = `
+      <div class="stat-card"><div class="stat-label">Total Collected</div><div class="stat-value green">$${totalCollected.toLocaleString()}</div><div class="stat-sub">from ${rents.length} tenants</div></div>
+      <div class="stat-card"><div class="stat-label">Management Fee (10%)</div><div class="stat-value accent">$${totalFee.toLocaleString()}</div><div class="stat-sub">office revenue</div></div>
+      <div class="stat-card"><div class="stat-label">To Owners</div><div class="stat-value" style="color:var(--orange)">$${totalToOwners.toLocaleString()}</div><div class="stat-sub">to be distributed</div></div>
+      <div class="stat-card"><div class="stat-label">Office Balance</div><div class="stat-value accent">$${totalFee.toLocaleString()}</div><div class="stat-sub">before expenses</div></div>`;
+    // Income table
+    document.getElementById('cash-income-tbody').innerHTML = rents.map(r => {
+      const fee = Math.round(r.rent_amount * 0.10);
+      return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono" style="color:var(--accent)">$${fee}</td><td class="td-mono" style="color:var(--green)">$${r.rent_amount - fee}</td></tr>`;
+    }).join('');
+    document.getElementById('cash-income-total').innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="3">Total</td><td class="td-mono">$${totalCollected}</td><td class="td-mono" style="color:var(--accent)">$${totalFee}</td><td class="td-mono" style="color:var(--green)">$${totalToOwners}</td></tr>`;
+    // Expenses (placeholder - no expense data yet)
+    document.getElementById('cash-expense-tbody').innerHTML = `
+      <tr><td>Alina salary</td><td class="td-mono">—</td><td>Staff</td><td class="td-mono">Monthly</td></tr>
+      <tr><td>Anya salary</td><td class="td-mono">—</td><td>Staff</td><td class="td-mono">Monthly</td></tr>
+      <tr><td>Office supplies</td><td class="td-mono">—</td><td>Office</td><td class="td-mono">—</td></tr>
+      <tr style="color:var(--text-muted);font-style:italic"><td colspan="4" style="text-align:center;padding:10px">Add real expenses to populate this table</td></tr>`;
+    document.getElementById('cash-expense-total').innerHTML = '';
+  }
+}
+
+// ── Load data ──
+async function loadDashboard() {
+  try {
+    const res = await fetch('/api/dashboard');
+    DATA = await res.json();
+    // Render whichever page is currently active (from hash or default)
+    const page = (location.hash || '#dashboard').replace('#', '');
+    const validPage = PAGES.includes(page) ? page : 'dashboard';
+    renderPage(validPage, DATA);
+    // Always update dashboard page in background so when user navigates to it, it's fresh
+    if (validPage !== 'dashboard' && document.getElementById('page-dashboard')) {
+      renderPage('dashboard', DATA);
+    }
   } catch(e) {
-    document.getElementById('alerts').innerHTML = '<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text">Cannot connect to API server</div></div>';
+    const alertsEl = document.getElementById('alerts');
+    if (alertsEl) alertsEl.innerHTML = '<div class="alert alert-red"><span class="alert-icon">&#9888;</span><div class="alert-text">' + t('cannot_connect') + '</div></div>';
   }
 }
 
 async function syncMonday() {
-  const btn = document.getElementById('sync-btn');
-  btn.textContent = 'Syncing...'; btn.disabled = true;
+  const btns = [document.getElementById('sync-btn'), document.getElementById('sync-btn2')].filter(Boolean);
+  btns.forEach(b => { b.textContent = 'Syncing...'; b.disabled = true; });
   try {
     const res = await fetch('/api/sync', {method:'POST'});
     const d = await res.json();
-    btn.textContent = `Synced ${d.synced} items`;
-    setTimeout(() => { btn.textContent = 'Sync Monday.com'; btn.disabled = false; loadDashboard(); }, 1500);
-  } catch(e) { btn.textContent = 'Sync failed'; btn.disabled = false; }
+    btns.forEach(b => b.textContent = `Synced ${d.synced} items`);
+    setTimeout(() => { btns.forEach(b => { b.textContent = 'Sync Monday.com'; b.disabled = false; }); loadDashboard(); }, 1500);
+  } catch(e) { btns.forEach(b => { b.textContent = 'Sync failed'; b.disabled = false; }); }
 }
 
 loadDashboard();
+
+// ══════════ AI CHAT WIDGET ══════════
+const CHAT_HISTORY = [];
+
+function initChatUI() {
+  const msgs = document.getElementById('chat-messages');
+  if (msgs && !msgs.children.length) {
+    msgs.innerHTML = `<div class="chat-msg assistant">${t('chat_welcome')}</div>`;
+  }
+  const sug = document.getElementById('chat-suggestions');
+  if (sug) {
+    sug.innerHTML = `
+      <span class="chat-suggestion" onclick="sendChat(t('suggest_occupied'))">${t('suggest_occupied')}</span>
+      <span class="chat-suggestion" onclick="sendChat(t('suggest_leases'))">${t('suggest_leases')}</span>
+      <span class="chat-suggestion" onclick="sendChat(t('suggest_income'))">${t('suggest_income')}</span>
+      <span class="chat-suggestion" onclick="sendChat(t('suggest_vacant'))">${t('suggest_vacant')}</span>`;
+  }
+}
+
+function toggleChat() {
+  const w = document.getElementById('chat-window');
+  w.classList.toggle('show');
+  if (w.classList.contains('show')) {
+    initChatUI();
+    setTimeout(() => document.getElementById('chat-input').focus(), 100);
+  }
+}
+
+function appendChatMsg(role, text, isThinking) {
+  const msgs = document.getElementById('chat-messages');
+  const div = document.createElement('div');
+  div.className = 'chat-msg ' + role + (isThinking ? ' thinking' : '');
+  div.textContent = text;
+  msgs.appendChild(div);
+  msgs.scrollTop = msgs.scrollHeight;
+  return div;
+}
+
+async function sendChat(message) {
+  const input = document.getElementById('chat-input');
+  const sendBtn = document.getElementById('chat-send');
+  const text = (message || input.value).trim();
+  if (!text) return;
+  input.value = '';
+  sendBtn.disabled = true;
+
+  appendChatMsg('user', text);
+  const thinking = appendChatMsg('assistant', 'חושבת...', true);
+
+  CHAT_HISTORY.push({role: 'user', content: text});
+
+  try {
+    const res = await fetch('/api/chat', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({message: text, history: CHAT_HISTORY.slice(0, -1), lang: LANG}),
+    });
+    const data = await res.json();
+    thinking.remove();
+    if (data.error) {
+      appendChatMsg('assistant', '⚠️ ' + data.error);
+    } else {
+      appendChatMsg('assistant', data.reply);
+      CHAT_HISTORY.push({role: 'assistant', content: data.reply});
+      // If chat performed any action (created task, added expense, etc.) - refresh dashboard
+      if (data.actions && data.actions.length > 0) {
+        loadDashboard();
+      }
+    }
+  } catch(e) {
+    thinking.remove();
+    appendChatMsg('assistant', '⚠️ שגיאה בחיבור לשרת');
+  }
+  sendBtn.disabled = false;
+  input.focus();
+}
+
+// Enter to send, Shift+Enter for newline
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('chat-input');
+  if (input) {
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendChat();
+      }
+    });
+  }
+});
 </script>
+
+<!-- ══════════ TASK DETAIL MODAL ══════════ -->
+<div id="task-modal" class="task-modal-overlay" onclick="if(event.target===this)closeTaskModal()">
+  <div class="task-modal">
+    <div id="tm-content"></div>
+  </div>
+</div>
+
+<!-- ══════════ AI CHAT WIDGET ══════════ -->
+<button class="chat-fab" onclick="toggleChat()" title="Ask the dashboard anything">💬</button>
+<div id="chat-window" class="chat-window">
+  <div class="chat-header">
+    <div class="chat-header-info">
+      <div style="width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;font-size:18px">🤖</div>
+      <div>
+        <div class="chat-header-title" data-i18n="chat_title">Dashboard Assistant</div>
+        <div class="chat-header-sub" data-i18n="chat_subtitle">Ask me anything</div>
+      </div>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">×</button>
+  </div>
+  <div id="chat-messages" class="chat-messages"></div>
+  <div class="chat-suggestions" id="chat-suggestions"></div>
+  <div class="chat-input-area">
+    <textarea id="chat-input" class="chat-input" rows="2" data-i18n-placeholder="chat_placeholder"></textarea>
+    <button id="chat-send" class="chat-send" onclick="sendChat()" data-i18n="chat_send">Send</button>
+  </div>
+</div>
 
 </body>
 </html>

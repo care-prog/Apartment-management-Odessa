@@ -25,9 +25,13 @@ def requires_auth(f):
         return f(*args, **kwargs)
     return decorated
 
+PUBLIC_PATHS = ['/api/whatsapp-query', '/whatsapp-bot.js']
+
 def init_auth(app):
     @app.before_request
     def require_login():
+        if request.path in PUBLIC_PATHS:
+            return
         if request.path.startswith('/api/') or request.path == '/' or request.path.endswith('.html') or request.path.endswith('.css') or request.path.endswith('.js'):
             auth = request.authorization
             if not check_auth(auth.password if auth else ''):

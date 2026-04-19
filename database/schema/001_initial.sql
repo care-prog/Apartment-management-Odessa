@@ -143,6 +143,38 @@ CREATE TABLE IF NOT EXISTS documents (
     uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );
 
+CREATE TABLE IF NOT EXISTS team_members (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    phone TEXT UNIQUE NOT NULL,
+    role TEXT DEFAULT 'manager',
+    language TEXT DEFAULT 'ru',
+    access_level TEXT DEFAULT 'full',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS office_expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    description TEXT NOT NULL,
+    amount REAL NOT NULL,
+    category TEXT DEFAULT 'general',
+    date DATE,
+    receipt_url TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS owner_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner_id INTEGER NOT NULL REFERENCES owners(id),
+    amount REAL NOT NULL,
+    payment_date DATE NOT NULL,
+    method TEXT DEFAULT 'cash',
+    period TEXT,
+    notes TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
 CREATE TABLE IF NOT EXISTS financial_transactions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     owner_id INTEGER REFERENCES owners(id),

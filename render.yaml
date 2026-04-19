@@ -11,5 +11,9 @@ services:
         sync: false
       - key: APP_PASSWORD
         sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: MANYCHAT_API_KEY
+        sync: false
       - key: PYTHON_VERSION
         value: 3.11.0

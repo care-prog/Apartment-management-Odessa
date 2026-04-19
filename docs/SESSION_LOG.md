@@ -38,22 +38,23 @@
 ### Current State
 ```
 Phase: 1 (MVP Core)
-Tasks done this phase: 1 of 14 (dashboard UI designed)
-Overall progress: 10%
-App currently: Static HTML dashboard with mock data showing all sections
-Not working yet: No backend, no database, no real data, no interactivity
+Tasks done this phase: 6 of 14
+Overall progress: 40%
+App currently: Full dashboard with Flask API, SQLite DB (13 tables), Monday.com sync (33 items), real property data
+Not working yet: Vercel deployment, CRUD forms, document upload, automated notifications
+Server runs at: http://localhost:5050
 ```
 
 ### Next Steps
-1. Define database schema (SQLite) based on DATA_STRUCTURE.md ER diagram
-2. Set up Flask backend with REST API endpoints
-3. Build Property CRUD — first module to wire up with real data
-4. Connect frontend to API — replace mock data with real queries
+1. Deploy to Vercel (need to convert to serverless + cloud DB)
+2. Add password protection (David-only access)
+3. Add CRUD forms for adding/editing tenants, payments, tasks
+4. Connect Monday.com real-time webhook (auto-sync on changes)
+5. Fix Sofievskaya showing $100,000 rent (that's the sale price, not rent)
 
 ### Open Questions
-- Should we migrate existing data from Split app? How to export?
-- What are the exact rent amounts for each apartment?
-- Monday.com automations — which ones are critical to replicate first?
-- Eliahu gas debt — is the 6,000 UAH figure accurate?
+- Vercel deployment: needs serverless rewrite + cloud DB (Turso/Supabase) — confirmed by David
+- Split app data migration: still open
+- Some Monday.com items have no status/rent (Pushkinskaya individual flats, Kladovka, etc.) — need clarification
 
 ---
