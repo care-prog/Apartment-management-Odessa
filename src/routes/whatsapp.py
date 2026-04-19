@@ -324,12 +324,26 @@ def wa_webhook_receive():
 
         role, user = identify_sender(from_phone)
 
+        # Log every incoming message
+        from src.models import insert_db as _ins
+        sender_name = (user or {}).get('name') or (user or {}).get('display_name') or from_phone
+        try:
+            _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
+                 ('in', from_phone, sender_name, role, message_body[:1000]))
+        except Exception:
+            pass
+
         # Unknown number → reject immediately, no Claude call
         if role == 'unknown':
-            wa_send(from_phone,
-                    "אני לא מזהה אותך במערכת.\n"
-                    "I don't recognize your number in the system.\n"
-                    "Please contact the system administrator. 🔒")
+            rejection = ("אני לא מזהה אותך במערכת.\n"
+                         "I don't recognize your number in the system.\n"
+                         "Please contact the system administrator. 🔒")
+            wa_send(from_phone, rejection)
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+                     ('out', 'bot', from_phone, 'bot', 'bot', rejection[:1000], 'rejected_unknown'))
+            except Exception:
+                pass
             return jsonify({'status': 'unknown_sender'}), 200
 
         # Property owner → limited access, no write tools
@@ -416,6 +430,12 @@ CURRENT DATA:
                 WA_SESSIONS[norm_phone]['history']       = history[-WA_MAX_HISTORY:]
                 WA_SESSIONS[norm_phone]['last_activity'] = _time.time()
                 wa_send(from_phone, reply_text or '✓')
+                # Log outgoing reply
+                try:
+                    _ins('INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?, ?)',
+                         ('out', 'bot', from_phone, 'bot', 'bot', (reply_text or '✓')[:1000]))
+                except Exception:
+                    pass
                 return jsonify({'status': 'replied', 'actions': actions}), 200
 
             messages_arr.append({'role': 'assistant', 'content': content})
@@ -439,6 +459,15 @@ CURRENT DATA:
 
 
 # ── Settings API (WhatsApp token + status) ─────────────────────────────────
+@bp.route('/api/whatsapp/log', methods=['GET'])
+def wa_log():
+    """Return recent WhatsApp message log."""
+    limit = int(request.args.get('limit', 50))
+    rows = query_db(
+        'SELECT * FROM whatsapp_log ORDER BY created_at DESC LIMIT ?', (limit,))
+    return jsonify([dict(r) for r in rows])
+
+
 @bp.route('/api/whatsapp/token-status', methods=['GET'])
 def wa_token_status():
     """Check if the current WhatsApp token is valid."""

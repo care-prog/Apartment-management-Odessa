@@ -1500,6 +1500,17 @@
         </div>
       </div>
 
+        <!-- ── WhatsApp Message Log ── -->
+        <div class="section owner-only" style="margin-top:20px">
+          <div class="section-head">
+            <div class="section-title">📩 WhatsApp Message Log</div>
+            <button class="btn" onclick="loadWaLog()" style="font-size:12px">↻ Refresh</button>
+          </div>
+          <div id="wa-log-table" style="margin-top:8px">
+            <div style="color:var(--text-muted);font-size:13px;padding:12px 0">Click Refresh to load messages.</div>
+          </div>
+        </div>
+
         <!-- ── WhatsApp Settings ── -->
         <div class="section owner-only" style="margin-top:20px">
           <div class="section-head">
@@ -2082,7 +2093,7 @@ function showPage(page, fromHash) {
   if (page === 'cash') { loadWallets(); loadCashSummary(); }
   if (page === 'log') loadActivityLog();
   if (page === 'owners') loadOwners();
-  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); }
+  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); loadWaLog(); }
   if (page === 'professionals') loadProfessionals();
   closeSidebar();
 }
@@ -2659,6 +2670,49 @@ async function loadTeamUsers() {
     }).join('');
   } catch(e) {
     grid.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load users</div>';
+  }
+}
+
+async function loadWaLog() {
+  const el = document.getElementById('wa-log-table');
+  if (!el) return;
+  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Loading...</div>';
+  try {
+    const r = await fetch('/api/whatsapp/log?limit=30');
+    const rows = await r.json();
+    if (!rows.length) {
+      el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No messages yet.</div>';
+      return;
+    }
+    el.innerHTML = `<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">
+      <thead><tr style="background:var(--surface-2)">
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Time</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Dir</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">From</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Role</th>
+        <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Message</th>
+      </tr></thead>
+      <tbody>${rows.map(r => {
+        const isIn = r.direction === 'in';
+        const dirBadge = isIn
+          ? '<span style="background:rgba(99,102,241,.15);color:var(--accent);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">IN</span>'
+          : '<span style="background:rgba(0,168,107,.12);color:var(--green);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">OUT</span>';
+        const ts = (r.created_at || '').replace('T',' ').slice(0,16);
+        const phone = isIn ? (r.from_phone || '') : (r.to_phone || '');
+        const name  = isIn ? (r.sender_name || phone) : 'Bot';
+        const role  = isIn ? (r.sender_role || '') : '';
+        const body  = (r.body || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        return `<tr style="border-bottom:1px solid var(--border)">
+          <td style="padding:8px 12px;color:var(--text-muted);white-space:nowrap">${ts}</td>
+          <td style="padding:8px 12px">${dirBadge}</td>
+          <td style="padding:8px 12px;white-space:nowrap"><div style="font-weight:600">${name}</div><div style="color:var(--text-muted);font-size:10px">${phone}</div></td>
+          <td style="padding:8px 12px"><span style="font-size:10px;color:var(--text-muted)">${role}</span></td>
+          <td style="padding:8px 12px;max-width:320px;word-break:break-word">${body}</td>
+        </tr>`;
+      }).join('')}</tbody>
+    </table></div>`;
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--red);font-size:13px">Error loading log</div>';
   }
 }
 

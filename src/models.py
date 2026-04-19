@@ -110,6 +110,13 @@ def safe_migrate():
         execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY, value TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS whatsapp_log (
+            id SERIAL PRIMARY KEY,
+            direction TEXT NOT NULL DEFAULT 'in',
+            from_phone TEXT, to_phone TEXT,
+            sender_name TEXT, sender_role TEXT,
+            body TEXT, status TEXT DEFAULT 'ok',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -163,6 +170,13 @@ def safe_migrate():
         execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY, value TEXT,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS whatsapp_log (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            direction TEXT NOT NULL DEFAULT 'in',
+            from_phone TEXT, to_phone TEXT,
+            sender_name TEXT, sender_role TEXT,
+            body TEXT, status TEXT DEFAULT 'ok',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
 
 
 def init_db():
