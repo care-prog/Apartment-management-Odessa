@@ -1210,14 +1210,17 @@
               <select id="log-filter-entity" onchange="loadActivityLog()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface)">
                 <option value="">All types</option>
                 <option value="task">Tasks</option>
+                <option value="tenant">Tenants</option>
+                <option value="lease">Leases</option>
                 <option value="expense">Expenses</option>
                 <option value="transaction">Transactions</option>
-                <option value="tenant">Tenants</option>
+                <option value="maintenance">Maintenance</option>
               </select>
               <select id="log-filter-action" onchange="loadActivityLog()" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface)">
                 <option value="">All actions</option>
-                <option value="delete">Deleted</option>
                 <option value="create">Created</option>
+                <option value="update">Updated</option>
+                <option value="delete">Deleted</option>
                 <option value="restore">Restored</option>
               </select>
               <button class="btn" onclick="loadActivityLog()" style="font-size:12px">&#8635; Refresh</button>
@@ -1225,8 +1228,8 @@
           </div>
           <div class="table-wrap">
             <table>
-              <thead><tr><th>Time</th><th>Action</th><th>Type</th><th>Description</th><th>Role</th><th>Restore</th></tr></thead>
-              <tbody id="log-tbody"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr></tbody>
+              <thead><tr><th>Time</th><th>Action</th><th>Type</th><th>Description</th><th>Who</th><th>Restore</th></tr></thead>
+              <tbody id="activity-log-body"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -3192,7 +3195,7 @@ async function loadActivityLog() {
         <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:${color};background:${color}18;text-transform:uppercase">${r.action}</span></td>
         <td style="font-size:12px">${icon} ${r.entity_type}${r.entity_id ? ' #'+r.entity_id : ''}</td>
         <td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description || '—'}</td>
-        <td style="font-size:11px;color:var(--text-muted)">${r.user_role || '—'}</td>
+        <td style="font-size:12px;font-weight:500">${r.user_name || r.user_role || 'Owner'}</td>
         <td>${canRestore ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:var(--green);color:#fff;border:none" onclick="restoreAction(${r.id})">Restore</button>` : ''}</td>
       </tr>`;
     }).join('');

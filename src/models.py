@@ -91,6 +91,7 @@ def safe_migrate():
             role TEXT NOT NULL DEFAULT 'office', permissions TEXT NOT NULL DEFAULT '{}',
             property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'Owner'")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -121,6 +122,8 @@ def safe_migrate():
             role TEXT NOT NULL DEFAULT 'office', permissions TEXT NOT NULL DEFAULT '{}',
             property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        try: execute_db("ALTER TABLE activity_log ADD COLUMN user_name TEXT DEFAULT 'Owner'")
+        except: pass
 
 
 def init_db():

@@ -27,16 +27,24 @@ def create_task():
          data.get('due_date'), data.get('status', 'pending'),
          data.get('priority', 'normal'), data.get('notes'))
     )
+    from src.routes.activity import log_action
+    log_action('create', 'task', tid, f"Created task: {data['title']} → {data.get('assigned_to','?')}")
     return jsonify({'id': tid}), 201
 
 @bp.route('/api/tasks/<int:tid>', methods=['PUT'])
 def update_task(tid):
     data = request.json
+    before = query_db('SELECT * FROM tasks WHERE id = ?', (tid,), one=True)
     execute_db(
         'UPDATE tasks SET title=?, description=?, assigned_to=?, due_date=?, status=?, priority=?, notes=? WHERE id=?',
         (data.get('title'), data.get('description'), data.get('assigned_to'),
          data.get('due_date'), data.get('status'), data.get('priority'), data.get('notes'), tid)
     )
+    from src.routes.activity import log_action
+    old_status = before['status'] if before else '?'
+    new_status = data.get('status', old_status)
+    desc = f"Task '{data.get('title')}': {old_status} → {new_status}" if old_status != new_status else f"Edited task: {data.get('title')}"
+    log_action('update', 'task', tid, desc, before_data=before)
     return jsonify({'ok': True})
 
 @bp.route('/api/tasks/<int:tid>', methods=['DELETE'])

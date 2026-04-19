@@ -6,15 +6,30 @@ from src.models import query_db, insert_db, execute_db
 bp = Blueprint('activity', __name__)
 
 
-def log_action(action, entity_type, entity_id=None, description=None, before_data=None, user_role='owner'):
-    """Call this from any route to record an action."""
+def _current_actor():
+    """Returns (role, display_name) of whoever is making the current request."""
     try:
+        from src.auth import get_current_user
+        user = get_current_user()
+        if user:
+            return user.get('role', 'owner'), user.get('display_name', 'Owner')
+    except Exception:
+        pass
+    return 'owner', 'Owner'
+
+
+def log_action(action, entity_type, entity_id=None, description=None, before_data=None, user_role=None):
+    """Call this from any route to record an action. Automatically captures who is logged in."""
+    try:
+        role, display_name = _current_actor()
+        if user_role:
+            role = user_role  # allow override
         insert_db(
-            'INSERT INTO activity_log (action, entity_type, entity_id, description, before_data, user_role, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            'INSERT INTO activity_log (action, entity_type, entity_id, description, before_data, user_role, user_name, ip_address) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
             (action, entity_type, str(entity_id) if entity_id else None,
              description,
              json.dumps(before_data, ensure_ascii=False) if before_data else None,
-             user_role,
+             role, display_name,
              request.remote_addr if request else None)
         )
     except Exception:

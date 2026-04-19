@@ -24,16 +24,21 @@ def create_tenant():
         (data['name'], data.get('phone'), data.get('email'),
          data.get('passport_info'), data.get('language', 'ru'), data.get('notes'))
     )
+    from src.routes.activity import log_action
+    log_action('create', 'tenant', tid, f"Added tenant: {data['name']}")
     return jsonify({'id': tid}), 201
 
 @bp.route('/api/tenants/<int:tid>', methods=['PUT'])
 def update_tenant(tid):
     data = request.json
+    before = query_db('SELECT * FROM tenants WHERE id = ?', (tid,), one=True)
     execute_db(
         'UPDATE tenants SET name=?, phone=?, email=?, passport_info=?, language=?, notes=? WHERE id=?',
         (data['name'], data.get('phone'), data.get('email'),
          data.get('passport_info'), data.get('language'), data.get('notes'), tid)
     )
+    from src.routes.activity import log_action
+    log_action('update', 'tenant', tid, f"Updated tenant: {data['name']}", before_data=before)
     return jsonify({'ok': True})
 
 @bp.route('/api/leases', methods=['GET'])
@@ -57,27 +62,39 @@ def create_lease():
          data['rent_amount'], data.get('deposit', 0), data.get('status', 'active'), data.get('notes'))
     )
     execute_db('UPDATE apartments SET status = ? WHERE id = ?', ('occupied', data['apartment_id']))
+    from src.routes.activity import log_action
+    tenant = query_db('SELECT name FROM tenants WHERE id = ?', (data['tenant_id'],), one=True)
+    log_action('create', 'lease', lid, f"New lease: {tenant['name'] if tenant else '?'} — ${data['rent_amount']}/mo")
     return jsonify({'id': lid}), 201
 
 @bp.route('/api/leases/<int:lid>', methods=['PUT'])
 def update_lease(lid):
     data = request.json
+    before = query_db('SELECT * FROM leases WHERE id = ?', (lid,), one=True)
     execute_db(
         'UPDATE leases SET start_date=?, end_date=?, rent_amount=?, deposit=?, status=?, notes=? WHERE id=?',
         (data.get('start_date'), data.get('end_date'), data.get('rent_amount'),
          data.get('deposit'), data.get('status'), data.get('notes'), lid)
     )
+    from src.routes.activity import log_action
+    log_action('update', 'lease', lid, f"Updated lease #{lid} — rent: ${data.get('rent_amount')}", before_data=before)
     return jsonify({'ok': True})
 
 @bp.route('/api/tenants/<int:tid>', methods=['DELETE'])
 def delete_tenant(tid):
+    tenant = query_db('SELECT * FROM tenants WHERE id = ?', (tid,), one=True)
     execute_db('DELETE FROM payments WHERE lease_id IN (SELECT id FROM leases WHERE tenant_id = ?)', (tid,))
     execute_db('DELETE FROM leases WHERE tenant_id = ?', (tid,))
     execute_db('DELETE FROM tenants WHERE id = ?', (tid,))
+    from src.routes.activity import log_action
+    log_action('delete', 'tenant', tid, f"Deleted tenant: {tenant['name'] if tenant else tid}", before_data=tenant)
     return jsonify({'ok': True})
 
 @bp.route('/api/leases/<int:lid>', methods=['DELETE'])
 def delete_lease(lid):
+    lease = query_db('SELECT * FROM leases WHERE id = ?', (lid,), one=True)
     execute_db('DELETE FROM payments WHERE lease_id = ?', (lid,))
     execute_db('DELETE FROM leases WHERE id = ?', (lid,))
+    from src.routes.activity import log_action
+    log_action('delete', 'lease', lid, f"Deleted lease #{lid}", before_data=lease)
     return jsonify({'ok': True})
