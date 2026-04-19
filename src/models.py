@@ -92,6 +92,19 @@ def safe_migrate():
             property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         execute_db("ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS user_name TEXT DEFAULT 'Owner'")
+        execute_db("""CREATE TABLE IF NOT EXISTS professionals (
+            id SERIAL PRIMARY KEY, name TEXT NOT NULL, phone TEXT, phone_2 TEXT,
+            messenger TEXT DEFAULT 'Viber', category TEXT DEFAULT 'Other', notes TEXT,
+            apartments_worked TEXT, total_paid DOUBLE PRECISION DEFAULT 0,
+            rating INTEGER DEFAULT 5, is_active INTEGER DEFAULT 1, monday_id TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS professional_payments (
+            id SERIAL PRIMARY KEY,
+            professional_id INTEGER REFERENCES professionals(id) ON DELETE CASCADE,
+            amount DOUBLE PRECISION NOT NULL, currency TEXT DEFAULT 'USD',
+            description TEXT, payment_date DATE,
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -124,6 +137,20 @@ def safe_migrate():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
         try: execute_db("ALTER TABLE activity_log ADD COLUMN user_name TEXT DEFAULT 'Owner'")
         except: pass
+        execute_db("""CREATE TABLE IF NOT EXISTS professionals (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+            phone TEXT, phone_2 TEXT, messenger TEXT DEFAULT 'Viber',
+            category TEXT DEFAULT 'Other', notes TEXT, apartments_worked TEXT,
+            total_paid REAL DEFAULT 0, rating INTEGER DEFAULT 5,
+            is_active INTEGER DEFAULT 1, monday_id TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS professional_payments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            professional_id INTEGER REFERENCES professionals(id) ON DELETE CASCADE,
+            amount REAL NOT NULL, currency TEXT DEFAULT 'USD',
+            description TEXT, payment_date DATE,
+            task_id INTEGER REFERENCES tasks(id) ON DELETE SET NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
 
 
 def init_db():

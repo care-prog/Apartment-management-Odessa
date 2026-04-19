@@ -742,6 +742,7 @@
       <div class="nav-group">
         <div class="nav-group-label" data-i18n="settings">Settings</div>
         <div class="nav-item" onclick="showPage('team')"><span class="icon">&#9998;</span> <span data-i18n="nav_team">Team</span></div>
+        <div class="nav-item" onclick="showPage('professionals')"><span class="icon">👷</span> <span>Professionals</span></div>
         <div class="nav-item owner-only" onclick="showPage('log')"><span class="icon">&#128203;</span> Activity Log</div>
       </div>
     </div>
@@ -1376,6 +1377,32 @@
         </div>
       </div>
 
+      <!-- ══════ PAGE: PROFESSIONALS ══════ -->
+      <div id="page-professionals" class="page" style="display:none">
+        <!-- Toolbar -->
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:16px">
+          <input id="pros-search" type="text" placeholder="Search professionals..." oninput="filterPros()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;flex:1;min-width:180px">
+          <select id="pros-cat-filter" onchange="filterPros()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+            <option value="">All Categories</option>
+            <option>Tile Work</option><option>Doors</option><option>Construction</option>
+            <option>Plumbing</option><option>Electrical</option><option>Cleaning</option>
+            <option>Realtor</option><option>Legal</option><option>Locksmith</option>
+            <option>Fire Safety</option><option>Design</option><option>Furniture</option>
+            <option>Windows/Glass</option><option>A/C</option><option>Laundry</option>
+            <option>Painting</option><option>IT/Tech</option><option>Materials/Supply</option>
+            <option>Utilities</option><option>Documents/Printing</option>
+            <option>Photography</option><option>Building Admin</option>
+            <option>Neighbor Contact</option><option>Internet/TV</option><option>Other</option>
+          </select>
+          <button class="btn btn-primary" onclick="openProModal(null)">+ Add</button>
+          <button class="btn owner-only" onclick="syncProsMonday()" style="font-size:12px">&#8635; Sync Monday</button>
+        </div>
+        <!-- Stats row -->
+        <div id="pros-stats" class="stats-row" style="margin-bottom:16px"></div>
+        <!-- Cards grid -->
+        <div id="pros-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px"></div>
+      </div>
+
       <!-- ══════ PAGE: TEAM ══════ -->
       <div id="page-team" class="page" style="display:none">
         <div class="section" style="margin-bottom:20px">
@@ -1503,6 +1530,10 @@
       <button class="bottom-tab" id="bt-finance" onclick="showPage('finance');setBottomTab('finance')">
         <span class="bt-icon-wrap"><span class="bt-icon">&#36;</span></span>
         <span class="bt-label">Finance</span>
+      </button>
+      <button class="bottom-tab" id="bt-professionals" onclick="showPage('professionals');setBottomTab('professionals')">
+        <span class="bt-icon-wrap"><span class="bt-icon">👷</span></span>
+        <span class="bt-label">Pros</span>
       </button>
       <button class="bottom-tab" id="bt-more" onclick="openSidebar()">
         <span class="bt-icon-wrap"><span class="bt-icon">&#9776;</span></span>
@@ -1938,7 +1969,7 @@ function applyTranslations() {
 
 
 // ── Navigation (with URL hash for refresh persistence) ──
-const PAGES = ['dashboard', 'properties', 'tenants', 'rent', 'maintenance', 'tasks', 'finance', 'cash', 'team', 'log', 'owners'];
+const PAGES = ['dashboard', 'properties', 'tenants', 'rent', 'maintenance', 'tasks', 'finance', 'cash', 'team', 'log', 'owners', 'professionals'];
 
 function showPage(page, fromHash) {
   if (!PAGES.includes(page)) page = 'dashboard';
@@ -1960,6 +1991,7 @@ function showPage(page, fromHash) {
   if (page === 'log') loadActivityLog();
   if (page === 'owners') loadOwners();
   if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); }
+  if (page === 'professionals') loadProfessionals();
   closeSidebar();
 }
 
@@ -3824,6 +3856,234 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 });
+
+// ══════════ PROFESSIONALS ══════════
+let _allPros = [];
+let _currentProId = null;
+
+const CAT_COLORS = {
+  'Cleaning':'#00c875','Realtor':'#0073ea','Construction':'#fdab3d',
+  'Plumbing':'#037f4c','Electrical':'#fdab3d','Legal':'#a25ddc',
+  'Locksmith':'#e44258','Fire Safety':'#e44258','Painting':'#00d4f5',
+  'IT/Tech':'#0073ea','Tile Work':'#ff642e','Doors':'#fdab3d',
+  'A/C':'#00d4f5','Furniture':'#a25ddc','Windows/Glass':'#00c875',
+  'Laundry':'#37c5f0','Materials/Supply':'#fdab3d','Design':'#a25ddc',
+  'Utilities':'#037f4c','Neighbor Contact':'#676879','Internet/TV':'#37c5f0',
+  'Documents/Printing':'#676879','Photography':'#a25ddc','Building Admin':'#676879',
+  'Other':'#676879',
+};
+
+async function loadProfessionals() {
+  try {
+    const res = await fetch('/api/professionals');
+    _allPros = await res.json();
+    renderProsStats();
+    renderProsGrid(_allPros);
+  } catch(e) { console.error('loadProfessionals error', e); }
+}
+
+function renderProsStats() {
+  const statsEl = document.getElementById('pros-stats');
+  if (!statsEl) return;
+  const cats = {};
+  _allPros.forEach(p => { cats[p.category] = (cats[p.category]||0) + 1; });
+  const topCats = Object.entries(cats).sort((a,b)=>b[1]-a[1]).slice(0,4);
+  const totalPaid = _allPros.reduce((s,p)=>s+(p.total_paid||0),0);
+  statsEl.innerHTML = `
+    <div class="stat-card" style="flex:1;min-width:120px;border-top:3px solid var(--accent)">
+      <div class="stat-label">TOTAL CONTACTS</div>
+      <div class="stat-value">${_allPros.length}</div>
+    </div>
+    ${topCats.map(([cat,cnt])=>`
+    <div class="stat-card" style="flex:1;min-width:120px;border-top:3px solid ${CAT_COLORS[cat]||'var(--accent)'}">
+      <div class="stat-label">${cat.toUpperCase()}</div>
+      <div class="stat-value">${cnt}</div>
+    </div>`).join('')}
+    <div class="stat-card" style="flex:1;min-width:120px;border-top:3px solid var(--green)">
+      <div class="stat-label">TOTAL PAID</div>
+      <div class="stat-value" style="color:var(--green)">$${totalPaid.toLocaleString()}</div>
+    </div>`;
+}
+
+function filterPros() {
+  const q = (document.getElementById('pros-search')?.value||'').toLowerCase();
+  const cat = document.getElementById('pros-cat-filter')?.value||'';
+  const filtered = _allPros.filter(p => {
+    const matchQ = !q || p.name.toLowerCase().includes(q) || (p.notes||'').toLowerCase().includes(q) || (p.apartments_worked||'').toLowerCase().includes(q);
+    const matchCat = !cat || p.category === cat;
+    return matchQ && matchCat;
+  });
+  renderProsGrid(filtered);
+}
+
+function renderProsGrid(pros) {
+  const grid = document.getElementById('pros-grid');
+  if (!grid) return;
+  if (!pros.length) { grid.innerHTML='<div style="color:var(--text-muted);padding:20px;grid-column:1/-1">No professionals found</div>'; return; }
+  const MESS_ICON = {WhatsApp:'🟢',Viber:'💜',Telegram:'✈️',None:'📵'};
+  const STARS = n => '⭐'.repeat(n||5);
+  grid.innerHTML = pros.map(p => {
+    const color = CAT_COLORS[p.category]||'var(--text-muted)';
+    const paid = p.total_paid||0;
+    return `<div class="section" style="cursor:pointer;transition:box-shadow .15s;border-left:4px solid ${color}" onclick="openProModal(${p.id})" onmouseenter="this.style.boxShadow='var(--shadow-lg)'" onmouseleave="this.style.boxShadow=''">
+      <div style="display:flex;align-items:flex-start;gap:12px">
+        <div style="width:40px;height:40px;border-radius:10px;background:${color}22;border:2px solid ${color};display:flex;align-items:center;justify-content:center;font-weight:700;font-size:16px;color:${color};flex-shrink:0">${(p.name||'?')[0].toUpperCase()}</div>
+        <div style="flex:1;min-width:0">
+          <div style="font-weight:700;font-size:14px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.name}</div>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:5px">
+            <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${color}22;color:${color}">${p.category}</span>
+            <span style="font-size:12px">${MESS_ICON[p.messenger]||'📱'} ${p.messenger||''}</span>
+          </div>
+          ${p.phone ? `<div style="font-size:12px;color:var(--text-dim)">📞 ${p.phone}</div>` : ''}
+          ${p.apartments_worked ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">🏠 ${p.apartments_worked}</div>` : ''}
+          ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.notes}</div>` : ''}
+        </div>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)">
+        <div style="font-size:12px">${STARS(p.rating)}</div>
+        ${paid > 0 ? `<div style="font-size:12px;font-weight:700;color:var(--green)">Paid: $${paid.toLocaleString()}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function openProModal(pid) {
+  _currentProId = pid;
+  document.getElementById('modal-pro').style.display = 'flex';
+  document.getElementById('pro-payments-section').style.display = 'none';
+  const delBtn = document.getElementById('pro-delete-btn');
+
+  if (!pid) {
+    document.getElementById('pro-modal-title').textContent = 'Add Professional';
+    document.getElementById('pro-id').value = '';
+    ['pro-name','pro-phone','pro-phone2','pro-apts','pro-notes'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('pro-category').value='Other';
+    document.getElementById('pro-messenger').value='Viber';
+    document.getElementById('pro-rating').value='5';
+    delBtn.style.display='none';
+    return;
+  }
+
+  delBtn.style.display='';
+  document.getElementById('pro-modal-title').textContent = 'Edit Professional';
+  const res = await fetch('/api/professionals/' + pid);
+  const p = await res.json();
+  document.getElementById('pro-id').value = p.id;
+  document.getElementById('pro-name').value = p.name||'';
+  document.getElementById('pro-phone').value = p.phone||'';
+  document.getElementById('pro-phone2').value = p.phone_2||'';
+  document.getElementById('pro-category').value = p.category||'Other';
+  document.getElementById('pro-messenger').value = p.messenger||'Viber';
+  document.getElementById('pro-rating').value = p.rating||5;
+  document.getElementById('pro-apts').value = p.apartments_worked||'';
+  document.getElementById('pro-notes').value = p.notes||'';
+
+  // Payment history
+  document.getElementById('pro-payments-section').style.display='';
+  const pList = document.getElementById('pro-payments-list');
+  const pays = p.payments||[];
+  if (pays.length) {
+    const total = pays.reduce((s,pp)=>s+pp.amount,0);
+    pList.innerHTML = `<div style="margin-bottom:8px">
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="background:var(--surface-2)">
+          <th style="padding:5px 8px;text-align:left;color:var(--text-muted);font-size:10px">Date</th>
+          <th style="padding:5px 8px;text-align:left;color:var(--text-muted);font-size:10px">Description</th>
+          <th style="padding:5px 8px;text-align:right;color:var(--text-muted);font-size:10px">Amount</th>
+          <th style="padding:5px 8px" class="owner-only"></th>
+        </tr></thead>
+        <tbody>${pays.map(pp=>`<tr>
+          <td style="padding:5px 8px">${fmtDate(pp.payment_date)||'—'}</td>
+          <td style="padding:5px 8px">${pp.description||'—'}</td>
+          <td style="padding:5px 8px;text-align:right;font-weight:700;color:var(--green)">${pp.currency==='UAH'?'₴':'$'}${Number(pp.amount).toLocaleString()}</td>
+          <td style="padding:5px 8px" class="owner-only"><button onclick="deleteProPayment(${pp.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:12px">✕</button></td>
+        </tr>`).join('')}</tbody>
+        <tfoot><tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="2" style="padding:5px 8px">Total paid</td><td style="padding:5px 8px;text-align:right;color:var(--green)">$${total.toLocaleString()}</td><td></td></tr></tfoot>
+      </table></div>`;
+  } else {
+    pList.innerHTML='<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No payments recorded yet</div>';
+  }
+  const pd = document.getElementById('pro-pay-date');
+  if (pd && !pd.value) pd.value = new Date().toISOString().slice(0,10);
+  applyRoleUI();
+}
+
+function closeProModal() {
+  document.getElementById('modal-pro').style.display='none';
+  _currentProId=null;
+}
+
+async function savePro() {
+  const name = document.getElementById('pro-name').value.trim();
+  if (!name) { alert('Name is required'); return; }
+  const payload = {
+    name,
+    phone: document.getElementById('pro-phone').value.trim(),
+    phone_2: document.getElementById('pro-phone2').value.trim(),
+    category: document.getElementById('pro-category').value,
+    messenger: document.getElementById('pro-messenger').value,
+    rating: parseInt(document.getElementById('pro-rating').value),
+    apartments_worked: document.getElementById('pro-apts').value.trim(),
+    notes: document.getElementById('pro-notes').value.trim(),
+  };
+  const pid = document.getElementById('pro-id').value;
+  const method = pid ? 'PUT' : 'POST';
+  const url = pid ? '/api/professionals/'+pid : '/api/professionals';
+  await fetch(url, {method, headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload)});
+  closeProModal();
+  loadProfessionals();
+}
+
+async function deletePro() {
+  if (!_currentProId) return;
+  if (!confirm('Delete this professional? All payment history will be lost.')) return;
+  await fetch('/api/professionals/'+_currentProId, {method:'DELETE'});
+  closeProModal();
+  loadProfessionals();
+}
+
+async function addProPayment() {
+  if (!_currentProId) return;
+  const amount = parseFloat(document.getElementById('pro-pay-amount').value);
+  const currency = document.getElementById('pro-pay-currency').value;
+  const desc = document.getElementById('pro-pay-desc').value.trim();
+  const date = document.getElementById('pro-pay-date').value;
+  if (!amount) { alert('Amount required'); return; }
+  await fetch('/api/professionals/'+_currentProId+'/payments', {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify({amount, currency, description:desc, payment_date:date||new Date().toISOString().slice(0,10)})
+  });
+  document.getElementById('pro-pay-amount').value='';
+  document.getElementById('pro-pay-desc').value='';
+  openProModal(_currentProId);
+  loadProfessionals();
+}
+
+async function deleteProPayment(payid) {
+  if (!confirm('Delete this payment?')) return;
+  await fetch('/api/professional-payments/'+payid, {method:'DELETE'});
+  openProModal(_currentProId);
+  loadProfessionals();
+}
+
+async function syncProsMonday() {
+  const btn = event.target;
+  btn.textContent='Syncing...';
+  btn.disabled=true;
+  try {
+    const res = await fetch('/api/professionals/sync-monday', {method:'POST'});
+    const d = await res.json();
+    btn.textContent='&#8635; Sync Monday';
+    btn.disabled=false;
+    loadProfessionals();
+    alert(`Synced: ${d.imported} imported, ${d.updated} updated`);
+  } catch(e) {
+    btn.textContent='&#8635; Sync Monday';
+    btn.disabled=false;
+    alert('Sync failed: '+e.message);
+  }
+}
 </script>
 
 <!-- ══════════ TASK DETAIL MODAL ══════════ -->
@@ -3851,6 +4111,91 @@ document.addEventListener('DOMContentLoaded', () => {
   <div class="chat-input-area">
     <textarea id="chat-input" class="chat-input" rows="2" data-i18n-placeholder="chat_placeholder"></textarea>
     <button id="chat-send" class="chat-send" onclick="sendChat()" data-i18n="chat_send">Send</button>
+  </div>
+</div>
+
+<!-- ══════ MODAL: PROFESSIONAL ══════ -->
+<div id="modal-pro" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeProModal()">
+  <div class="modal-box" style="width:580px;max-width:96vw;max-height:90vh;overflow-y:auto">
+    <div class="modal-head">
+      <div class="modal-title" id="pro-modal-title">Add Professional</div>
+      <button class="modal-close" onclick="closeProModal()">&#10005;</button>
+    </div>
+    <div style="padding:20px">
+      <input type="hidden" id="pro-id">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Full Name *</label>
+          <input id="pro-name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone 1</label>
+          <input id="pro-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone 2</label>
+          <input id="pro-phone2" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Category</label>
+          <select id="pro-category" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+            <option>Tile Work</option><option>Doors</option><option>Construction</option>
+            <option>Plumbing</option><option>Electrical</option><option>Cleaning</option>
+            <option>Realtor</option><option>Legal</option><option>Locksmith</option>
+            <option>Fire Safety</option><option>Design</option><option>Furniture</option>
+            <option>Windows/Glass</option><option>A/C</option><option>Laundry</option>
+            <option>Painting</option><option>IT/Tech</option><option>Materials/Supply</option>
+            <option>Utilities</option><option>Documents/Printing</option>
+            <option>Photography</option><option>Building Admin</option>
+            <option>Neighbor Contact</option><option>Internet/TV</option><option selected>Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Messenger</label>
+          <select id="pro-messenger" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+            <option>WhatsApp</option><option selected>Viber</option><option>Telegram</option><option>None</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Rating</label>
+          <select id="pro-rating" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+            <option value="5">&#11088;&#11088;&#11088;&#11088;&#11088; Excellent</option>
+            <option value="4">&#11088;&#11088;&#11088;&#11088; Good</option>
+            <option value="3">&#11088;&#11088;&#11088; Average</option>
+            <option value="2">&#11088;&#11088; Below Average</option>
+            <option value="1">&#11088; Poor / Avoid</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Apartments Worked</label>
+          <input id="pro-apts" placeholder="e.g. 134, 49, Pushkinskaya" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+        </div>
+        <div style="grid-column:1/-1">
+          <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label>
+          <textarea id="pro-notes" rows="3" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;resize:vertical"></textarea>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-bottom:20px">
+        <button class="btn" id="pro-delete-btn" onclick="deletePro()" style="color:var(--red);display:none">Delete</button>
+        <button class="btn" onclick="closeProModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="savePro()">&#128190; Save</button>
+      </div>
+
+      <!-- Payment history section (shown when editing existing pro) -->
+      <div id="pro-payments-section" style="display:none;border-top:1px solid var(--border);padding-top:16px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">&#128176; Payment History</div>
+        <div id="pro-payments-list"></div>
+        <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">
+          <input id="pro-pay-amount" type="number" step="0.01" placeholder="Amount" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;width:110px">
+          <select id="pro-pay-currency" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+            <option>USD</option><option>UAH</option>
+          </select>
+          <input id="pro-pay-desc" placeholder="For what work..." style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;flex:1;min-width:140px">
+          <input id="pro-pay-date" type="date" style="padding:7px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+          <button class="btn btn-primary" onclick="addProPayment()" style="font-size:12px">+ Add Payment</button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 

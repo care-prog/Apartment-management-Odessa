@@ -5,6 +5,33 @@
 
 ---
 
+## Session 6 — 2026-04-19
+
+**Duration:** Full session
+**Phase:** Phase 1
+**Focus:** Professionals module — contacts directory for tradespeople
+
+### Done
+- DB migration: added `professionals` and `professional_payments` tables to `safe_migrate()` (both SQLite and PostgreSQL blocks)
+- `src/routes/professionals.py` — full CRUD: GET list (with search/category filter + live total_paid from payments), POST create, GET single with payments array, PUT update, DELETE with cascade, POST payment, DELETE payment
+- Monday.com sync endpoint: `POST /api/professionals/sync-monday` — live API call to board 5261090733, upserts by monday_id, auto-detects category from name (25-category keyword matching)
+- `detect_category()` function with 25 categories and full keyword list
+- Registered blueprint in `src/app.py`
+- `index.html` — nav item (sidebar + bottom nav "Pros" tab), professionals page with search/filter toolbar + stats row + cards grid, professional modal with payment history section
+- PAGES array updated to include 'professionals'
+- `showPage()` calls `loadProfessionals()` when navigating to professionals page
+- All 8 validation checks passed
+
+### Deployment
+- Push to GitHub → manual deploy on Render
+
+### Next
+- Test professionals page with real data — sync Monday board 5261090733
+- Add logging to wallets.py and maintenance.py
+- Property owner filtered view
+
+---
+
 ## Session 5 — 2026-04-19
 
 **Duration:** Full session

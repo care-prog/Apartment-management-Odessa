@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
-from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity, users
+from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity, users, professionals as professionals_mod
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
@@ -48,6 +48,7 @@ app.register_blueprint(uploads.bp)
 app.register_blueprint(wallets.bp)
 app.register_blueprint(activity.bp)
 app.register_blueprint(users.bp)
+app.register_blueprint(professionals_mod.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
