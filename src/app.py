@@ -57,6 +57,19 @@ def sync_monday():
         import traceback
         return jsonify({'synced': 0, 'error': str(e), 'trace': traceback.format_exc()}), 500
 
+@app.route('/api/sync/push', methods=['POST'])
+def sync_push():
+    """Accepts raw Monday items from Make.com and syncs to DB."""
+    data = request.json
+    if not data or 'items' not in data:
+        return jsonify({'error': 'Expected {items: [...]}'}), 400
+    try:
+        result = sync_to_db(items=data['items'])
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        return jsonify({'synced': 0, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
 @app.route('/api/sync/test', methods=['GET'])
 def sync_test():
     """Diagnostic endpoint — shows Monday API connection status."""

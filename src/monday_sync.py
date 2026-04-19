@@ -112,9 +112,11 @@ def parse_item(item):
         'subitems': item.get('subitems', []),
     }
 
-def sync_to_db():
+def sync_to_db(items=None):
+    """Sync Monday items to DB. Pass pre-fetched items to skip API call."""
     from src.models import query_db, insert_db, execute_db, init_db
-    items = fetch_board_items()
+    if items is None:
+        items = fetch_board_items()
     if not items:
         return {'synced': 0, 'error': 'No items fetched'}
 
