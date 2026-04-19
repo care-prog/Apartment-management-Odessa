@@ -202,14 +202,20 @@ def sync_monday():
     items = boards[0].get('items_page', {}).get('items', [])
 
     imported = 0
-    updated = 0
+    skipped = 0
     for item in items:
         mid = str(item['id'])
         name = item['name'].strip()
         if not name:
             continue
 
-        # Parse column values
+        # If already exists in our system — skip (preserve manual edits)
+        existing = query_db('SELECT id FROM professionals WHERE monday_id = ?', (mid,), one=True)
+        if existing:
+            skipped += 1
+            continue
+
+        # New contact — import from Monday
         cols = {cv['id']: cv['text'] for cv in item.get('column_values', [])}
         phone = cols.get('phone', '') or ''
         phone_2 = cols.get('phone_1', '') or ''
@@ -219,18 +225,11 @@ def sync_monday():
         notes = cols.get('text', '') or ''
         category = detect_category(name)
 
-        existing = query_db('SELECT id FROM professionals WHERE monday_id = ?', (mid,), one=True)
-        if existing:
-            execute_db(
-                'UPDATE professionals SET name=?, phone=?, phone_2=?, messenger=?, category=?, notes=? WHERE monday_id=?',
-                (name, phone, phone_2, messenger, category, notes, mid)
-            )
-            updated += 1
-        else:
-            insert_db(
-                'INSERT OR IGNORE INTO professionals (name, phone, phone_2, messenger, category, notes, monday_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
-                (name, phone, phone_2, messenger, category, notes, mid)
-            )
-            imported += 1
+        insert_db(
+            'INSERT OR IGNORE INTO professionals (name, phone, phone_2, messenger, category, notes, monday_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            (name, phone, phone_2, messenger, category, notes, mid)
+        )
+        imported += 1
 
-    return jsonify({'ok': True, 'imported': imported, 'updated': updated, 'total': len(items)})
+    return jsonify({'ok': True, 'imported': imported, 'skipped': skipped, 'total': len(items),
+                    'message': f'Added {imported} new contacts. Skipped {skipped} existing (your edits preserved).'})
