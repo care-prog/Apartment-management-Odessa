@@ -200,9 +200,14 @@ def sync_to_db():
         if db_status == 'occupied' and p['rent'] > 0:
             tenant_name = f"Tenant {p['name']}"
             tenant_id = insert_db("INSERT INTO tenants (name, language) VALUES (?, ?)", (tenant_name, 'ru'))
+            def _safe_date(v, default=None):
+                if not v:
+                    return default
+                m = re.match(r'(\d{4})-(\d{2})-(\d{2})', str(v))
+                return m.group(0) if m else default
             insert_db(
                 "INSERT INTO leases (apartment_id, tenant_id, start_date, end_date, rent_amount, status) VALUES (?, ?, ?, ?, ?, ?)",
-                (apt_id, tenant_id, p['date_start'] or '2025-01-01', p['date_finish'] or None, p['rent'], 'active'))
+                (apt_id, tenant_id, _safe_date(p['date_start'], '2025-01-01'), _safe_date(p['date_finish']), p['rent'], 'active'))
 
         synced.append({'name': p['name'], 'status': db_status, 'rent': p['rent']})
     return {'synced': len(synced), 'items': synced}
