@@ -12,9 +12,10 @@ def list_expenses():
 def create_expense():
     data = request.json
     eid = insert_db(
-        'INSERT INTO office_expenses (description, amount, category, date, receipt_url, notes) VALUES (?, ?, ?, ?, ?, ?)',
+        'INSERT INTO office_expenses (description, amount, category, date, receipt_url, notes, currency) VALUES (?, ?, ?, ?, ?, ?, ?)',
         (data['description'], data['amount'], data.get('category', 'general'),
-         data.get('date'), data.get('receipt_url'), data.get('notes')))
+         data.get('date'), data.get('receipt_url'), data.get('notes'),
+         data.get('currency', 'USD')))
     return jsonify({'id': eid}), 201
 
 @bp.route('/api/expenses/<int:eid>', methods=['PUT'])

@@ -1789,23 +1789,40 @@ async function loadWallets() {
   const txns = await txnRes.json();
   const commissions = await commRes.json();
 
-  // Wallet cards
+  // Wallet summary cards — prominent, clear numbers
   const wc = document.getElementById('wallet-cards');
   if (wc) {
-    wc.innerHTML = ['USD', 'UAH'].map(cur => {
-      const w = wallets[cur] || {income:0, expenses:0, balance:0};
-      const sym = cur === 'USD' ? '$' : '₴';
-      const balColor = w.balance >= 0 ? 'var(--green)' : 'var(--red)';
-      return `<div class="stat-card">
-        <div class="stat-label">${sym} ${cur} Wallet</div>
-        <div class="stat-value" style="color:${balColor}">${sym}${w.balance.toLocaleString()}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">
-          <span style="color:var(--green)">▲ ${sym}${w.income.toLocaleString()}</span>
-          &nbsp;
-          <span style="color:var(--red)">▼ ${sym}${w.expenses.toLocaleString()}</span>
+    const usd = wallets['USD'] || {income:0, expenses:0, balance:0};
+    const uah = wallets['UAH'] || {income:0, expenses:0, balance:0};
+    const usdBalColor = usd.balance >= 0 ? 'var(--green)' : 'var(--red)';
+    const uahBalColor = uah.balance >= 0 ? 'var(--green)' : 'var(--red)';
+    wc.innerHTML = `
+      <div class="stat-card" style="flex:1;min-width:200px;border-top:3px solid var(--green)">
+        <div class="stat-label" style="font-size:12px;font-weight:700;letter-spacing:.5px">💵 USD WALLET</div>
+        <div class="stat-value" style="color:${usdBalColor};font-size:32px;margin:6px 0">${usd.balance >= 0 ? '' : '-'}$${Math.abs(usd.balance).toLocaleString()}</div>
+        <div style="display:flex;gap:16px;font-size:12px;margin-top:6px;border-top:1px solid var(--border);padding-top:8px">
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">INCOME</div><div style="color:var(--green);font-weight:700">$${usd.income.toLocaleString()}</div></div>
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">EXPENSES</div><div style="color:var(--red);font-weight:700">$${usd.expenses.toLocaleString()}</div></div>
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">BALANCE</div><div style="color:${usdBalColor};font-weight:700">${usd.balance >= 0 ? '' : '-'}$${Math.abs(usd.balance).toLocaleString()}</div></div>
+        </div>
+      </div>
+      <div class="stat-card" style="flex:1;min-width:200px;border-top:3px solid var(--yellow)">
+        <div class="stat-label" style="font-size:12px;font-weight:700;letter-spacing:.5px">₴ UAH WALLET</div>
+        <div class="stat-value" style="color:${uahBalColor};font-size:32px;margin:6px 0">${uah.balance >= 0 ? '' : '-'}₴${Math.abs(uah.balance).toLocaleString()}</div>
+        <div style="display:flex;gap:16px;font-size:12px;margin-top:6px;border-top:1px solid var(--border);padding-top:8px">
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">INCOME</div><div style="color:var(--green);font-weight:700">₴${uah.income.toLocaleString()}</div></div>
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">EXPENSES</div><div style="color:var(--red);font-weight:700">₴${uah.expenses.toLocaleString()}</div></div>
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">BALANCE</div><div style="color:${uahBalColor};font-weight:700">${uah.balance >= 0 ? '' : '-'}₴${Math.abs(uah.balance).toLocaleString()}</div></div>
+        </div>
+      </div>
+      <div class="stat-card" style="flex:1;min-width:200px;border-top:3px solid var(--accent)">
+        <div class="stat-label" style="font-size:12px;font-weight:700;letter-spacing:.5px">📊 TOTAL TRANSACTIONS</div>
+        <div class="stat-value" style="font-size:28px;margin:6px 0">${txns.length}</div>
+        <div style="display:flex;gap:16px;font-size:12px;margin-top:6px;border-top:1px solid var(--border);padding-top:8px">
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">IN</div><div style="color:var(--green);font-weight:700">${txns.filter(t=>t.type==='income').length}</div></div>
+          <div><div style="color:var(--text-muted);font-size:10px;font-weight:600;margin-bottom:2px">OUT</div><div style="color:var(--red);font-weight:700">${txns.filter(t=>t.type==='expense').length}</div></div>
         </div>
       </div>`;
-    }).join('');
   }
 
   // Transactions table
