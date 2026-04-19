@@ -23,18 +23,24 @@
 - `src/routes/whatsapp.py` — Added `GET /api/whatsapp/token-status` and `POST /api/whatsapp/update-token`
 - `src/routes/whatsapp.py` — Fixed `WA_CONVERSATIONS` → `WA_SESSIONS` bug in whatsapp_reset
 - `src/models.py` — Added `system_settings` table via safe_migrate; added `get_setting()`/`set_setting()` helpers
+- `src/models.py` — Added `_pg_run()` helper — wraps every PG migration in try/except (fixed deploy crash)
 - `src/app.py` — Added `GET /api/health` keepalive endpoint
 - `src/auth.py` — Added `/api/health` to PUBLIC_PATHS
 - `index.html` — Team page: WhatsApp Token section — shows status (red/green), paste-to-update UI
 - `.github/workflows/keepalive.yml` — GitHub Actions pings `/api/health` every 10 min to prevent Render sleep
+- `src/routes/finance.py` — Added `GET /api/finance/owners-summary` — all owners, per-property breakdown, balance owed, grand totals
+- `index.html` — Finance page rebuilt: KPI summary row (5 stats) + per-owner cards (monthly rate / owner share / balance owed)
+- `index.html` — Each owner card: properties breakdown, last 3 payments, "💸 Record Payment" button
+- `index.html` — Added `modal-rec-pay` inline modal: amount/date/method/period/notes
+- `index.html` — Added `loadOwnerFinanceReport()`, `openRecPayModal()`, `closeRecPayModal()`, `submitRecPay()` JS
 
 ### Deployment
-- Push + Render auto-deploy
+- Render stuck on `89c30a2` — PG safe_migrate crash fixed in `5f2c88b`; new push will trigger fresh redeploy
 
 ### Next
+- Verify Render deploys successfully after this push
+- WhatsApp: set new token + phone ID from Team page settings (once deployed)
 - Eliyahu's phone number (still unknown)
-- Property assignments for Natan and Eliyahu
-- UptimeRobot ping to prevent Render sleep
 
 ---
 

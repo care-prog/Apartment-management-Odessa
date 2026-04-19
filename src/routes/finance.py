@@ -134,6 +134,65 @@ def office_cash():
         'recent_expenses': recent_expenses,
     })
 
+# ── Owner Financial Summary (Finance page) ──
+@bp.route('/api/finance/owners-summary', methods=['GET'])
+def owners_financial_summary():
+    """Returns all owners with full financial breakdown for the Finance page."""
+    owners = query_db('SELECT * FROM owners ORDER BY name')
+    result = []
+    for o in owners:
+        oid = o['id']
+        properties = query_db('''
+            SELECT p.*,
+                (SELECT COUNT(*) FROM apartments WHERE property_id = p.id) as total_units,
+                (SELECT COUNT(*) FROM apartments WHERE property_id = p.id AND status = 'occupied') as occupied_units,
+                (SELECT COALESCE(SUM(l.rent_amount), 0)
+                 FROM leases l JOIN apartments a ON l.apartment_id = a.id
+                 WHERE a.property_id = p.id AND l.status = 'active') as monthly_rent
+            FROM properties p WHERE p.owner_id = ?
+        ''', (oid,))
+
+        payments = query_db(
+            'SELECT * FROM owner_payments WHERE owner_id = ? ORDER BY payment_date DESC',
+            (oid,))
+        total_paid = sum(float(p['amount']) for p in payments)
+        total_rent = sum(float(p['monthly_rent']) for p in properties)
+        fee = round(total_rent * 0.10, 2)
+        owner_monthly = round(total_rent - fee, 2)
+        balance_owed = round(owner_monthly - total_paid, 2)
+
+        result.append({
+            **dict(o),
+            'properties': [dict(p) for p in properties],
+            'payments': [dict(p) for p in payments],
+            'financials': {
+                'total_monthly_rent': total_rent,
+                'management_fee': fee,
+                'owner_monthly': owner_monthly,
+                'total_paid': total_paid,
+                'balance_owed': balance_owed,
+            }
+        })
+
+    # Grand totals
+    grand_rent    = sum(o['financials']['total_monthly_rent'] for o in result)
+    grand_fee     = sum(o['financials']['management_fee']     for o in result)
+    grand_monthly = sum(o['financials']['owner_monthly']      for o in result)
+    grand_paid    = sum(o['financials']['total_paid']         for o in result)
+    grand_owed    = sum(o['financials']['balance_owed']       for o in result)
+
+    return jsonify({
+        'owners': result,
+        'totals': {
+            'total_monthly_rent': round(grand_rent, 2),
+            'management_fee':     round(grand_fee, 2),
+            'owner_monthly':      round(grand_monthly, 2),
+            'total_paid':         round(grand_paid, 2),
+            'balance_owed':       round(grand_owed, 2),
+        }
+    })
+
+
 # ── Property Detail (with owner financials) ──
 @bp.route('/api/properties/<int:pid>/detail', methods=['GET'])
 def property_detail(pid):

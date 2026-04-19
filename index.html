@@ -1136,9 +1136,59 @@
 
       <!-- ══════ PAGE: FINANCE ══════ -->
       <div id="page-finance" class="page" style="display:none">
-        <div class="section">
-          <div class="section-head"><div class="section-title"><span class="icon">&#36;</span> Owner Financial Reports</div></div>
-          <div id="finance-full" class="finance-grid"></div>
+
+        <!-- ── Grand Summary ── -->
+        <div id="finance-summary-kpi" class="stats-row" style="margin-bottom:20px"></div>
+
+        <!-- ── Owner Cards ── -->
+        <div id="finance-full" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(360px,1fr));gap:16px"></div>
+
+        <!-- ── Record Payment Modal (inline) ── -->
+        <div id="modal-rec-pay" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:300;align-items:center;justify-content:center;padding:20px">
+          <div style="background:var(--surface);border-radius:14px;box-shadow:var(--shadow-xl);width:100%;max-width:420px;overflow:hidden">
+            <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+              <div id="rec-pay-title" style="font-size:16px;font-weight:700">Record Payment to Owner</div>
+              <button onclick="closeRecPayModal()" style="background:none;border:none;font-size:18px;cursor:pointer;color:var(--text-muted)">✕</button>
+            </div>
+            <div style="padding:18px 20px">
+              <input type="hidden" id="rec-pay-owner-id">
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Amount (USD)</label>
+                  <input id="rec-pay-amount" type="number" min="0" step="0.01" placeholder="0.00"
+                    style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px">
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Date</label>
+                  <input id="rec-pay-date" type="date"
+                    style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Method</label>
+                  <select id="rec-pay-method" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                    <option>Cash (courier)</option>
+                    <option>Bank transfer</option>
+                    <option>Crypto</option>
+                    <option>Other</option>
+                  </select>
+                </div>
+                <div>
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Period</label>
+                  <input id="rec-pay-period" type="month"
+                    style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div style="grid-column:1/-1">
+                  <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Notes</label>
+                  <input id="rec-pay-notes" placeholder="Optional note..."
+                    style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+              </div>
+              <div style="display:flex;gap:8px;justify-content:flex-end">
+                <button onclick="closeRecPayModal()" class="btn" style="font-size:12px">Cancel</button>
+                <button onclick="submitRecPay()" class="btn btn-primary" style="font-size:12px">Record Payment</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -2462,30 +2512,7 @@ function renderPage(page, d) {
   }
 
   if (page === 'finance') {
-    document.getElementById('finance-full').innerHTML = (d.owners||[]).map(o => {
-      const ownerUnits = (d.rent_status||[]).filter(r => {
-        const prop = d.properties.find(p => p.name === r.property_name);
-        return prop && prop.owner_name === o.name;
-      });
-      const totalRent = ownerUnits.reduce((s,r) => s + (r.rent_amount||0), 0);
-      const fee = Math.round(totalRent * 0.10);
-      const ownerGets = totalRent - fee;
-      const unitRows = ownerUnits.map(r => `<div class="finance-row"><span class="label">${r.property_name} #${r.apt_number}</span><span class="val">$${r.rent_amount}</span></div>`).join('');
-      return `<div class="finance-card" style="grid-column:span 1">
-        <div class="finance-owner">${o.name}</div>
-        <div class="finance-row"><span class="label" style="font-size:10px;color:var(--text-muted)">${o.notes||''}</span></div>
-        <div style="margin:8px 0;border-top:1px solid var(--border);padding-top:8px">
-          ${unitRows || '<div class="finance-row"><span class="label">No active units</span></div>'}
-        </div>
-        <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:4px">
-          <div class="finance-row"><span class="label"><strong>Total Rent</strong></span><span class="val"><strong>$${totalRent}</strong></span></div>
-          <div class="finance-row"><span class="label">Management Fee (10%)</span><span class="val red">-$${fee}</span></div>
-          <div class="finance-row"><span class="label"><strong>Owner Receives</strong></span><span class="val green"><strong>$${ownerGets}</strong></span></div>
-        </div>
-        ${o.report_schedule?'<div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px"><div class="finance-row"><span class="label">Report Schedule</span><span class="val">'+o.report_schedule+'</span></div></div>':''}
-        <div style="border-top:1px solid var(--border);padding-top:6px;margin-top:6px"><div class="finance-row"><span class="label">Payment Method</span><span class="val">Cash (courier)</span></div></div>
-      </div>`;
-    }).join('');
+    loadOwnerFinanceReport();
   }
 
   if (page === 'cash') {
@@ -3552,6 +3579,180 @@ async function submitNewOwner() {
     showToast('Error: ' + e.message);
   } finally {
     if (btn) { btn.disabled = false; btn.textContent = 'Create Owner'; }
+  }
+}
+
+// ══════════ OWNER FINANCIAL REPORTS ══════════
+
+async function loadOwnerFinanceReport() {
+  const kpiEl  = document.getElementById('finance-summary-kpi');
+  const gridEl = document.getElementById('finance-full');
+  if (!kpiEl || !gridEl) return;
+  kpiEl.innerHTML  = '<div style="color:var(--text-muted);font-size:13px;padding:8px">Loading...</div>';
+  gridEl.innerHTML = '';
+
+  try {
+    const r = await fetch('/api/finance/owners-summary');
+    const data = await r.json();
+    const t = data.totals || {};
+    const owners = data.owners || [];
+
+    // ── Grand summary KPI row ──
+    const owedColor = t.balance_owed > 0 ? 'var(--red)' : 'var(--green)';
+    kpiEl.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-label">Total Monthly Rent</div>
+        <div class="stat-value" style="color:var(--text)">$${(t.total_monthly_rent||0).toLocaleString()}</div>
+        <div class="stat-sub">from all active leases</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Management Fee (10%)</div>
+        <div class="stat-value accent">$${(t.management_fee||0).toLocaleString()}</div>
+        <div class="stat-sub">office revenue</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Owners Monthly Share</div>
+        <div class="stat-value green">$${(t.owner_monthly||0).toLocaleString()}</div>
+        <div class="stat-sub">after management fee</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Total Paid to Owners</div>
+        <div class="stat-value" style="color:var(--text)">$${(t.total_paid||0).toLocaleString()}</div>
+        <div class="stat-sub">all recorded payments</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">${t.balance_owed > 0 ? 'Total Owed to Owners' : 'Overpaid'}</div>
+        <div class="stat-value" style="color:${owedColor}">$${Math.abs(t.balance_owed||0).toLocaleString()}</div>
+        <div class="stat-sub">${t.balance_owed > 0 ? 'pending payment' : 'ahead of schedule'}</div>
+      </div>`;
+
+    if (!owners.length) {
+      gridEl.innerHTML = '<div style="color:var(--text-muted);padding:20px">No owners yet.</div>';
+      return;
+    }
+
+    gridEl.innerHTML = owners.map(o => {
+      const fin = o.financials;
+      const owedC = fin.balance_owed > 0 ? 'var(--red)' : 'var(--green)';
+      const owedLabel = fin.balance_owed > 0 ? '🔴 Owed to Owner' : '🟢 Overpaid';
+
+      // Properties breakdown
+      const propRows = (o.properties || []).map(p => `
+        <div style="display:flex;justify-content:space-between;padding:6px 10px;border-radius:6px;background:var(--surface-2);margin-bottom:4px">
+          <div>
+            <div style="font-size:12px;font-weight:600">${p.name}</div>
+            <div style="font-size:10px;color:var(--text-muted)">${p.occupied_units||0}/${p.total_units||0} units occupied</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:13px;font-weight:700;color:var(--green)">$${(p.monthly_rent||0).toLocaleString()}/mo</div>
+          </div>
+        </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No properties assigned</div>';
+
+      // Last 3 payments
+      const lastPays = (o.payments || []).slice(0, 3).map(p =>
+        `<div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text-dim);padding:3px 0">
+          <span>${p.payment_date ? fmtDate(p.payment_date) : '—'} · ${p.method||'cash'}</span>
+          <span style="font-weight:600;color:var(--green)">$${p.amount}</span>
+        </div>`).join('') || '<div style="font-size:11px;color:var(--text-muted)">No payments recorded</div>';
+
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden">
+        <!-- Header -->
+        <div style="padding:16px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px">${(o.name||'?')[0].toUpperCase()}</div>
+            <div>
+              <div style="font-weight:700;font-size:15px">${o.name}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${o.phone||o.email||o.contact||'No contact'}</div>
+            </div>
+          </div>
+          <button onclick="openOwnerModal(${o.id})" style="font-size:11px;color:var(--accent);background:none;border:1px solid var(--accent);border-radius:6px;padding:4px 10px;cursor:pointer">Details →</button>
+        </div>
+
+        <!-- Financial KPIs -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border-bottom:1px solid var(--border)">
+          <div style="padding:12px 14px;border-right:1px solid var(--border);text-align:center">
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">MONTHLY RATE</div>
+            <div style="font-size:16px;font-weight:700">$${(fin.total_monthly_rent||0).toLocaleString()}</div>
+          </div>
+          <div style="padding:12px 14px;border-right:1px solid var(--border);text-align:center">
+            <div style="font-size:10px;color:var(--text-muted);font-weight:600;margin-bottom:2px">OWNER SHARE</div>
+            <div style="font-size:16px;font-weight:700;color:var(--green)">$${(fin.owner_monthly||0).toLocaleString()}</div>
+            <div style="font-size:10px;color:var(--text-muted)">after 10% fee</div>
+          </div>
+          <div style="padding:12px 14px;text-align:center">
+            <div style="font-size:10px;font-weight:600;margin-bottom:2px;color:${owedC}">${owedLabel}</div>
+            <div style="font-size:16px;font-weight:700;color:${owedC}">$${Math.abs(fin.balance_owed||0).toLocaleString()}</div>
+            <div style="font-size:10px;color:var(--text-muted)">paid: $${(fin.total_paid||0).toLocaleString()}</div>
+          </div>
+        </div>
+
+        <!-- Properties -->
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Properties</div>
+          ${propRows}
+        </div>
+
+        <!-- Last payments -->
+        <div style="padding:12px 18px;border-bottom:1px solid var(--border)">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px">Recent Payments</div>
+          ${lastPays}
+        </div>
+
+        <!-- Actions -->
+        <div style="padding:12px 18px;display:flex;gap:8px">
+          <button onclick="openRecPayModal(${o.id}, '${(o.name||'').replace(/'/g,"\\'")}')" class="btn btn-primary" style="font-size:12px;flex:1">💸 Record Payment</button>
+        </div>
+      </div>`;
+    }).join('');
+
+  } catch(e) {
+    kpiEl.innerHTML = '<div style="color:var(--red);font-size:13px">Error loading financial data</div>';
+    console.error(e);
+  }
+}
+
+function openRecPayModal(ownerId, ownerName) {
+  document.getElementById('rec-pay-owner-id').value = ownerId;
+  document.getElementById('rec-pay-title').textContent = `Record Payment → ${ownerName}`;
+  document.getElementById('rec-pay-amount').value = '';
+  document.getElementById('rec-pay-notes').value = '';
+  document.getElementById('rec-pay-date').value = new Date().toISOString().slice(0,10);
+  document.getElementById('rec-pay-period').value = new Date().toISOString().slice(0,7);
+  document.getElementById('modal-rec-pay').style.display = 'flex';
+  setTimeout(() => document.getElementById('rec-pay-amount').focus(), 50);
+}
+
+function closeRecPayModal() {
+  document.getElementById('modal-rec-pay').style.display = 'none';
+}
+
+async function submitRecPay() {
+  const oid    = document.getElementById('rec-pay-owner-id').value;
+  const amount = parseFloat(document.getElementById('rec-pay-amount').value);
+  if (!amount || amount <= 0) return showToast('Enter an amount');
+  const btn = document.querySelector('#modal-rec-pay .btn-primary');
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await fetch('/api/owner-payments', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        owner_id:     parseInt(oid),
+        amount,
+        payment_date: document.getElementById('rec-pay-date').value,
+        method:       document.getElementById('rec-pay-method').value,
+        period:       document.getElementById('rec-pay-period').value,
+        notes:        document.getElementById('rec-pay-notes').value,
+      })
+    });
+    if (!r.ok) throw new Error('Failed');
+    closeRecPayModal();
+    showToast('Payment recorded ✓');
+    loadOwnerFinanceReport();  // refresh
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Record Payment';
   }
 }
 
