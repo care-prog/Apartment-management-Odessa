@@ -5,6 +5,29 @@
 
 ---
 
+## Session 7 — 2026-04-19
+
+**Duration:** Continuation session
+**Phase:** Phase 1
+**Focus:** Activity log coverage — wallets + maintenance logging
+
+### Done
+- `src/routes/wallets.py` — added `log_action` calls to create/update/delete transaction endpoints; snapshot captured before update/delete
+- `src/routes/maintenance.py` — added `log_action` calls to create/update maintenance order + create warranty endpoints
+- Activity log now covers: tasks, tenants, expenses, transactions, maintenance orders, warranties
+
+### Deployment
+- Professionals module deploy `dep-d7igplho3t8c738h1uug` triggered and completed during this session
+- Logging additions committed and pushed
+
+### Next
+- Property owner filtered view — dashboard/API filters to only show assigned property_ids
+- Test professionals page: sync Monday board 5261090733 to import contacts
+- Recurring tasks module (based on Alina Tasks board patterns)
+- Add Alina Tasks board import (board 4735694190)
+
+---
+
 ## Session 6 — 2026-04-19
 
 **Duration:** Full session

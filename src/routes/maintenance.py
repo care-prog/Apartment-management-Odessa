@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify
 from src.models import query_db, insert_db, execute_db
+from src.routes.activity import log_action
 
 bp = Blueprint('maintenance', __name__)
 
@@ -30,15 +31,21 @@ def create_order():
         (data['apartment_id'], data['description'], data.get('status', 'reported'),
          data.get('assigned_to'), data.get('cost'), data.get('warranty_id'))
     )
+    log_action('create', 'maintenance', oid,
+               f"New maintenance order: {data['description'][:60]} (apt {data['apartment_id']})")
     return jsonify({'id': oid}), 201
 
 @bp.route('/api/maintenance/<int:oid>', methods=['PUT'])
 def update_order(oid):
     data = request.json
+    before = query_db('SELECT * FROM maintenance_orders WHERE id = ?', (oid,), one=True)
     execute_db(
         'UPDATE maintenance_orders SET status=?, assigned_to=?, cost=?, completed_at=? WHERE id=?',
         (data.get('status'), data.get('assigned_to'), data.get('cost'), data.get('completed_at'), oid)
     )
+    log_action('update', 'maintenance', oid,
+               f"Maintenance order #{oid} → {data.get('status', 'updated')}",
+               before_data=dict(before) if before else None)
     return jsonify({'ok': True})
 
 @bp.route('/api/warranties', methods=['GET'])
@@ -59,4 +66,6 @@ def create_warranty():
         (data['apartment_id'], data['appliance'], data.get('start_date'),
          data.get('end_date'), data.get('provider'), data.get('document_url'), data.get('notes'))
     )
+    log_action('create', 'warranty', wid,
+               f"New warranty: {data['appliance']} (apt {data['apartment_id']}, expires {data.get('end_date','?')})")
     return jsonify({'id': wid}), 201

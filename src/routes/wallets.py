@@ -1,6 +1,7 @@
 """Cash wallet management: USD and UAH transactions + commission per apartment."""
 from flask import Blueprint, request, jsonify
 from src.models import query_db, insert_db, execute_db
+from src.routes.activity import log_action
 
 bp = Blueprint('wallets', __name__)
 
@@ -27,23 +28,34 @@ def create_transaction():
         (data['type'], data['amount'], data.get('currency', 'USD'),
          data.get('category', 'general'), data.get('description'), data.get('transaction_date'))
     )
+    log_action('create', 'transaction', tid,
+               f"{data['type'].title()}: {data.get('description', data.get('category', 'transaction'))} "
+               f"({data.get('currency','USD')} {data['amount']})")
     return jsonify({'id': tid}), 201
 
 
 @bp.route('/api/transactions/<int:tid>', methods=['PUT'])
 def update_transaction(tid):
     data = request.json
+    before = query_db('SELECT * FROM cash_transactions WHERE id = ?', (tid,), one=True)
     execute_db(
         'UPDATE cash_transactions SET type=?, amount=?, currency=?, category=?, description=?, transaction_date=? WHERE id=?',
         (data.get('type'), data.get('amount'), data.get('currency', 'USD'),
          data.get('category'), data.get('description'), data.get('transaction_date'), tid)
     )
+    log_action('update', 'transaction', tid,
+               f"Updated transaction: {data.get('description', data.get('category', 'transaction'))}",
+               before_data=dict(before) if before else None)
     return jsonify({'ok': True})
 
 
 @bp.route('/api/transactions/<int:tid>', methods=['DELETE'])
 def delete_transaction(tid):
+    before = query_db('SELECT * FROM cash_transactions WHERE id = ?', (tid,), one=True)
     execute_db('DELETE FROM cash_transactions WHERE id = ?', (tid,))
+    log_action('delete', 'transaction', tid,
+               f"Deleted transaction: {before.get('description', before.get('category', 'transaction')) if before else tid}",
+               before_data=dict(before) if before else None)
     return jsonify({'ok': True})
 
 
