@@ -215,19 +215,7 @@ WA_SESSIONS = {}
 WA_MAX_HISTORY = 20
 SESSION_TIMEOUT_SECONDS = 300  # 5 minutes
 
-# Trigger keywords - user must send one to START a session
-APT_TRIGGERS = ['apt', 'דירה', 'דיר', 'квартир', 'квартира', 'apartment', 'בוט', 'bot']
-
-
-def _is_apt_trigger(text):
-    if not text:
-        return False
-    lower = text.lower().strip()
-    # Direct trigger word at start or alone
-    for trig in APT_TRIGGERS:
-        if lower == trig or lower.startswith(trig + ' ') or lower.startswith(trig + '?') or lower.startswith(trig + ',') or lower.startswith(trig + '.'):
-            return True
-    return False
+SESSION_TIMEOUT_SECONDS = 1800  # 30 minutes idle = new session
 
 
 # ── Meta WhatsApp Cloud API ──────────────────────────────────────────────────
@@ -295,37 +283,28 @@ def wa_webhook_receive():
         if not message_body:
             return jsonify({'status': 'empty'}), 200
 
-        # ── Route through existing logic ──────────────────────────────────
+        # ── Identify sender & route ───────────────────────────────────────
         from src.routes.chat import call_claude, gather_context, execute_tool, TOOLS, LANG_NAMES
         import json as _json
         import time as _time
 
         role, user = identify_sender(from_phone)
 
+        # Unknown number → reject immediately, no Claude call
+        if role == 'unknown':
+            wa_send(from_phone,
+                    "אני לא מזהה אותך במערכת.\n"
+                    "I don't recognize your number in the system.\n"
+                    "Please contact the system administrator. 🔒")
+            return jsonify({'status': 'unknown_sender'}), 200
+
         norm_phone = normalize_phone(from_phone) or from_phone
         now = _time.time()
         session = WA_SESSIONS.get(norm_phone)
-        has_active = session and (now - session.get('last_activity', 0)) < SESSION_TIMEOUT_SECONDS
-        if session and not has_active:
-            del WA_SESSIONS[norm_phone]
-
-        is_trigger = _is_apt_trigger(message_body)
-
-        # Start session on trigger
-        if is_trigger and not has_active:
+        is_new_session = (session is None or
+                          (now - session.get('last_activity', 0)) >= SESSION_TIMEOUT_SECONDS)
+        if is_new_session:
             WA_SESSIONS[norm_phone] = {'history': [], 'last_activity': now}
-            if role == 'team':
-                reply = f"שלום {user['name']}! 👋\nאיך אני יכול לעזור?\n• מידע על דירה\n• פתיחת משימה\n• עדכון סטטוס"
-            elif role == 'tenant':
-                reply = f"שלום {user.get('name','')}! 👋\nאיך אני יכול לעזור לך?"
-            else:
-                reply = "שלום! 👋\nאיזה דירה אתה שואל עליה ומה אתה צריך?"
-            wa_send(from_phone, reply)
-            return jsonify({'status': 'greeted'}), 200
-
-        if not has_active and not is_trigger:
-            # Silent ignore — don't reply to every message, only sessions
-            return jsonify({'status': 'ignored'}), 200
 
         # Active session — full Claude response
         if norm_phone not in WA_SESSIONS:
@@ -337,20 +316,28 @@ def wa_webhook_receive():
         lang_name  = LANG_NAMES.get(user_lang, 'Hebrew')
         context    = gather_context()
 
+        display_name = user.get('name') or user.get('display_name') or 'שם לא ידוע'
+
         if role == 'team':
-            access_note = (f"This user is a TEAM MEMBER ({user.get('name','')}, role: {user.get('role','')}). "
+            access_note = (f"This user is a TEAM MEMBER. Name: {display_name}, role: {user.get('role','')}. "
                            "Full access — answer any question, take any action.")
-        elif role == 'tenant':
+        else:  # tenant
             apt_no = user.get('apt_number', '?')
             prop   = user.get('property_name', '')
-            access_note = (f"This user is a TENANT ({user.get('name','')}) renting {prop} #{apt_no}. "
+            access_note = (f"This user is a TENANT. Name: {display_name}, renting {prop} #{apt_no}. "
                            "Only share info about THEIR apartment. NO other tenant info, NO financials.")
-        else:
-            access_note = "UNKNOWN sender. Be polite, do NOT share any sensitive data. Ask who they are."
+
+        greeting_instruction = (
+            f"IMPORTANT: This is the FIRST message from this person in a new conversation. "
+            f"Start your reply with a warm greeting: 'שלום {display_name}! 👋' "
+            f"then immediately answer their question."
+            if is_new_session else ""
+        )
 
         system_prompt = f"""You are the WhatsApp assistant for "Apartment Management Odessa".
 Be CONCISE — WhatsApp messages must be short. No markdown tables. Light emoji use only.
 {access_note}
+{greeting_instruction}
 Respond in the same language the user wrote in (default: {lang_name}).
 
 CURRENT DATA:
@@ -442,42 +429,24 @@ def whatsapp_query():
             if team:
                 role, user = 'team', team
 
-    msg_lower = message.lower().strip()
-    norm_phone = normalize_phone(phone) or phone  # fallback: use raw for mc_ IDs
+    norm_phone = normalize_phone(phone) or phone
     now = _time.time()
 
-    # Check active session (hasn't timed out yet)
+    # Unknown sender → reject
+    if role == 'unknown':
+        return jsonify({
+            'reply': 'אני לא מזהה אותך במערכת. פנה למנהל מערכות 🔒',
+            'role': 'unknown', 'silent': False
+        })
+
+    # Session management
     session = WA_SESSIONS.get(norm_phone)
-    has_active_session = (
-        session is not None
-        and (now - session.get('last_activity', 0)) < SESSION_TIMEOUT_SECONDS
-    )
-
-    # Garbage-collect expired session if present
-    if session and not has_active_session:
-        del WA_SESSIONS[norm_phone]
-
-    is_trigger = _is_apt_trigger(message)
-
-    # If it's a trigger word — start new session and greet
-    if is_trigger and not has_active_session:
+    is_new_session = (session is None or
+                      (now - session.get('last_activity', 0)) >= SESSION_TIMEOUT_SECONDS)
+    if is_new_session:
         WA_SESSIONS[norm_phone] = {'history': [], 'last_activity': now}
-        if role == 'team':
-            greeting = f"שלום {user['name']}! 👋\nאני העוזר של מערכת ניהול הדירות.\nאיך אני יכול לעזור?\n\nאתה יכול לבקש ממני:\n• מידע על דירה (לדוגמה: \"מה דירה 134\")\n• לפתוח משימה (לדוגמה: \"תפתח משימה לאלינה לבדוק בוילר בדירה 138\")\n• לעדכן סטטוס\n• כל שאלה אחרת"
-        elif role == 'tenant':
-            name = user.get('name', '')
-            greeting = f"שלום {name}! 👋\nאיך אני יכול לעזור לך?"
-        else:
-            greeting = "שלום! 👋\nכדי שאוכל לעזור — תגיד לי על איזה דירה אתה שואל ומה אתה צריך."
-        return jsonify({'reply': greeting, 'role': role})
 
-    # If no active session AND no trigger — return a single zero-width space so ManyChat
-    # can still render a "message" without showing anything to the user.
-    # We also include silent:true in case you want to handle it differently later.
-    if not has_active_session and not is_trigger:
-        return jsonify({'reply': '\u200b', 'role': 'ignored', 'silent': True})
-
-    # We have an active session — route through smart chat with Claude + tools
+    # Route through Claude + tools
     from src.routes.chat import call_claude, gather_context, execute_tool, TOOLS, LANG_NAMES
     import json as _json
 
@@ -491,26 +460,30 @@ def whatsapp_query():
 
     context = gather_context()
 
+    display_name = user.get('name') or user.get('display_name') or ''
+
     # Different system prompt per role
     if role == 'team':
-        access_note = "This user is a TEAM MEMBER ({}, role: {}). They have FULL access — answer any question, take any action.".format(
-            user.get('name', ''), user.get('role', ''))
-    elif role == 'tenant':
+        access_note = f"This user is a TEAM MEMBER. Name: {display_name}, role: {user.get('role','')}. Full access — answer any question, take any action."
+    else:
         apt_no = user.get('apt_number', 'unknown')
         prop = user.get('property_name', '')
-        access_note = (f"This user is a TENANT named {user.get('name','')} renting {prop} #{apt_no}. "
-                       "ONLY share information about THEIR apartment and lease (rent amount, due date, lease end, wifi, access codes if asked). "
-                       "DO NOT share other tenants' info, owner financials, office cash, or other apartments. "
-                       "DO NOT use tools that modify data — they can only ask questions. "
-                       "If they ask for something you can't share, politely redirect them to contact the manager.")
-    else:
-        access_note = "This user is UNKNOWN (not in the system). Be polite but DO NOT share any sensitive info. Ask who they are and which apartment they're calling about."
+        access_note = (f"This user is a TENANT. Name: {display_name}, renting {prop} #{apt_no}. "
+                       "ONLY share information about THEIR apartment and lease. "
+                       "DO NOT use tools that modify data.")
+
+    greeting_instruction = (
+        f"IMPORTANT: This is the FIRST message from this person. "
+        f"Start your reply with: 'שלום {display_name}! 👋' then answer their question."
+        if is_new_session else ""
+    )
 
     system_prompt = f"""You are the WhatsApp assistant for "Apartment Management Odessa".
-You are talking via WhatsApp to one user. Be CONCISE — WhatsApp messages should be short and clear.
-Use line breaks, bullets, emojis sparingly. NO markdown headers or tables (WhatsApp doesn't render them well).
+Be CONCISE — WhatsApp messages should be short and clear.
+No markdown headers or tables. Light emoji use.
 
 {access_note}
+{greeting_instruction}
 
 The user's preferred language is {lang_name}. Respond in the same language they wrote in.
 
