@@ -107,6 +107,9 @@ def safe_migrate():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS paid_by TEXT DEFAULT 'office'")
         execute_db("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY, value TEXT,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -157,6 +160,9 @@ def safe_migrate():
         except: pass
         try: execute_db("ALTER TABLE maintenance_orders ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
+        execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
+            key TEXT PRIMARY KEY, value TEXT,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
 
 
 def init_db():
@@ -226,3 +232,25 @@ def execute_db(query, args=()):
         db.execute(q, args)
         db.commit()
     db.close()
+
+
+def get_setting(key, default=None):
+    """Read a value from system_settings table. Returns default if not found."""
+    try:
+        row = query_db('SELECT value FROM system_settings WHERE key = ?', (key,), one=True)
+        return row['value'] if row else default
+    except Exception:
+        return default
+
+
+def set_setting(key, value):
+    """Upsert a key-value pair in system_settings."""
+    try:
+        existing = query_db('SELECT key FROM system_settings WHERE key = ?', (key,), one=True)
+        if existing:
+            execute_db('UPDATE system_settings SET value = ?, updated_at = CURRENT_TIMESTAMP WHERE key = ?',
+                       (value, key))
+        else:
+            execute_db('INSERT INTO system_settings (key, value) VALUES (?, ?)', (key, value))
+    except Exception:
+        pass

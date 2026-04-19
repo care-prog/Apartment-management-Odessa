@@ -18,7 +18,15 @@
 - `index.html` — After creating owner, auto-opens the owner detail modal (so user can assign properties immediately)
 - `index.html` — Fixed empty state message in `loadOwners()` to mention the button
 - `src/routes/properties.py` — `create_owner()` now accepts `phone`, `email`, `bank_details` fields (not just `contact`)
-- WhatsApp token expired at 12:00 PDT today — identified root cause, instructed user on getting permanent system token
+- WhatsApp token expired at 12:00 PDT today — root cause identified
+- `src/routes/whatsapp.py` — `wa_send()` now reads token from DB first (falls back to env var)
+- `src/routes/whatsapp.py` — Added `GET /api/whatsapp/token-status` and `POST /api/whatsapp/update-token`
+- `src/routes/whatsapp.py` — Fixed `WA_CONVERSATIONS` → `WA_SESSIONS` bug in whatsapp_reset
+- `src/models.py` — Added `system_settings` table via safe_migrate; added `get_setting()`/`set_setting()` helpers
+- `src/app.py` — Added `GET /api/health` keepalive endpoint
+- `src/auth.py` — Added `/api/health` to PUBLIC_PATHS
+- `index.html` — Team page: WhatsApp Token section — shows status (red/green), paste-to-update UI
+- `.github/workflows/keepalive.yml` — GitHub Actions pings `/api/health` every 10 min to prevent Render sleep
 
 ### Deployment
 - Push + Render auto-deploy

@@ -1500,6 +1500,34 @@
         </div>
       </div>
 
+        <!-- ── WhatsApp Settings ── -->
+        <div class="section owner-only" style="margin-top:20px">
+          <div class="section-head">
+            <div class="section-title">📱 WhatsApp Bot Settings</div>
+          </div>
+          <div style="padding:16px 0">
+            <div id="wa-token-status" style="margin-bottom:16px;padding:12px 16px;border-radius:8px;font-size:13px;background:var(--surface-2)">
+              Checking token status...
+            </div>
+            <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end">
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">
+                  WhatsApp Access Token
+                  <span style="font-weight:400;color:var(--text-muted)"> — paste here to update without touching Render</span>
+                </label>
+                <input id="wa-new-token" type="password" placeholder="EAAR... or permanent system user token"
+                  style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:monospace;background:var(--surface)">
+              </div>
+              <button class="btn btn-primary" onclick="updateWaToken()" style="white-space:nowrap;font-size:12px">Save Token</button>
+            </div>
+            <div style="margin-top:10px;padding:10px 12px;background:rgba(99,102,241,.06);border-radius:8px;font-size:12px;color:var(--text-muted)">
+              💡 Get a new temporary token: <strong>developers.facebook.com → Your App → WhatsApp → API Setup → copy Temporary access token</strong>.<br>
+              For a permanent token (no daily refresh): Business Manager → System Users → Generate Token.
+            </div>
+          </div>
+        </div>
+      </div>
+
       <!-- ══════ MODAL: USER EDIT ══════ -->
       <div id="modal-user" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUserModal()">
         <div class="modal-box" style="width:520px;max-width:96vw">
@@ -2046,7 +2074,7 @@ function showPage(page, fromHash) {
   if (page === 'cash') { loadWallets(); loadCashSummary(); }
   if (page === 'log') loadActivityLog();
   if (page === 'owners') loadOwners();
-  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); }
+  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); }
   if (page === 'professionals') loadProfessionals();
   closeSidebar();
 }
@@ -2623,6 +2651,48 @@ async function loadTeamUsers() {
     }).join('');
   } catch(e) {
     grid.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load users</div>';
+  }
+}
+
+async function checkWaTokenStatus() {
+  const el = document.getElementById('wa-token-status');
+  if (!el) return;
+  try {
+    const r = await fetch('/api/whatsapp/token-status');
+    const d = await r.json();
+    if (d.valid) {
+      el.style.background = 'rgba(0,168,107,.08)';
+      el.style.border = '1px solid rgba(0,168,107,.3)';
+      el.innerHTML = `✅ <strong>Token is valid</strong> — Connected to: ${d.phone} (${d.name}) <span style="font-size:11px;color:var(--text-muted)">[${d.source}]</span>`;
+    } else {
+      el.style.background = 'rgba(239,68,68,.06)';
+      el.style.border = '1px solid rgba(239,68,68,.3)';
+      el.innerHTML = `❌ <strong>Token expired or invalid</strong> — ${d.error || 'Unknown error'}<br><span style="font-size:12px;color:var(--text-muted)">Paste a new token below to fix.</span>`;
+    }
+  } catch(e) {
+    el.innerHTML = '⚠️ Could not check token status';
+  }
+}
+
+async function updateWaToken() {
+  const token = (document.getElementById('wa-new-token').value || '').trim();
+  if (!token) return showToast('Paste the token first');
+  const btn = event.target;
+  btn.disabled = true; btn.textContent = 'Saving...';
+  try {
+    const r = await fetch('/api/whatsapp/update-token', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({token})
+    });
+    const d = await r.json();
+    if (!r.ok || d.error) { showToast('Error: ' + (d.error || 'Failed')); return; }
+    document.getElementById('wa-new-token').value = '';
+    showToast('✅ Token saved! WhatsApp bot is active again.');
+    checkWaTokenStatus();
+  } catch(e) {
+    showToast('Error: ' + e.message);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Save Token';
   }
 }
 
