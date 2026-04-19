@@ -31,11 +31,14 @@ def monday_query(query):
     token = get_token()
     if not token:
         return {'error': 'No Monday.com API token configured'}
-    req = urllib.request.Request(MONDAY_API_URL,
-        data=json.dumps({'query': query}).encode(),
-        headers={'Authorization': token, 'Content-Type': 'application/json'})
-    resp = urllib.request.urlopen(req)
-    return json.loads(resp.read())
+    try:
+        req = urllib.request.Request(MONDAY_API_URL,
+            data=json.dumps({'query': query}).encode(),
+            headers={'Authorization': token, 'Content-Type': 'application/json'})
+        resp = urllib.request.urlopen(req, timeout=30)
+        return json.loads(resp.read())
+    except Exception as e:
+        return {'error': str(e)}
 
 def fetch_board_items():
     board_id = get_board_id()

@@ -50,8 +50,23 @@ ROOT = os.path.dirname(os.path.dirname(__file__))
 
 @app.route('/api/sync', methods=['POST'])
 def sync_monday():
-    result = sync_to_db()
-    return jsonify(result)
+    try:
+        result = sync_to_db()
+        return jsonify(result)
+    except Exception as e:
+        import traceback
+        return jsonify({'synced': 0, 'error': str(e), 'trace': traceback.format_exc()}), 500
+
+@app.route('/api/sync/test', methods=['GET'])
+def sync_test():
+    """Diagnostic endpoint — shows Monday API connection status."""
+    from src.monday_sync import get_token, get_board_id, monday_query
+    token = get_token()
+    board_id = get_board_id()
+    if not token:
+        return jsonify({'ok': False, 'error': 'MONDAY_API_TOKEN not set'})
+    result = monday_query('{ me { name } }')
+    return jsonify({'ok': 'error' not in result, 'board_id': board_id, 'monday': result})
 
 @app.route('/api/monday/raw', methods=['GET'])
 def monday_raw():
