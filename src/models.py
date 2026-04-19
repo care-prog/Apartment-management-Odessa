@@ -26,9 +26,11 @@ def _translate(query: str) -> str:
     """Translate SQLite-flavored SQL to PostgreSQL when needed."""
     if not USE_PG:
         return query
-    # ? placeholders → %s
-    out = query.replace('?', '%s')
-    # INSERT OR IGNORE INTO table → INSERT INTO table ... ON CONFLICT DO NOTHING
+    # 1) Escape literal % (e.g. in LIKE '%foo%') so psycopg doesn't treat it as a format spec
+    out = query.replace('%', '%%')
+    # 2) ? placeholders → %s
+    out = out.replace('?', '%s')
+    # 3) INSERT OR IGNORE INTO table → INSERT INTO table ... ON CONFLICT DO NOTHING
     if re.search(r'INSERT\s+OR\s+IGNORE\s+INTO', out, re.IGNORECASE):
         out = re.sub(r'INSERT\s+OR\s+IGNORE\s+INTO', 'INSERT INTO', out, flags=re.IGNORECASE)
         if 'ON CONFLICT' not in out.upper():
