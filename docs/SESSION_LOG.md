@@ -21,6 +21,17 @@
 - Mobile responsive: hamburger button, sidebar drawer, bottom tab bar (Apple-style), full-screen modals on mobile, table horizontal scroll
 - `applyRoleUI()` enhanced: shows all 4 roles (owner/admin/office/property_owner) with color badges, updates avatar initials
 
+### Also done (same session)
+- Monday.com full UI redesign: dark sidebar (#1c1f3b), blue primary (#0073ea), solid status pills, search bar in topbar
+- Property cards: colored left border, solid status badges
+- Status pills: fully solid colored (Monday style) — green/orange/red/grey, white text
+- Stat cards: lighter, cleaner Monday KPI style
+- Tables: stronger header, blue hover row
+- Buttons: solid blue primary with shadow
+- Task board columns: Monday kanban look
+- Bottom nav: dark (matches sidebar)
+- Role pills: Monday palette colors
+
 ### Next
 - Test user creation on deployed Render app
 - Verify mobile layout on real device
