@@ -121,8 +121,8 @@ def sync_to_db():
     execute_db("DELETE FROM tenants")
     execute_db("DELETE FROM meter_readings")
     execute_db("DELETE FROM utility_bills")
-    execute_db("DELETE FROM warranties")
     execute_db("DELETE FROM maintenance_orders")
+    execute_db("DELETE FROM warranties")
     execute_db("DELETE FROM documents WHERE apartment_id IS NOT NULL")
     execute_db("DELETE FROM apartments")
 
