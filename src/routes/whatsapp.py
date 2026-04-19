@@ -1,9 +1,12 @@
 """
-WhatsApp query API - handles incoming messages from the WhatsApp bot.
-Identifies sender (team / tenant / unknown) and returns appropriate response.
+WhatsApp API — handles both ManyChat relay and official Meta WhatsApp webhook.
+Official Meta webhook: GET /api/whatsapp/webhook (verify) + POST (incoming messages)
+ManyChat relay (legacy): POST /api/whatsapp-query
 """
+import os
 import re
 import json
+import requests as _requests
 from flask import Blueprint, request, jsonify
 from src.models import query_db
 
@@ -227,6 +230,180 @@ def _is_apt_trigger(text):
     return False
 
 
+# ── Meta WhatsApp Cloud API ──────────────────────────────────────────────────
+
+WA_PHONE_ID   = os.environ.get('WHATSAPP_PHONE_ID', '')
+WA_TOKEN      = os.environ.get('WHATSAPP_TOKEN', '')
+WA_VERIFY_TOK = os.environ.get('WHATSAPP_VERIFY_TOKEN', 'odessa-whatsapp-2026')
+WA_API_URL    = 'https://graph.facebook.com/v19.0'
+
+
+def wa_send(to_phone, text):
+    """Send a WhatsApp text message via Meta Cloud API."""
+    if not WA_PHONE_ID or not WA_TOKEN:
+        return {'error': 'WhatsApp credentials not set'}
+    url = f'{WA_API_URL}/{WA_PHONE_ID}/messages'
+    payload = {
+        'messaging_product': 'whatsapp',
+        'to': to_phone,
+        'type': 'text',
+        'text': {'body': text[:4096]},
+    }
+    resp = _requests.post(url, json=payload,
+                          headers={'Authorization': f'Bearer {WA_TOKEN}',
+                                   'Content-Type': 'application/json'},
+                          timeout=15)
+    return resp.json()
+
+
+@bp.route('/api/whatsapp/webhook', methods=['GET'])
+def wa_webhook_verify():
+    """Meta calls this to verify the webhook. Must return hub.challenge."""
+    mode      = request.args.get('hub.mode')
+    token     = request.args.get('hub.verify_token')
+    challenge = request.args.get('hub.challenge')
+    if mode == 'subscribe' and token == WA_VERIFY_TOK:
+        return challenge, 200
+    return 'Forbidden', 403
+
+
+@bp.route('/api/whatsapp/webhook', methods=['POST'])
+def wa_webhook_receive():
+    """Receive incoming WhatsApp messages from Meta and reply via Claude."""
+    data = request.json or {}
+
+    try:
+        entry   = (data.get('entry') or [{}])[0]
+        changes = (entry.get('changes') or [{}])[0]
+        value   = changes.get('value', {})
+
+        # Only process actual messages (ignore status updates)
+        messages = value.get('messages', [])
+        if not messages:
+            return jsonify({'status': 'ignored'}), 200
+
+        msg       = messages[0]
+        msg_type  = msg.get('type', '')
+        from_phone = msg.get('from', '')  # international format, no +
+
+        # Only handle text messages for now
+        if msg_type != 'text':
+            wa_send(from_phone, '⚠️ Sorry, I can only process text messages for now.')
+            return jsonify({'status': 'unsupported_type'}), 200
+
+        message_body = msg['text']['body'].strip()
+        if not message_body:
+            return jsonify({'status': 'empty'}), 200
+
+        # ── Route through existing logic ──────────────────────────────────
+        from src.routes.chat import call_claude, gather_context, execute_tool, TOOLS, LANG_NAMES
+        import json as _json
+        import time as _time
+
+        role, user = identify_sender(from_phone)
+
+        norm_phone = normalize_phone(from_phone) or from_phone
+        now = _time.time()
+        session = WA_SESSIONS.get(norm_phone)
+        has_active = session and (now - session.get('last_activity', 0)) < SESSION_TIMEOUT_SECONDS
+        if session and not has_active:
+            del WA_SESSIONS[norm_phone]
+
+        is_trigger = _is_apt_trigger(message_body)
+
+        # Start session on trigger
+        if is_trigger and not has_active:
+            WA_SESSIONS[norm_phone] = {'history': [], 'last_activity': now}
+            if role == 'team':
+                reply = f"שלום {user['name']}! 👋\nאיך אני יכול לעזור?\n• מידע על דירה\n• פתיחת משימה\n• עדכון סטטוס"
+            elif role == 'tenant':
+                reply = f"שלום {user.get('name','')}! 👋\nאיך אני יכול לעזור לך?"
+            else:
+                reply = "שלום! 👋\nאיזה דירה אתה שואל עליה ומה אתה צריך?"
+            wa_send(from_phone, reply)
+            return jsonify({'status': 'greeted'}), 200
+
+        if not has_active and not is_trigger:
+            # Silent ignore — don't reply to every message, only sessions
+            return jsonify({'status': 'ignored'}), 200
+
+        # Active session — full Claude response
+        if norm_phone not in WA_SESSIONS:
+            WA_SESSIONS[norm_phone] = {'history': [], 'last_activity': now}
+        WA_SESSIONS[norm_phone]['last_activity'] = now
+        history = WA_SESSIONS[norm_phone]['history']
+
+        user_lang  = user.get('language', 'he') if user else 'he'
+        lang_name  = LANG_NAMES.get(user_lang, 'Hebrew')
+        context    = gather_context()
+
+        if role == 'team':
+            access_note = (f"This user is a TEAM MEMBER ({user.get('name','')}, role: {user.get('role','')}). "
+                           "Full access — answer any question, take any action.")
+        elif role == 'tenant':
+            apt_no = user.get('apt_number', '?')
+            prop   = user.get('property_name', '')
+            access_note = (f"This user is a TENANT ({user.get('name','')}) renting {prop} #{apt_no}. "
+                           "Only share info about THEIR apartment. NO other tenant info, NO financials.")
+        else:
+            access_note = "UNKNOWN sender. Be polite, do NOT share any sensitive data. Ask who they are."
+
+        system_prompt = f"""You are the WhatsApp assistant for "Apartment Management Odessa".
+Be CONCISE — WhatsApp messages must be short. No markdown tables. Light emoji use only.
+{access_note}
+Respond in the same language the user wrote in (default: {lang_name}).
+
+CURRENT DATA:
+{_json.dumps(context, ensure_ascii=False, default=str)[:12000]}
+"""
+        messages_arr = []
+        for h in history[-WA_MAX_HISTORY:]:
+            messages_arr.append({'role': h['role'], 'content': h['content']})
+        messages_arr.append({'role': 'user', 'content': message_body})
+
+        use_tools   = (role == 'team')
+        actions     = []
+
+        for _ in range(4):
+            result = call_claude(messages_arr, system_prompt, use_tools=use_tools)
+            if 'error' in result:
+                wa_send(from_phone, '⚠️ ' + result['error'][:200])
+                return jsonify({'status': 'error'}), 200
+
+            content    = result.get('content', [])
+            tool_uses  = [c for c in content if c.get('type') == 'tool_use']
+            text_blocks = [c for c in content if c.get('type') == 'text']
+
+            if not tool_uses:
+                reply_text = '\n'.join(b.get('text', '') for b in text_blocks).strip()
+                history.append({'role': 'user',      'content': message_body})
+                history.append({'role': 'assistant', 'content': reply_text})
+                WA_SESSIONS[norm_phone]['history']       = history[-WA_MAX_HISTORY:]
+                WA_SESSIONS[norm_phone]['last_activity'] = _time.time()
+                wa_send(from_phone, reply_text or '✓')
+                return jsonify({'status': 'replied', 'actions': actions}), 200
+
+            messages_arr.append({'role': 'assistant', 'content': content})
+            tool_results = []
+            for tu in tool_uses:
+                tr = execute_tool(tu['name'], tu.get('input', {}))
+                actions.append({'tool': tu['name'], 'result': tr})
+                tool_results.append({
+                    'type': 'tool_result',
+                    'tool_use_id': tu['id'],
+                    'content': _json.dumps(tr, ensure_ascii=False),
+                })
+            messages_arr.append({'role': 'user', 'content': tool_results})
+
+        wa_send(from_phone, 'Done ✓')
+        return jsonify({'status': 'done', 'actions': actions}), 200
+
+    except Exception as e:
+        # Always return 200 to Meta, even on errors — otherwise Meta retries forever
+        return jsonify({'status': 'error', 'detail': str(e)}), 200
+
+
+# ── ManyChat relay (legacy) ───────────────────────────────────────────────────
 @bp.route('/api/whatsapp-query', methods=['POST'])
 def whatsapp_query():
     data = request.json or {}
