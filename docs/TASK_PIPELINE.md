@@ -28,7 +28,7 @@
 | Utility meter readings | ⚪ To Do | 1 | Property CRUD | Log readings, calculate bills, deadline tracking (1st-3rd) |
 | Task board | ⚪ To Do | 1 | - | Assign to Alina/Anya, pending/progress/done columns |
 | Maintenance work orders | ⚪ To Do | 1 | Property CRUD | Track repairs, warranties, handyman contacts |
-| Owner financial reports | ⚪ To Do | 1 | Rent + Utilities | Sam (15-22nd), Natan (10-17th), Kanatna (10-15th) |
+| Owner financial reports | 🔵 Built | 1 | Rent + Utilities | Financial breakdown: date range, timeline chart, category breakdown, permissions matrix |
 | Document storage | ⚪ To Do | 1 | Property CRUD | Upload contracts, photos, warranties per property |
 | Flask API backend | ⚪ To Do | 1 | Database schema | REST API for all CRUD operations |
 | Connect frontend to API | ⚪ To Do | 1 | Flask API + UI | Wire up dashboard with real data |

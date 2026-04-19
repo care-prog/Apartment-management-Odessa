@@ -5,6 +5,36 @@
 
 ---
 
+## Session 5 — 2026-04-19
+
+**Duration:** Full session
+**Phase:** Phase 1
+**Focus:** Financial breakdown dashboard + permissions matrix
+
+### Done
+- `GET /api/cash-summary` new endpoint in wallets.py — date-range + currency filtered: total_income, total_expenses, balance, by_month timeline, by_category breakdown
+- Office Cash page: added Financial Breakdown section with FROM/TO date pickers, currency selector, "All time" reset button
+- 4 KPI cards per period: Cash In, Cash Out, Net Balance, Avg/Month
+- Chart.js bar chart: Monthly Timeline — income bars (green) + expenses bars (red) + balance line (blue)
+- Chart.js doughnut chart: expenses by category, with category table below
+- Charts properly destroyed/recreated on re-filter (no memory leaks)
+- Default date range: Jan 1 of current year → today (pre-populated on page open)
+- Permissions Matrix: professional table on Team page showing Owner/Admin/Office/Property Owner columns vs 18 feature rows in 5 grouped sections
+- Emoji legend: ✅ Full / ⚙️ Configurable / 👁️ Read only / 🚫 No access
+- English-only responses from Claude going forward (RTL display issue)
+
+### Deployment
+- All code pushed to GitHub — **Render must be manually deployed** (webhook still disconnected)
+- Go to render.com → apartment-mgmt-odessa → Manual Deploy → Deploy latest commit
+
+### Next
+- Log in on Render, navigate to Office Cash → test breakdown charts with real data
+- Test permissions matrix display on Team page
+- Add logging to wallets.py (transactions) and maintenance.py (still missing)
+- Property owner filtered view: dashboard/API filters to only show assigned property_ids
+
+---
+
 ## Session 4 — 2026-04-19
 
 **Duration:** Full session

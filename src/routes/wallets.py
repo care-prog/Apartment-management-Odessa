@@ -106,3 +106,117 @@ def list_commissions():
     """Returns all commission overrides — used to overlay on apartment list."""
     rows = query_db('SELECT * FROM commission_overrides')
     return jsonify({r['monday_id']: r for r in rows})
+
+
+# ── Financial Summary (date-range aware) ──
+
+@bp.route('/api/cash-summary', methods=['GET'])
+def cash_summary():
+    """Date-range filtered summary: totals, monthly timeline, category breakdown.
+    Query params: from=YYYY-MM-DD, to=YYYY-MM-DD, currency=USD|UAH
+    """
+    from src.models import month_str
+    from_date = request.args.get('from')
+    to_date = request.args.get('to')
+    currency = request.args.get('currency', 'USD')
+
+    # Build parameterised WHERE snippets for each table
+    txn_filter = ' AND currency = ?'
+    txn_args = [currency]
+    off_filter = ' AND currency = ?'
+    off_args = [currency]
+
+    if from_date:
+        txn_filter += ' AND transaction_date >= ?'
+        txn_args.append(from_date)
+        off_filter += ' AND date >= ?'
+        off_args.append(from_date)
+    if to_date:
+        txn_filter += ' AND transaction_date <= ?'
+        txn_args.append(to_date)
+        off_filter += ' AND date <= ?'
+        off_args.append(to_date)
+
+    # ── Totals ──
+    total_inc = query_db(
+        f"SELECT COALESCE(SUM(amount),0) as s FROM cash_transactions WHERE type='income'{txn_filter}",
+        txn_args, one=True)['s']
+    total_exp_txn = query_db(
+        f"SELECT COALESCE(SUM(amount),0) as s FROM cash_transactions WHERE type='expense'{txn_filter}",
+        txn_args, one=True)['s']
+    total_off = query_db(
+        f"SELECT COALESCE(SUM(amount),0) as s FROM office_expenses WHERE 1=1{off_filter}",
+        off_args, one=True)['s']
+
+    total_income = round(float(total_inc), 2)
+    total_expenses = round(float(total_exp_txn) + float(total_off), 2)
+
+    # ── Monthly timeline (cash_transactions) ──
+    mf = month_str('transaction_date')
+    monthly_rows = query_db(
+        f"SELECT {mf} as month, type, COALESCE(SUM(amount),0) as total "
+        f"FROM cash_transactions WHERE 1=1{txn_filter} GROUP BY month, type ORDER BY month",
+        txn_args)
+    months: dict = {}
+    for r in monthly_rows:
+        m = r['month'] or ''
+        if not m:
+            continue
+        months.setdefault(m, {'month': m, 'income': 0.0, 'expenses': 0.0})
+        if r['type'] == 'income':
+            months[m]['income'] = round(float(r['total']), 2)
+        else:
+            months[m]['expenses'] = round(float(r['total']), 2)
+
+    # Add office_expenses per month
+    mf2 = month_str('date')
+    off_monthly = query_db(
+        f"SELECT {mf2} as month, COALESCE(SUM(amount),0) as total "
+        f"FROM office_expenses WHERE 1=1{off_filter} GROUP BY month ORDER BY month",
+        off_args)
+    for r in off_monthly:
+        m = r['month'] or ''
+        if not m:
+            continue
+        months.setdefault(m, {'month': m, 'income': 0.0, 'expenses': 0.0})
+        months[m]['expenses'] = round(months[m]['expenses'] + float(r['total']), 2)
+
+    by_month = sorted(months.values(), key=lambda x: x['month'])
+    for row in by_month:
+        row['balance'] = round(row['income'] - row['expenses'], 2)
+
+    # ── Category breakdown ──
+    cats: dict = {}
+    for r in query_db(
+        f"SELECT category, COALESCE(SUM(amount),0) as total FROM cash_transactions "
+        f"WHERE type='income'{txn_filter} GROUP BY category", txn_args):
+        c = r['category'] or 'other'
+        cats.setdefault(c, {'category': c, 'income': 0.0, 'expenses': 0.0})
+        cats[c]['income'] = round(float(r['total']), 2)
+
+    for r in query_db(
+        f"SELECT category, COALESCE(SUM(amount),0) as total FROM cash_transactions "
+        f"WHERE type='expense'{txn_filter} GROUP BY category", txn_args):
+        c = r['category'] or 'other'
+        cats.setdefault(c, {'category': c, 'income': 0.0, 'expenses': 0.0})
+        cats[c]['expenses'] = round(cats[c].get('expenses', 0) + float(r['total']), 2)
+
+    for r in query_db(
+        f"SELECT category, COALESCE(SUM(amount),0) as total FROM office_expenses "
+        f"WHERE 1=1{off_filter} GROUP BY category", off_args):
+        c = r['category'] or 'general'
+        cats.setdefault(c, {'category': c, 'income': 0.0, 'expenses': 0.0})
+        cats[c]['expenses'] = round(cats[c].get('expenses', 0) + float(r['total']), 2)
+
+    by_category = sorted(cats.values(), key=lambda x: -(x['income'] + x['expenses']))
+
+    return jsonify({
+        'currency': currency,
+        'from_date': from_date,
+        'to_date': to_date,
+        'total_income': total_income,
+        'total_expenses': total_expenses,
+        'balance': round(total_income - total_expenses, 2),
+        'by_month': by_month,
+        'by_category': by_category,
+    })

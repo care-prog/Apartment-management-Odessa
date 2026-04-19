@@ -989,7 +989,49 @@
       <!-- ══════ PAGE: OFFICE CASH ══════ -->
       <div id="page-cash" class="page" style="display:none">
 
-        <!-- Wallet Cards -->
+        <!-- ── Financial Breakdown Section ── -->
+        <div class="chart-card" style="margin-bottom:20px">
+          <div class="chart-head" style="flex-wrap:wrap;gap:12px">
+            <div>
+              <div class="chart-title">📊 Financial Breakdown</div>
+              <div class="chart-subtitle">Filter by date range — see income, expenses and balance over time</div>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:11px;font-weight:600;color:var(--text-dim)">FROM</span>
+                <input type="date" id="summary-from" style="padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+              </div>
+              <div style="display:flex;align-items:center;gap:5px">
+                <span style="font-size:11px;font-weight:600;color:var(--text-dim)">TO</span>
+                <input type="date" id="summary-to" style="padding:5px 9px;border:1px solid var(--border);border-radius:6px;font-size:12px;font-family:inherit">
+              </div>
+              <select id="summary-currency" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;font-size:12px;background:var(--surface);font-family:inherit">
+                <option value="USD">$ USD</option>
+                <option value="UAH">₴ UAH</option>
+              </select>
+              <button class="btn btn-primary" onclick="loadCashSummary()" style="font-size:12px;white-space:nowrap">Apply ▶</button>
+              <button class="btn" onclick="clearSummaryFilter()" style="font-size:12px;white-space:nowrap">All time</button>
+            </div>
+          </div>
+
+          <!-- KPI Cards for the period -->
+          <div class="stats-row" id="summary-kpi" style="margin-bottom:20px"></div>
+
+          <!-- Charts: timeline + category -->
+          <div class="chart-grid-2">
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Monthly Timeline</div>
+              <div class="chart-canvas-wrap"><canvas id="cash-timeline-chart"></canvas></div>
+            </div>
+            <div>
+              <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">By Category</div>
+              <div class="chart-canvas-wrap" style="height:200px"><canvas id="cash-category-chart"></canvas></div>
+              <div id="cash-category-table" style="margin-top:14px;max-height:160px;overflow-y:auto"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Wallet Cards (all-time totals) -->
         <div class="stats-row" id="wallet-cards" style="margin-bottom:20px"></div>
 
         <!-- Add Transaction (owner only) -->
@@ -1237,7 +1279,7 @@
 
       <!-- ══════ PAGE: TEAM ══════ -->
       <div id="page-team" class="page" style="display:none">
-        <div class="section">
+        <div class="section" style="margin-bottom:20px">
           <div class="section-head">
             <div class="section-title"><span class="icon">&#9998;</span> Team &amp; Users</div>
             <div class="section-actions owner-only">
@@ -1245,6 +1287,34 @@
             </div>
           </div>
           <div id="user-grid" class="user-grid"></div>
+        </div>
+
+        <!-- ── Permissions Matrix ── -->
+        <div class="section">
+          <div class="section-head">
+            <div class="section-title">🔐 Access Permissions Matrix</div>
+            <div style="font-size:12px;color:var(--text-muted)">What each role can access and do</div>
+          </div>
+          <div class="table-wrap">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead>
+                <tr style="background:var(--surface-2)">
+                  <th style="text-align:left;padding:10px 16px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);white-space:nowrap;border-bottom:1px solid var(--border)">Feature / Permission</th>
+                  <th style="text-align:center;padding:10px 16px;border-bottom:1px solid var(--border)"><span style="display:inline-block;padding:4px 12px;background:#1c1f3b;color:#fff;border-radius:20px;font-size:11px;font-weight:700">Owner</span></th>
+                  <th style="text-align:center;padding:10px 16px;border-bottom:1px solid var(--border)"><span style="display:inline-block;padding:4px 12px;background:var(--purple);color:#fff;border-radius:20px;font-size:11px;font-weight:700">Admin</span></th>
+                  <th style="text-align:center;padding:10px 16px;border-bottom:1px solid var(--border)"><span style="display:inline-block;padding:4px 12px;background:var(--accent);color:#fff;border-radius:20px;font-size:11px;font-weight:700">Office</span></th>
+                  <th style="text-align:center;padding:10px 16px;border-bottom:1px solid var(--border)"><span style="display:inline-block;padding:4px 12px;background:var(--teal);color:#fff;border-radius:20px;font-size:11px;font-weight:700">Property Owner</span></th>
+                </tr>
+              </thead>
+              <tbody id="perm-matrix-tbody"></tbody>
+            </table>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);padding:10px 16px;display:flex;gap:16px">
+            <span>✅ Full access</span>
+            <span>⚙️ Configurable per user</span>
+            <span>👁️ Read only</span>
+            <span>🚫 No access</span>
+          </div>
         </div>
       </div>
 
@@ -1787,10 +1857,10 @@ function showPage(page, fromHash) {
     location.hash = '#' + page;
   }
   if (DATA) renderPage(page, DATA);
-  if (page === 'cash') loadWallets();
+  if (page === 'cash') { loadWallets(); loadCashSummary(); }
   if (page === 'log') loadActivityLog();
   if (page === 'owners') loadOwners();
-  if (page === 'team') loadTeamUsers();
+  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); }
   closeSidebar();
 }
 
@@ -2658,6 +2728,231 @@ async function editCommission(mondayId, rentAmount) {
     body: JSON.stringify({commission_type: type, commission_value: value})
   });
   loadWallets();
+}
+
+// ══════════ CASH SUMMARY / BREAKDOWN ══════════
+
+let _cashCharts = {};
+
+function _initSummaryDates() {
+  const from = document.getElementById('summary-from');
+  const to = document.getElementById('summary-to');
+  if (!from || to?.value) return;
+  // Default: first day of current year → today
+  const now = new Date();
+  from.value = now.getFullYear() + '-01-01';
+  to.value = now.toISOString().slice(0, 10);
+}
+
+function clearSummaryFilter() {
+  const from = document.getElementById('summary-from');
+  const to = document.getElementById('summary-to');
+  if (from) from.value = '';
+  if (to) to.value = '';
+  loadCashSummary();
+}
+
+async function loadCashSummary() {
+  _initSummaryDates();
+  const from = document.getElementById('summary-from')?.value || '';
+  const to   = document.getElementById('summary-to')?.value   || '';
+  const currency = document.getElementById('summary-currency')?.value || 'USD';
+  const sym = currency === 'USD' ? '$' : '₴';
+
+  const params = new URLSearchParams({ currency });
+  if (from) params.set('from', from);
+  if (to)   params.set('to', to);
+
+  let data;
+  try {
+    const res = await fetch('/api/cash-summary?' + params);
+    data = await res.json();
+  } catch(e) {
+    console.error('cash-summary error', e);
+    return;
+  }
+
+  // ── KPI Cards ──
+  const kpi = document.getElementById('summary-kpi');
+  if (kpi) {
+    const bColor = data.balance >= 0 ? 'var(--green)' : 'var(--red)';
+    const periodLabel = from && to ? `${from} → ${to}` : from ? `From ${from}` : to ? `Until ${to}` : 'All time';
+    const monthCount = data.by_month.length;
+    const avgIncome = monthCount ? Math.round(data.total_income / monthCount) : 0;
+    kpi.innerHTML = `
+      <div class="stat-card" style="flex:1;min-width:130px;border-top:3px solid var(--green)">
+        <div class="stat-label">CASH IN</div>
+        <div class="stat-value" style="color:var(--green);font-size:26px">${sym}${data.total_income.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${periodLabel}</div>
+      </div>
+      <div class="stat-card" style="flex:1;min-width:130px;border-top:3px solid var(--red)">
+        <div class="stat-label">CASH OUT</div>
+        <div class="stat-value" style="color:var(--red);font-size:26px">${sym}${data.total_expenses.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${periodLabel}</div>
+      </div>
+      <div class="stat-card" style="flex:1;min-width:130px;border-top:3px solid ${bColor}">
+        <div class="stat-label">NET BALANCE</div>
+        <div class="stat-value" style="color:${bColor};font-size:26px">${data.balance < 0 ? '-' : ''}${sym}${Math.abs(data.balance).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${currency}</div>
+      </div>
+      <div class="stat-card" style="flex:1;min-width:130px;border-top:3px solid var(--accent)">
+        <div class="stat-label">AVG / MONTH</div>
+        <div class="stat-value" style="font-size:26px">${sym}${avgIncome.toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${monthCount} months</div>
+      </div>`;
+  }
+
+  _renderCashTimeline(data.by_month, sym);
+  _renderCashCategory(data.by_category, sym);
+}
+
+function _renderCashTimeline(byMonth, sym) {
+  const ctx = document.getElementById('cash-timeline-chart');
+  if (!ctx) return;
+  if (_cashCharts.timeline) { try { _cashCharts.timeline.destroy(); } catch(e) {} }
+
+  if (!byMonth.length) {
+    ctx.getContext('2d').clearRect(0, 0, ctx.width, ctx.height);
+    _cashCharts.timeline = null;
+    return;
+  }
+  _cashCharts.timeline = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: byMonth.map(m => m.month),
+      datasets: [
+        { label: 'Income',   data: byMonth.map(m => m.income),   backgroundColor: 'rgba(0,200,117,0.85)', borderRadius: 4, barPercentage: 0.65 },
+        { label: 'Expenses', data: byMonth.map(m => m.expenses), backgroundColor: 'rgba(228,66,88,0.85)', borderRadius: 4, barPercentage: 0.65 },
+        { label: 'Balance',  data: byMonth.map(m => m.balance),
+          type: 'line', borderColor: '#0073ea', backgroundColor: 'rgba(0,115,234,0.07)',
+          pointRadius: 4, pointBackgroundColor: '#0073ea',
+          tension: 0.35, fill: true, yAxisID: 'y' }
+      ]
+    },
+    options: {
+      responsive: true, maintainAspectRatio: false,
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { font: { size: 11, family: 'Inter' }, boxWidth: 12, padding: 14 } },
+        tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${sym}${Number(c.raw).toLocaleString()}` } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 10, family: 'Inter' } } },
+        y: { grid: { color: 'rgba(0,0,0,0.04)' },
+             ticks: { callback: v => sym + Number(v).toLocaleString(), font: { size: 10, family: 'Inter' } } }
+      }
+    }
+  });
+}
+
+function _renderCashCategory(byCat, sym) {
+  const ctx = document.getElementById('cash-category-chart');
+  if (!ctx) return;
+  if (_cashCharts.category) { try { _cashCharts.category.destroy(); } catch(e) {} }
+
+  const expCats = byCat.filter(c => c.expenses > 0);
+  const COLORS = ['#0073ea','#e44258','#00c875','#fdab3d','#a25ddc','#037f4c','#00d4f5','#ff642e','#c4c4c4'];
+
+  if (expCats.length) {
+    _cashCharts.category = new Chart(ctx, {
+      type: 'doughnut',
+      data: {
+        labels: expCats.map(c => c.category),
+        datasets: [{ data: expCats.map(c => c.expenses), backgroundColor: COLORS.slice(0, expCats.length), borderWidth: 2, borderColor: '#fff', hoverOffset: 6 }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false, cutout: '60%',
+        plugins: {
+          legend: { position: 'bottom', labels: { font: { size: 10, family: 'Inter' }, padding: 8, boxWidth: 10 } },
+          tooltip: { callbacks: { label: c => ` ${c.label}: ${sym}${Number(c.raw).toLocaleString()}` } }
+        }
+      }
+    });
+  }
+
+  // Category table
+  const tbl = document.getElementById('cash-category-table');
+  if (tbl) {
+    if (!byCat.length) { tbl.innerHTML = '<div style="color:var(--text-muted);font-size:12px;text-align:center;padding:12px">No data for period</div>'; return; }
+    tbl.innerHTML = `
+      <table style="width:100%;font-size:12px;border-collapse:collapse">
+        <thead><tr style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase">
+          <th style="padding:4px 6px;text-align:left;border-bottom:1px solid var(--border)">Category</th>
+          <th style="padding:4px 6px;text-align:right;border-bottom:1px solid var(--border);color:var(--green)">Income</th>
+          <th style="padding:4px 6px;text-align:right;border-bottom:1px solid var(--border);color:var(--red)">Expenses</th>
+        </tr></thead>
+        <tbody>${byCat.map((c,i) => `
+          <tr style="${i % 2 === 0 ? 'background:var(--surface-2)' : ''}">
+            <td style="padding:5px 6px;font-weight:500">${c.category}</td>
+            <td style="padding:5px 6px;text-align:right;color:var(--green);font-weight:600">${c.income > 0 ? sym + c.income.toLocaleString() : '—'}</td>
+            <td style="padding:5px 6px;text-align:right;color:var(--red);font-weight:600">${c.expenses > 0 ? sym + c.expenses.toLocaleString() : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>`;
+  }
+}
+
+// ══════════ PERMISSIONS MATRIX ══════════
+
+const PERM_MATRIX = [
+  { section: 'Dashboard & Overview', rows: [
+    { label: 'View Dashboard',          owner:'✅', admin:'✅', office:'✅', prop:'👁️' },
+    { label: 'See All Properties',      owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+    { label: 'See Assigned Properties', owner:'✅', admin:'✅', office:'✅', prop:'✅' },
+    { label: 'Sync Monday.com',         owner:'✅', admin:'✅', office:'🚫', prop:'🚫' },
+  ]},
+  { section: 'Tenants & Leases', rows: [
+    { label: 'View Tenants',           owner:'✅', admin:'✅', office:'✅', prop:'👁️' },
+    { label: 'Add / Edit Tenants',     owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+    { label: 'Delete Tenants',         owner:'✅', admin:'⚙️', office:'🚫', prop:'🚫' },
+    { label: 'Manage Leases',          owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+    { label: 'Record Payments',        owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+  ]},
+  { section: 'Finances & Cash', rows: [
+    { label: 'View Financial Data',    owner:'✅', admin:'✅', office:'🚫', prop:'🚫' },
+    { label: 'Add Transactions',       owner:'✅', admin:'✅', office:'🚫', prop:'🚫' },
+    { label: 'Add Office Expenses',    owner:'✅', admin:'✅', office:'🚫', prop:'🚫' },
+    { label: 'Set Commission Rates',   owner:'✅', admin:'⚙️', office:'🚫', prop:'🚫' },
+    { label: 'View Owner Reports',     owner:'✅', admin:'✅', office:'🚫', prop:'✅' },
+  ]},
+  { section: 'Tasks & Operations', rows: [
+    { label: 'View Tasks',             owner:'✅', admin:'✅', office:'✅', prop:'👁️' },
+    { label: 'Create / Edit Tasks',    owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+    { label: 'Delete Tasks',           owner:'✅', admin:'✅', office:'⚙️', prop:'🚫' },
+    { label: 'View Activity Log',      owner:'✅', admin:'✅', office:'✅', prop:'🚫' },
+    { label: 'Restore Deleted Items',  owner:'✅', admin:'⚙️', office:'🚫', prop:'🚫' },
+  ]},
+  { section: 'System & Users', rows: [
+    { label: 'Add / Edit App Users',   owner:'✅', admin:'🚫', office:'🚫', prop:'🚫' },
+    { label: 'Assign Permissions',     owner:'✅', admin:'🚫', office:'🚫', prop:'🚫' },
+    { label: 'View System Settings',   owner:'✅', admin:'👁️', office:'🚫', prop:'🚫' },
+  ]},
+];
+
+function renderPermissionsMatrix() {
+  const tbody = document.getElementById('perm-matrix-tbody');
+  if (!tbody) return;
+  const CELL = {
+    '✅': 'color:#00c875;font-size:18px',
+    '⚙️': 'color:#fdab3d;font-size:16px',
+    '👁️': 'color:#0073ea;font-size:16px',
+    '🚫': 'color:#d0d3dc;font-size:16px',
+  };
+  let html = '';
+  PERM_MATRIX.forEach(group => {
+    html += `<tr><td colspan="5" style="padding:10px 16px 4px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:var(--text-muted);background:var(--surface-2);border-top:1px solid var(--border)">${group.section}</td></tr>`;
+    group.rows.forEach((row, i) => {
+      const bg = i % 2 === 0 ? '' : 'background:var(--surface-2)';
+      html += `<tr style="${bg}">
+        <td style="padding:9px 16px;font-size:13px;font-weight:500">${row.label}</td>
+        <td style="text-align:center;padding:9px 16px;${CELL[row.owner]||''}">${row.owner}</td>
+        <td style="text-align:center;padding:9px 16px;${CELL[row.admin]||''}">${row.admin}</td>
+        <td style="text-align:center;padding:9px 16px;${CELL[row.office]||''}">${row.office}</td>
+        <td style="text-align:center;padding:9px 16px;${CELL[row.prop]||''}">${row.prop}</td>
+      </tr>`;
+    });
+  });
+  tbody.innerHTML = html;
 }
 
 // ══════════ TENANT + LEASE MODAL ══════════
