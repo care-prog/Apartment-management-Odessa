@@ -3,7 +3,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
-from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity
+from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity, users
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
@@ -47,6 +47,7 @@ app.register_blueprint(chat.bp)
 app.register_blueprint(uploads.bp)
 app.register_blueprint(wallets.bp)
 app.register_blueprint(activity.bp)
+app.register_blueprint(users.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -78,9 +79,18 @@ def sync_push():
 
 @app.route('/api/me', methods=['GET'])
 def current_user():
-    from src.auth import get_current_role
-    role = get_current_role()
-    return jsonify({'role': role or 'guest', 'is_owner': role == 'owner'})
+    from src.auth import get_current_user
+    user = get_current_user()
+    if not user:
+        return jsonify({'role': 'guest', 'is_owner': False, 'display_name': 'Guest', 'permissions': '{}', 'property_ids': '[]'})
+    return jsonify({
+        'id': user.get('id'),
+        'role': user.get('role', 'guest'),
+        'is_owner': user.get('role') == 'owner',
+        'display_name': user.get('display_name', 'User'),
+        'permissions': user.get('permissions', '{}'),
+        'property_ids': user.get('property_ids', '[]'),
+    })
 
 @app.route('/api/sync/test', methods=['GET'])
 def sync_test():

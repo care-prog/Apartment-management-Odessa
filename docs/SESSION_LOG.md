@@ -5,6 +5,29 @@
 
 ---
 
+## Session 4 — 2026-04-19
+
+**Duration:** Full session
+**Phase:** Phase 1
+**Focus:** Multi-user auth, Team/user management page, mobile responsive UI
+
+### Done
+- Multi-user auth: app_users table in both schemas + safe_migrate()
+- New `src/routes/users.py`: full CRUD for app_users (owner-only)
+- `src/auth.py` rewrite: DB-user cookie auth (u{uid}:token), legacy env-var auth still works
+- `/api/me` updated: returns full user dict (id, role, display_name, permissions, property_ids)
+- Team page overhauled: live user grid from `/api/users`, click-to-edit, role color pills
+- User edit modal: display_name, username, password reset, role selector, 6 permission toggles, property assignment for property_owner role
+- Mobile responsive: hamburger button, sidebar drawer, bottom tab bar (Apple-style), full-screen modals on mobile, table horizontal scroll
+- `applyRoleUI()` enhanced: shows all 4 roles (owner/admin/office/property_owner) with color badges, updates avatar initials
+
+### Next
+- Test user creation on deployed Render app
+- Verify mobile layout on real device
+- Add filtering: property_owner sees only their assigned properties
+
+---
+
 ## Session 3 — 2026-04-18
 
 **Duration:** Full session

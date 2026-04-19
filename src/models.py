@@ -9,6 +9,7 @@ so all existing route code works unchanged on both backends.
 import os
 import re
 import sqlite3
+import datetime
 
 DB_PATH = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'apartment_mgmt.db')
 SCHEMA_SQLITE = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'database', 'schema', '001_initial.sql')
@@ -20,6 +21,14 @@ USE_PG = bool(DATABASE_URL)
 if USE_PG:
     import psycopg
     from psycopg.rows import dict_row
+
+
+def _serialize_row(row):
+    """Convert datetime/date objects in a row dict to ISO strings."""
+    if row is None:
+        return None
+    return {k: v.isoformat() if isinstance(v, (datetime.date, datetime.datetime)) else v
+            for k, v in row.items()}
 
 
 def month_str(col: str) -> str:
@@ -76,6 +85,12 @@ def safe_migrate():
             entity_id TEXT, description TEXT, before_data TEXT,
             user_role TEXT DEFAULT 'owner', ip_address TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS app_users (
+            id SERIAL PRIMARY KEY, username TEXT UNIQUE NOT NULL,
+            display_name TEXT NOT NULL, password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'office', permissions TEXT NOT NULL DEFAULT '{}',
+            property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -99,6 +114,12 @@ def safe_migrate():
             id INTEGER PRIMARY KEY AUTOINCREMENT, action TEXT NOT NULL,
             entity_type TEXT NOT NULL, entity_id TEXT, description TEXT,
             before_data TEXT, user_role TEXT DEFAULT 'owner', ip_address TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS app_users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
+            display_name TEXT NOT NULL, password_hash TEXT NOT NULL,
+            role TEXT NOT NULL DEFAULT 'office', permissions TEXT NOT NULL DEFAULT '{}',
+            property_ids TEXT NOT NULL DEFAULT '[]', is_active INTEGER NOT NULL DEFAULT 1,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
 
 
@@ -124,7 +145,7 @@ def query_db(query, args=(), one=False):
     if USE_PG:
         with db.cursor() as cur:
             cur.execute(q, args)
-            rv = cur.fetchall() if cur.description else []
+            rv = [_serialize_row(r) for r in (cur.fetchall() if cur.description else [])]
     else:
         cur = db.execute(q, args)
         rv = [dict(row) for row in cur.fetchall()]

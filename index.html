@@ -486,32 +486,162 @@
   }
   .modal textarea { min-height: 60px; resize: vertical; }
   .modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+  .modal-box {
+    background: var(--surface); border-radius: 14px; width: 90%;
+    max-height: 90vh; overflow-y: auto;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.14), 0 4px 12px rgba(0,0,0,0.06);
+  }
+  .modal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 18px 22px 16px; border-bottom: 1px solid var(--border);
+  }
+  .modal-title { font-size: 16px; font-weight: 700; letter-spacing: -0.3px; }
+  .modal-close {
+    background: none; border: none; cursor: pointer; color: var(--text-muted);
+    font-size: 18px; width: 28px; height: 28px; border-radius: 6px;
+    display: flex; align-items: center; justify-content: center; transition: all 0.12s;
+    font-family: inherit;
+  }
+  .modal-close:hover { background: var(--surface-hover); color: var(--text); }
+  .modal-body { padding: 20px 22px; }
+
+  /* ── Hamburger button (mobile only) ── */
+  .hamburger-btn {
+    display: none; background: none; border: none; cursor: pointer;
+    width: 36px; height: 36px; border-radius: 8px; align-items: center;
+    justify-content: center; color: var(--text-dim); font-size: 18px;
+    transition: all 0.15s; flex-shrink: 0;
+  }
+  .hamburger-btn:hover { background: var(--surface-hover); color: var(--text); }
+
+  /* ── Sidebar overlay (mobile) ── */
+  .sidebar-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+    z-index: 99; backdrop-filter: blur(2px);
+  }
+  .sidebar-overlay.active { display: block; }
+
+  /* ── Bottom tab bar (mobile) ── */
+  .bottom-nav {
+    display: none; position: fixed; bottom: 0; left: 0; right: 0;
+    height: 60px; background: rgba(255,255,255,0.95); backdrop-filter: blur(20px) saturate(1.8);
+    border-top: 1px solid var(--border);
+    z-index: 50; padding: 0 4px; padding-bottom: env(safe-area-inset-bottom, 0);
+    box-shadow: 0 -1px 0 rgba(0,0,0,0.05), 0 -4px 16px rgba(0,0,0,0.06);
+  }
+  .bottom-nav-inner { display: flex; height: 60px; }
+  .bottom-tab {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; cursor: pointer; color: var(--text-muted); transition: color 0.15s;
+    border: none; background: none; font-family: inherit; padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-tab.active { color: var(--accent); }
+  .bottom-tab .bt-icon { font-size: 20px; line-height: 1; }
+  .bottom-tab .bt-label { font-size: 9px; font-weight: 600; letter-spacing: 0.2px; }
+
+  /* ── User cards (Team page) ── */
+  .user-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .user-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius);
+    padding: 16px 18px; cursor: pointer; transition: all 0.15s;
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .user-card:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
+  .user-avatar-lg {
+    width: 42px; height: 42px; border-radius: 50%; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 17px; font-weight: 700; color: #fff;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    box-shadow: 0 2px 6px rgba(94,106,210,0.25);
+  }
+  .user-card-info { flex: 1; min-width: 0; }
+  .user-card-name { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .user-card-username { font-size: 11px; color: var(--text-muted); font-family: 'JetBrains Mono', monospace; margin-bottom: 6px; }
+  .user-card-meta { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .role-pill {
+    font-size: 10px; font-weight: 600; padding: 2px 8px; border-radius: 20px; text-transform: uppercase; letter-spacing: 0.4px;
+  }
+  .role-owner { background: rgba(94,106,210,0.12); color: var(--accent); }
+  .role-admin { background: rgba(249,115,22,0.12); color: var(--orange); }
+  .role-office { background: rgba(0,168,107,0.12); color: var(--green); }
+  .role-property_owner { background: rgba(168,85,247,0.12); color: var(--purple); }
+
+  /* ── Permission toggles ── */
+  .perm-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .perm-toggle { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface-2); border-radius: 8px; font-size: 12px; font-weight: 500; }
+  .toggle-sw { position: relative; width: 34px; height: 20px; cursor: pointer; flex-shrink: 0; }
+  .toggle-sw input { opacity: 0; width: 0; height: 0; }
+  .toggle-track { position: absolute; inset: 0; background: var(--border-accent); border-radius: 20px; transition: 0.2s; }
+  .toggle-track:before { content: ''; position: absolute; width: 14px; height: 14px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: 0.2s; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
+  .toggle-sw input:checked + .toggle-track { background: var(--accent); }
+  .toggle-sw input:checked + .toggle-track:before { transform: translateX(14px); }
 
   /* ── Mobile Responsive ── */
   @media (max-width: 768px) {
-    .sidebar { display: none; }
-    .main { margin-left: 0; }
-    .stats-row { grid-template-columns: repeat(2, 1fr); }
-    .property-grid { grid-template-columns: 1fr; }
+    .hamburger-btn { display: flex; }
+    .bottom-nav { display: flex; flex-direction: column; }
+
+    /* Sidebar becomes a drawer */
+    .sidebar {
+      transform: translateX(-100%); transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+      z-index: 100;
+    }
+    .sidebar.open { transform: translateX(0); }
+    [dir="rtl"] .sidebar { transform: translateX(100%); }
+    [dir="rtl"] .sidebar.open { transform: translateX(0); }
+
+    .main { margin-left: 0 !important; }
+    .content { padding: 16px; padding-bottom: 80px; }
+    .topbar { padding: 10px 14px; }
+    .topbar-date { display: none; }
+
+    .stats-row { grid-template-columns: 1fr 1fr; gap: 10px; }
+    .property-grid { grid-template-columns: 1fr 1fr; }
     .task-columns { grid-template-columns: 1fr; }
     .two-col { grid-template-columns: 1fr; }
     .finance-grid { grid-template-columns: 1fr; }
-    .content { padding: 16px; }
-    .topbar { padding: 12px 16px; }
+    .chart-grid-2 { grid-template-columns: 1fr; }
+    .user-grid { grid-template-columns: 1fr; }
+
+    /* Tables: horizontal scroll */
+    .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: var(--radius); }
+    table { min-width: 560px; }
+
+    /* Modals: full screen on mobile */
+    .modal-box {
+      width: 100% !important; max-width: 100% !important; max-height: 100% !important;
+      border-radius: 20px 20px 0 0 !important;
+      margin: 0 !important; position: fixed !important; bottom: 0 !important;
+      top: auto !important; transform: none !important;
+    }
+    .modal-overlay { align-items: flex-end !important; }
+
+    /* Section heads: stack on mobile */
+    .section-head { flex-wrap: wrap; gap: 8px; }
+
+    .stat-value { font-size: 22px; }
+    .stat-card { padding: 12px 14px; }
+    .chart-card { padding: 16px; }
   }
 
   @media (max-width: 480px) {
     .stats-row { grid-template-columns: 1fr 1fr; gap: 8px; }
-    .stat-card { padding: 12px; }
+    .property-grid { grid-template-columns: 1fr; }
+    .stat-card { padding: 10px 12px; }
     .stat-value { font-size: 20px; }
+    .topbar-title { font-size: 15px; }
+    #lang-switcher { display: none; }
   }
 </style>
 </head>
 <body>
 
+<div class="sidebar-overlay" id="sidebar-overlay" onclick="closeSidebar()"></div>
+
 <div class="app">
   <!-- ── Sidebar ── -->
-  <nav class="sidebar">
+  <nav class="sidebar" id="sidebar">
     <div class="sidebar-brand">
       <div class="brand-icon">AM</div>
       <div>
@@ -559,7 +689,10 @@
 
     <!-- Top Bar -->
     <div class="topbar">
-      <div class="topbar-title">Dashboard</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <button class="hamburger-btn" onclick="openSidebar()" aria-label="Menu">&#9776;</button>
+        <div class="topbar-title">Dashboard</div>
+      </div>
       <div class="topbar-right">
         <select id="lang-switcher" onchange="setLang(this.value)" style="padding:5px 10px;border:1px solid var(--border);border-radius:6px;background:var(--surface);font-size:12px;cursor:pointer;font-family:inherit">
           <option value="he">🇮🇱 עברית</option>
@@ -1031,20 +1164,105 @@
       <!-- ══════ PAGE: TEAM ══════ -->
       <div id="page-team" class="page" style="display:none">
         <div class="section">
-          <div class="section-head"><div class="section-title"><span class="icon">&#9998;</span> Team</div></div>
-          <div class="table-wrap">
-            <table><thead><tr><th>Person</th><th>Role</th><th>Schedule</th><th>Status</th></tr></thead>
-            <tbody>
-              <tr><td><strong>Alina</strong></td><td>Weekday Manager</td><td class="td-mono">Mon-Fri 10:00-18:00</td><td><span class="pill pill-active">Active</span></td></tr>
-              <tr><td><strong>Anya</strong></td><td>Weekend Manager</td><td class="td-mono">Sat-Sun 10:00-18:00</td><td><span class="pill pill-pending">Off today</span></td></tr>
-              <tr><td><strong>Katya</strong></td><td>Supervisor (departing)</td><td class="td-mono">Remote</td><td><span class="pill pill-due">Transitioning</span></td></tr>
-            </tbody></table>
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9998;</span> Team &amp; Users</div>
+            <div class="section-actions owner-only">
+              <button class="btn btn-primary" onclick="openUserModal(null)">+ Add User</button>
+            </div>
+          </div>
+          <div id="user-grid" class="user-grid"></div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: USER EDIT ══════ -->
+      <div id="modal-user" class="modal-overlay" style="display:none" onclick="if(event.target===this)closeUserModal()">
+        <div class="modal-box" style="width:520px;max-width:96vw">
+          <div class="modal-head">
+            <div class="modal-title" id="user-modal-title">Add User</div>
+            <button class="modal-close" onclick="closeUserModal()">&#10005;</button>
+          </div>
+          <div class="modal-body">
+            <input type="hidden" id="um-id">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Display Name</label>
+                <input id="um-display" type="text" placeholder="Katya" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Username (login)</label>
+                <input id="um-username" type="text" placeholder="katya" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px">
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Password <span id="um-pw-hint" style="color:var(--text-muted)">(leave blank to keep)</span></label>
+                <input id="um-password" type="password" placeholder="New password" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;font-family:inherit">
+              </div>
+              <div>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Role</label>
+                <select id="um-role" onchange="onRoleChange()" style="width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="owner">Owner (full access)</option>
+                  <option value="admin">Admin (Katya-level)</option>
+                  <option value="office">Office staff</option>
+                  <option value="property_owner">Property owner</option>
+                </select>
+              </div>
+            </div>
+
+            <!-- Permissions (shown for admin/office roles) -->
+            <div id="um-perms-section">
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px">Permissions</label>
+              <div class="perm-grid">
+                <label class="perm-toggle"><span>View financials</span><span class="toggle-sw"><input type="checkbox" id="perm-view_financials"><span class="toggle-track"></span></span></label>
+                <label class="perm-toggle"><span>Edit tenants</span><span class="toggle-sw"><input type="checkbox" id="perm-edit_tenants"><span class="toggle-track"></span></span></label>
+                <label class="perm-toggle"><span>Edit maintenance</span><span class="toggle-sw"><input type="checkbox" id="perm-edit_maintenance"><span class="toggle-track"></span></span></label>
+                <label class="perm-toggle"><span>Manage payments</span><span class="toggle-sw"><input type="checkbox" id="perm-manage_payments"><span class="toggle-track"></span></span></label>
+                <label class="perm-toggle"><span>View reports</span><span class="toggle-sw"><input type="checkbox" id="perm-view_reports"><span class="toggle-track"></span></span></label>
+                <label class="perm-toggle"><span>Manage expenses</span><span class="toggle-sw"><input type="checkbox" id="perm-manage_expenses"><span class="toggle-track"></span></span></label>
+              </div>
+            </div>
+
+            <!-- Property filter (shown for property_owner role) -->
+            <div id="um-props-section" style="display:none;margin-top:14px">
+              <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:8px;font-weight:600;text-transform:uppercase;letter-spacing:0.8px">Assigned Properties</label>
+              <div id="um-props-list" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+            </div>
+
+            <div style="display:flex;gap:10px;justify-content:space-between;margin-top:20px">
+              <button class="btn" id="um-delete-btn" onclick="deleteUser()" style="color:var(--red);border-color:var(--red)">Delete User</button>
+              <div style="display:flex;gap:8px">
+                <button class="btn" onclick="closeUserModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveUser()">Save</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
     </div>
   </div>
+
+  <!-- ── Bottom Navigation (mobile) ── -->
+  <nav class="bottom-nav">
+    <div class="bottom-nav-inner">
+      <button class="bottom-tab active" id="bt-dashboard" onclick="showPage('dashboard');setBottomTab('dashboard')">
+        <span class="bt-icon">&#9632;</span><span class="bt-label">Home</span>
+      </button>
+      <button class="bottom-tab" id="bt-properties" onclick="showPage('properties');setBottomTab('properties')">
+        <span class="bt-icon">&#9872;</span><span class="bt-label">Properties</span>
+      </button>
+      <button class="bottom-tab" id="bt-tenants" onclick="showPage('tenants');setBottomTab('tenants')">
+        <span class="bt-icon">&#9783;</span><span class="bt-label">Tenants</span>
+      </button>
+      <button class="bottom-tab" id="bt-finance" onclick="showPage('finance');setBottomTab('finance')">
+        <span class="bt-icon">&#36;</span><span class="bt-label">Finance</span>
+      </button>
+      <button class="bottom-tab" id="bt-more" onclick="openSidebar()">
+        <span class="bt-icon">&#9776;</span><span class="bt-label">More</span>
+      </button>
+    </div>
+  </nav>
+
 </div>
 
 <script>
@@ -1493,6 +1711,8 @@ function showPage(page, fromHash) {
   if (page === 'cash') loadWallets();
   if (page === 'log') loadActivityLog();
   if (page === 'owners') loadOwners();
+  if (page === 'team') loadTeamUsers();
+  closeSidebar();
 }
 
 // Restore page from hash on load + back/forward navigation
@@ -1961,11 +2181,13 @@ async function syncMonday() {
 
 // ══════════ ROLE-BASED ACCESS ══════════
 let USER_ROLE = 'owner'; // default until loaded
+let USER_ME = null;
 
 async function loadUserRole() {
   try {
     const res = await fetch('/api/me');
     const me = await res.json();
+    USER_ME = me;
     USER_ROLE = me.role || 'guest';
     applyRoleUI();
   } catch(e) { /* keep default */ }
@@ -1973,15 +2195,19 @@ async function loadUserRole() {
 
 function applyRoleUI() {
   const isOwner = USER_ROLE === 'owner';
-  // Hide/show all owner-only elements
   document.querySelectorAll('.owner-only').forEach(el => {
     el.style.display = isOwner ? '' : 'none';
   });
-  // Show role badge in header
   const badge = document.getElementById('role-badge');
   if (badge) {
-    badge.textContent = isOwner ? 'Owner' : 'Admin';
-    badge.style.background = isOwner ? 'var(--accent)' : 'var(--orange)';
+    const roleLabel = {owner:'Owner',admin:'Admin',office:'Office',property_owner:'Prop. Owner'}[USER_ROLE] || USER_ROLE;
+    badge.textContent = roleLabel;
+    badge.style.background = {owner:'var(--accent)',admin:'var(--orange)',office:'var(--green)',property_owner:'var(--purple)'}[USER_ROLE] || 'var(--text-muted)';
+  }
+  const avatar = document.querySelector('.topbar-avatar');
+  if (avatar && USER_ME?.display_name) {
+    const initials = USER_ME.display_name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    avatar.textContent = initials;
   }
 }
 
@@ -1991,6 +2217,152 @@ function requireOwner(action) {
     return false;
   }
   return true;
+}
+
+// ══════════ SIDEBAR TOGGLE (mobile) ══════════
+function openSidebar() {
+  document.getElementById('sidebar').classList.add('open');
+  document.getElementById('sidebar-overlay').classList.add('active');
+  document.body.style.overflow = 'hidden';
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebar-overlay').classList.remove('active');
+  document.body.style.overflow = '';
+}
+
+// ══════════ BOTTOM TAB BAR ══════════
+function setBottomTab(page) {
+  document.querySelectorAll('.bottom-tab').forEach(t => t.classList.remove('active'));
+  const btn = document.getElementById('bt-' + page);
+  if (btn) btn.classList.add('active');
+}
+
+// ══════════ TEAM / USER MANAGEMENT ══════════
+const PERM_KEYS = ['view_financials','edit_tenants','edit_maintenance','manage_payments','view_reports','manage_expenses'];
+
+async function loadTeamUsers() {
+  const grid = document.getElementById('user-grid');
+  if (!grid) return;
+  grid.innerHTML = '<div style="color:var(--text-muted);padding:20px">Loading...</div>';
+  try {
+    const res = await fetch('/api/users');
+    if (res.status === 403) { grid.innerHTML = '<div style="color:var(--text-muted);padding:20px">Owner access required to manage users.</div>'; return; }
+    const users = await res.json();
+    if (!users.length) { grid.innerHTML = '<div style="color:var(--text-muted);padding:20px">No users yet. Add your first team member.</div>'; return; }
+    grid.innerHTML = users.map(u => {
+      const initials = (u.display_name||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+      const roleClass = `role-${u.role}`;
+      const roleLabel = {owner:'Owner',admin:'Admin',office:'Office',property_owner:'Property Owner'}[u.role] || u.role;
+      const status = u.is_active ? '<span class="pill pill-active">Active</span>' : '<span class="pill pill-overdue">Inactive</span>';
+      return `<div class="user-card" onclick="openUserModal(${JSON.stringify(u).replace(/"/g,'&quot;')})">
+        <div class="user-avatar-lg">${initials}</div>
+        <div class="user-card-info">
+          <div class="user-card-name">${u.display_name||'—'}</div>
+          <div class="user-card-username">@${u.username}</div>
+          <div class="user-card-meta">
+            <span class="role-pill ${roleClass}">${roleLabel}</span>
+            ${status}
+          </div>
+        </div>
+      </div>`;
+    }).join('');
+  } catch(e) {
+    grid.innerHTML = '<div style="color:var(--red);padding:20px">Failed to load users</div>';
+  }
+}
+
+async function openUserModal(user) {
+  const isNew = !user || typeof user === 'object' && !user.id;
+  document.getElementById('user-modal-title').textContent = isNew ? 'Add User' : 'Edit User';
+  document.getElementById('um-id').value = user?.id || '';
+  document.getElementById('um-display').value = user?.display_name || '';
+  document.getElementById('um-username').value = user?.username || '';
+  document.getElementById('um-password').value = '';
+  document.getElementById('um-role').value = user?.role || 'office';
+  document.getElementById('um-pw-hint').style.display = isNew ? 'none' : '';
+  if (isNew) document.getElementById('um-pw-hint').textContent = '';
+  else document.getElementById('um-pw-hint').textContent = '(leave blank to keep)';
+  document.getElementById('um-delete-btn').style.display = isNew ? 'none' : '';
+
+  // Parse permissions
+  let perms = {};
+  try { perms = JSON.parse(user?.permissions || '{}'); } catch(e) {}
+  PERM_KEYS.forEach(k => {
+    const el = document.getElementById('perm-' + k);
+    if (el) el.checked = !!perms[k];
+  });
+
+  // Parse property_ids
+  let propIds = [];
+  try { propIds = JSON.parse(user?.property_ids || '[]'); } catch(e) {}
+  await loadPropertyCheckboxes(propIds);
+
+  onRoleChange();
+  document.getElementById('modal-user').style.display = 'flex';
+}
+
+function onRoleChange() {
+  const role = document.getElementById('um-role').value;
+  document.getElementById('um-perms-section').style.display = (role === 'owner') ? 'none' : '';
+  document.getElementById('um-props-section').style.display = (role === 'property_owner') ? '' : 'none';
+}
+
+async function loadPropertyCheckboxes(selectedIds) {
+  const container = document.getElementById('um-props-list');
+  if (!container) return;
+  try {
+    const res = await fetch('/api/properties');
+    const props = await res.json();
+    container.innerHTML = props.map(p => {
+      const checked = selectedIds.includes(p.id) ? 'checked' : '';
+      return `<label style="display:flex;align-items:center;gap:6px;padding:6px 10px;background:var(--surface-2);border-radius:6px;font-size:12px;cursor:pointer">
+        <input type="checkbox" value="${p.id}" ${checked} style="accent-color:var(--accent)"> ${p.name}
+      </label>`;
+    }).join('');
+  } catch(e) { container.innerHTML = '—'; }
+}
+
+function closeUserModal() {
+  document.getElementById('modal-user').style.display = 'none';
+}
+
+async function saveUser() {
+  const uid = document.getElementById('um-id').value;
+  const role = document.getElementById('um-role').value;
+  const password = document.getElementById('um-password').value;
+
+  const perms = {};
+  PERM_KEYS.forEach(k => { perms[k] = !!(document.getElementById('perm-' + k)?.checked); });
+
+  const propIds = [...document.querySelectorAll('#um-props-list input[type=checkbox]:checked')].map(el => parseInt(el.value));
+
+  const body = {
+    display_name: document.getElementById('um-display').value.trim(),
+    username: document.getElementById('um-username').value.trim().toLowerCase(),
+    role,
+    permissions: JSON.stringify(perms),
+    property_ids: JSON.stringify(propIds),
+    is_active: 1,
+  };
+  if (password) body.password = password;
+  if (!body.display_name || !body.username) { alert('Display name and username are required'); return; }
+
+  const url = uid ? `/api/users/${uid}` : '/api/users';
+  const method = uid ? 'PUT' : 'POST';
+  const res = await fetch(url, { method, headers: {'Content-Type':'application/json'}, body: JSON.stringify(body) });
+  if (!res.ok) { const e = await res.json(); alert(e.error || 'Save failed'); return; }
+  closeUserModal();
+  loadTeamUsers();
+}
+
+async function deleteUser() {
+  const uid = document.getElementById('um-id').value;
+  if (!uid) return;
+  if (!confirm('Delete this user? They will lose access immediately.')) return;
+  await fetch(`/api/users/${uid}`, { method: 'DELETE' });
+  closeUserModal();
+  loadTeamUsers();
 }
 
 loadUserRole();
