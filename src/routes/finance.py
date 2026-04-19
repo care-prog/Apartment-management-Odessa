@@ -21,8 +21,8 @@ def create_expense():
 @bp.route('/api/expenses/<int:eid>', methods=['PUT'])
 def update_expense(eid):
     data = request.json
-    execute_db('UPDATE office_expenses SET description=?, amount=?, category=?, date=?, notes=? WHERE id=?',
-        (data.get('description'), data.get('amount'), data.get('category'), data.get('date'), data.get('notes'), eid))
+    execute_db('UPDATE office_expenses SET description=?, amount=?, category=?, date=?, notes=?, currency=? WHERE id=?',
+        (data.get('description'), data.get('amount'), data.get('category'), data.get('date'), data.get('notes'), data.get('currency', 'USD'), eid))
     return jsonify({'ok': True})
 
 @bp.route('/api/expenses/<int:eid>', methods=['DELETE'])

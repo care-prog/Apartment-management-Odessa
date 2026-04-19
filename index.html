@@ -729,9 +729,12 @@
       <!-- ══════ PAGE: TENANTS ══════ -->
       <div id="page-tenants" class="page" style="display:none">
         <div class="section">
-          <div class="section-head"><div class="section-title"><span class="icon">&#9783;</span> Tenants &amp; Leases</div></div>
+          <div class="section-head">
+            <div class="section-title"><span class="icon">&#9783;</span> Tenants &amp; Leases</div>
+            <button class="btn btn-primary" onclick="openTenantLeaseModal('create')">+ Add Tenant</button>
+          </div>
           <div class="table-wrap">
-            <table><thead><tr><th>Tenant</th><th>Property</th><th>Apt</th><th>Rent $</th><th>Lease Start</th><th>Lease End</th><th>Renewal</th><th>Status</th></tr></thead>
+            <table><thead><tr><th>Tenant</th><th>Property</th><th>Apt</th><th>Rent $</th><th>Lease Start</th><th>Lease End</th><th>Renewal</th><th>Status</th><th></th></tr></thead>
             <tbody id="tenants-tbody"></tbody></table>
           </div>
         </div>
@@ -757,7 +760,7 @@
         <div class="section">
           <div class="section-head"><div class="section-title"><span class="icon">&#9881;</span> Maintenance Orders</div></div>
           <div class="table-wrap">
-            <table><thead><tr><th>Issue</th><th>Property</th><th>Apt</th><th>Assigned To</th><th>Status</th><th>Created</th></tr></thead>
+            <table><thead><tr><th>Issue</th><th>Property</th><th>Apt</th><th>Assigned To</th><th>Status</th><th>Created</th><th></th></tr></thead>
             <tbody id="maint-full-tbody"></tbody></table>
           </div>
         </div>
@@ -884,6 +887,111 @@
               <table><thead><tr><th>Expense</th><th>Amount</th><th>Category</th><th>Date</th><th class="owner-only"></th></tr></thead>
               <tbody id="cash-expense-tbody"></tbody>
               <tfoot id="cash-expense-total"></tfoot></table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: TENANT + LEASE ══════ -->
+      <div id="modal-tenant-lease" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:300;overflow-y:auto;padding:24px 16px">
+        <div style="max-width:680px;margin:0 auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden">
+          <div style="padding:18px 24px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div id="tl-modal-title" style="font-size:17px;font-weight:700">Add Tenant</div>
+            <button onclick="closeTenantLeaseModal()" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
+          </div>
+          <div style="padding:20px 24px">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Tenant Info</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Full Name *</label><input id="tl-name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone</label><input id="tl-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Email</label><input id="tl-email" type="email" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Passport / ID</label><input id="tl-passport" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            </div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Lease Terms</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Property</label>
+                <select id="tl-property" onchange="filterAptsByProperty()" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="">— Select property —</option>
+                </select>
+              </div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Apartment *</label>
+                <select id="tl-apartment" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="">— Select apartment —</option>
+                </select>
+              </div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Start Date *</label><input id="tl-start" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">End Date</label><input id="tl-end" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Monthly Rent ($) *</label><input id="tl-rent" type="number" min="0" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Deposit ($)</label><input id="tl-deposit" type="number" min="0" step="0.01" value="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label><input id="tl-notes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            </div>
+            <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
+              <button class="btn" onclick="closeTenantLeaseModal()">Cancel</button>
+              <button class="btn btn-primary" onclick="saveTenantLease()">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: MAINTENANCE EDIT ══════ -->
+      <div id="modal-maint-edit" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:300;overflow-y:auto;padding:24px 16px">
+        <div style="max-width:440px;margin:40px auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:15px;font-weight:700">Edit Maintenance Order</div>
+            <button onclick="document.getElementById('modal-maint-edit').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
+          </div>
+          <div style="padding:20px">
+            <input type="hidden" id="me-id">
+            <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Status</label>
+              <select id="me-status" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                <option value="reported">Reported</option>
+                <option value="in_progress">In Progress</option>
+                <option value="completed">Completed</option>
+              </select>
+            </div>
+            <div style="margin-bottom:12px"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Assigned To</label>
+              <input id="me-assigned" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            </div>
+            <div style="margin-bottom:16px"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Cost ($)</label>
+              <input id="me-cost" type="number" min="0" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+              <button class="btn" onclick="document.getElementById('modal-maint-edit').style.display='none'">Cancel</button>
+              <button class="btn btn-primary" onclick="saveMaintenanceEdit()">Save</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ══════ MODAL: EXPENSE EDIT ══════ -->
+      <div id="modal-expense-edit" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:300;overflow-y:auto;padding:24px 16px">
+        <div style="max-width:420px;margin:40px auto;background:var(--surface);border-radius:16px;box-shadow:var(--shadow-xl);overflow:hidden">
+          <div style="padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between">
+            <div style="font-size:15px;font-weight:700">Edit Expense</div>
+            <button onclick="document.getElementById('modal-expense-edit').style.display='none'" style="background:none;border:none;font-size:20px;cursor:pointer;color:var(--text-muted)">&#10005;</button>
+          </div>
+          <div style="padding:20px">
+            <input type="hidden" id="ee-id">
+            <div style="margin-bottom:10px"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Description *</label><input id="ee-desc" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Amount *</label><input id="ee-amount" type="number" min="0" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Currency</label>
+                <select id="ee-currency" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="USD">$ USD</option><option value="UAH">₴ UAH</option>
+                </select>
+              </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Category</label>
+                <select id="ee-cat" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                  <option value="general">General</option><option value="repairs">Repairs</option><option value="utilities">Utilities</option><option value="salary">Salary</option><option value="office">Office</option>
+                </select>
+              </div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Date</label><input id="ee-date" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+            </div>
+            <div style="display:flex;gap:10px;justify-content:flex-end">
+              <button class="btn" onclick="document.getElementById('modal-expense-edit').style.display='none'">Cancel</button>
+              <button class="btn btn-primary" onclick="saveExpenseEdit()">Save</button>
             </div>
           </div>
         </div>
@@ -1430,7 +1538,7 @@ function rentRow(r) {
     else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
     else renewHtml='<span class="pill pill-active">'+days+' days</span>';
   }
-  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td></tr>`;
+  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r)})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit lease">✏️</button></td></tr>`;
 }
 
 // ── Task card builder (now draggable + clickable) ──
@@ -1726,7 +1834,7 @@ function renderPage(page, d) {
         else if(days<=60) renewHtml='<span class="pill pill-due">'+days+' days</span>';
         else renewHtml='<span class="pill pill-active">'+days+' days</span>';
       }
-      return `<tr><td>${r.tenant_name}</td><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${fmtDate(r.start_date)}</td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><span class="pill pill-active">Active</span></td></tr>`;
+      return `<tr><td>${r.tenant_name}</td><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${fmtDate(r.start_date)}</td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><span class="pill pill-active">Active</span></td><td><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r)})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit">✏️</button></td></tr>`;
     }).join('');
   }
 
@@ -1737,7 +1845,7 @@ function renderPage(page, d) {
   if (page === 'maintenance') {
     document.getElementById('maint-full-tbody').innerHTML = (d.maintenance||[]).map(o => {
       let pill='pill-pending',label=o.status;if(o.status==='in_progress'){pill='pill-progress';label='In Progress';}else if(o.status==='reported'){pill='pill-pending';label='Reported';}
-      return `<tr><td>${o.description}</td><td>${o.property_name}</td><td class="td-mono">${o.apt_number}</td><td>${o.assigned_to||'—'}</td><td><span class="pill ${pill}">${label}</span></td><td class="td-mono">${fmtDate(o.created_at)}</td></tr>`;
+      return `<tr><td>${o.description}</td><td>${o.property_name}</td><td class="td-mono">${o.apt_number}</td><td>${o.assigned_to||'—'}</td><td><span class="pill ${pill}">${label}</span></td><td class="td-mono">${fmtDate(o.created_at)}</td><td><button onclick="openMaintenanceEditModal(${o.id},'${(o.status||'').replace(/'/g,"\\'")}','${(o.assigned_to||'').replace(/'/g,"\\'")}',${o.cost||0})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit">✏️</button></td></tr>`;
     }).join('') || '<tr><td colspan="6" style="color:var(--text-muted);text-align:center">No maintenance orders</td></tr>';
   }
 
@@ -1807,7 +1915,10 @@ function renderPage(page, d) {
           <td class="td-mono">${sym}${e.amount}</td>
           <td>${e.category || '—'}</td>
           <td class="td-mono">${fmtDate(e.date)}</td>
-          <td class="owner-only"><button onclick="deleteExpense(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px" title="Delete">&#10005;</button></td>
+          <td style="white-space:nowrap">
+            <button onclick="openExpenseEditModal(${e.id},'${(e.description||'').replace(/'/g,"\\'")}',${e.amount},'${e.category||''}','${e.date||''}','${e.currency||'USD'}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 4px" title="Edit">✏️</button>
+            <button class="owner-only" onclick="deleteExpense(${e.id})" style="background:none;border:none;cursor:pointer;color:var(--text-muted);font-size:14px;padding:2px 4px" title="Delete">&#10005;</button>
+          </td>
         </tr>`;
       }).join('');
       tfoot.innerHTML = `<tr style="font-weight:700;border-top:2px solid var(--border)"><td colspan="2">Total: $${total.toFixed(2)}</td><td colspan="3"></td></tr>`;
@@ -1867,8 +1978,8 @@ function applyRoleUI() {
   // Show role badge in header
   const badge = document.getElementById('role-badge');
   if (badge) {
-    badge.textContent = isOwner ? 'Owner' : 'Manager';
-    badge.style.background = isOwner ? 'var(--accent)' : 'var(--text-muted)';
+    badge.textContent = isOwner ? 'Owner' : 'Admin';
+    badge.style.background = isOwner ? 'var(--accent)' : 'var(--orange)';
   }
 }
 
@@ -2080,6 +2191,228 @@ async function editCommission(mondayId, rentAmount) {
   });
   loadWallets();
 }
+
+// ══════════ TENANT + LEASE MODAL ══════════
+
+let _tlMode = 'create';   // 'create' | 'edit'
+let _tlLeaseId = null;
+let _tlTenantId = null;
+let _allApartments = [];
+
+async function openTenantLeaseModal(mode, rowData) {
+  _tlMode = mode;
+  document.getElementById('modal-tenant-lease').style.display = 'block';
+
+  // Load all apartments for dropdown
+  const [aptsRes, propsRes] = await Promise.all([
+    fetch('/api/apartments'),
+    fetch('/api/properties')
+  ]);
+  _allApartments = await aptsRes.json();
+  const props = await propsRes.json();
+
+  // Populate property dropdown
+  const propSel = document.getElementById('tl-property');
+  propSel.innerHTML = '<option value="">— Select property —</option>' +
+    props.map(p => `<option value="${p.id}">${p.name}</option>`).join('');
+
+  if (mode === 'create') {
+    document.getElementById('tl-modal-title').textContent = '+ Add Tenant';
+    _tlLeaseId = null;
+    _tlTenantId = null;
+    ['tl-name','tl-phone','tl-email','tl-passport','tl-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('tl-rent').value = '';
+    document.getElementById('tl-deposit').value = '0';
+    document.getElementById('tl-start').value = new Date().toISOString().slice(0,10);
+    document.getElementById('tl-end').value = '';
+    document.getElementById('tl-apartment').innerHTML = '<option value="">— Select apartment —</option>';
+  } else {
+    // Edit mode — rowData is the rent_status row object
+    const r = typeof rowData === 'string' ? JSON.parse(rowData) : rowData;
+    _tlLeaseId = r.lease_id;
+    document.getElementById('tl-modal-title').textContent = '✏️ Edit Lease — ' + r.tenant_name;
+
+    // Fetch full tenant details
+    const tRes = await fetch('/api/tenants');
+    const tenants = await tRes.json();
+    const tenant = tenants.find(t => t.name === r.tenant_name);
+    _tlTenantId = tenant ? tenant.id : null;
+
+    document.getElementById('tl-name').value = r.tenant_name || '';
+    document.getElementById('tl-phone').value = tenant?.phone || '';
+    document.getElementById('tl-email').value = tenant?.email || '';
+    document.getElementById('tl-passport').value = tenant?.passport_info || '';
+    document.getElementById('tl-notes').value = '';
+    document.getElementById('tl-rent').value = r.rent_amount || '';
+    document.getElementById('tl-deposit').value = '0';
+    document.getElementById('tl-start').value = fmtDate(r.start_date);
+    document.getElementById('tl-end').value = fmtDate(r.end_date);
+
+    // Find the property for this row
+    const matchProp = props.find(p => p.name === r.property_name);
+    if (matchProp) {
+      propSel.value = matchProp.id;
+      filterAptsByProperty();
+      // Select the correct apartment after filtering
+      setTimeout(() => {
+        const aptSel = document.getElementById('tl-apartment');
+        const matchApt = _allApartments.find(a => a.property_id === matchProp.id && a.number === r.apt_number);
+        if (matchApt) aptSel.value = matchApt.id;
+      }, 50);
+    }
+  }
+}
+
+function filterAptsByProperty() {
+  const pid = parseInt(document.getElementById('tl-property').value);
+  const aptSel = document.getElementById('tl-apartment');
+  const filtered = _allApartments.filter(a => a.property_id === pid);
+  aptSel.innerHTML = '<option value="">— Select apartment —</option>' +
+    filtered.map(a => `<option value="${a.id}">Apt ${a.number}${a.status === 'vacant' ? ' (vacant)' : ' (' + a.status + ')'}</option>`).join('');
+}
+
+async function saveTenantLease() {
+  const name = document.getElementById('tl-name').value.trim();
+  const aptId = parseInt(document.getElementById('tl-apartment').value);
+  const rent = parseFloat(document.getElementById('tl-rent').value);
+  const startDate = document.getElementById('tl-start').value;
+  if (!name) { alert('Tenant name is required'); return; }
+  if (!aptId) { alert('Please select an apartment'); return; }
+  if (!rent || isNaN(rent)) { alert('Monthly rent is required'); return; }
+  if (!startDate) { alert('Start date is required'); return; }
+
+  const tenantData = {
+    name,
+    phone: document.getElementById('tl-phone').value,
+    email: document.getElementById('tl-email').value,
+    passport_info: document.getElementById('tl-passport').value,
+    language: 'ru',
+    notes: document.getElementById('tl-notes').value,
+  };
+
+  let tenantId = _tlTenantId;
+
+  if (_tlMode === 'create') {
+    // Create tenant then lease
+    const tRes = await fetch('/api/tenants', {
+      method: 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(tenantData)
+    });
+    const tData = await tRes.json();
+    tenantId = tData.id;
+
+    await fetch('/api/leases', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({
+        apartment_id: aptId,
+        tenant_id: tenantId,
+        start_date: startDate,
+        end_date: document.getElementById('tl-end').value || null,
+        rent_amount: rent,
+        deposit: parseFloat(document.getElementById('tl-deposit').value) || 0,
+        status: 'active',
+        notes: document.getElementById('tl-notes').value,
+      })
+    });
+  } else {
+    // Update tenant
+    if (tenantId) {
+      await fetch('/api/tenants/' + tenantId, {
+        method: 'PUT', headers: {'Content-Type':'application/json'}, body: JSON.stringify(tenantData)
+      });
+    }
+    // Update lease
+    if (_tlLeaseId) {
+      await fetch('/api/leases/' + _tlLeaseId, {
+        method: 'PUT',
+        headers: {'Content-Type':'application/json'},
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: document.getElementById('tl-end').value || null,
+          rent_amount: rent,
+          deposit: parseFloat(document.getElementById('tl-deposit').value) || 0,
+          status: 'active',
+          notes: document.getElementById('tl-notes').value,
+        })
+      });
+    }
+  }
+
+  closeTenantLeaseModal();
+  loadDashboard();
+}
+
+function closeTenantLeaseModal() {
+  document.getElementById('modal-tenant-lease').style.display = 'none';
+  _tlMode = 'create'; _tlLeaseId = null; _tlTenantId = null;
+}
+
+// ══════════ MAINTENANCE EDIT MODAL ══════════
+
+function openMaintenanceEditModal(mid, status, assignedTo, cost) {
+  document.getElementById('me-id').value = mid;
+  document.getElementById('me-status').value = status || 'reported';
+  document.getElementById('me-assigned').value = assignedTo || '';
+  document.getElementById('me-cost').value = cost || '';
+  document.getElementById('modal-maint-edit').style.display = 'block';
+}
+
+async function saveMaintenanceEdit() {
+  const mid = document.getElementById('me-id').value;
+  const completed = document.getElementById('me-status').value === 'completed' ? new Date().toISOString().slice(0,10) : null;
+  await fetch('/api/maintenance/' + mid, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      status: document.getElementById('me-status').value,
+      assigned_to: document.getElementById('me-assigned').value,
+      cost: parseFloat(document.getElementById('me-cost').value) || null,
+      completed_at: completed,
+    })
+  });
+  document.getElementById('modal-maint-edit').style.display = 'none';
+  loadDashboard();
+}
+
+// ══════════ EXPENSE EDIT MODAL ══════════
+
+function openExpenseEditModal(eid, desc, amount, cat, date, currency) {
+  document.getElementById('ee-id').value = eid;
+  document.getElementById('ee-desc').value = desc || '';
+  document.getElementById('ee-amount').value = amount || '';
+  document.getElementById('ee-cat').value = cat || 'general';
+  document.getElementById('ee-date').value = fmtDate(date);
+  document.getElementById('ee-currency').value = currency || 'USD';
+  document.getElementById('modal-expense-edit').style.display = 'block';
+}
+
+async function saveExpenseEdit() {
+  const eid = document.getElementById('ee-id').value;
+  const desc = document.getElementById('ee-desc').value.trim();
+  const amount = parseFloat(document.getElementById('ee-amount').value);
+  if (!desc || !amount) { alert('Description and amount required'); return; }
+  await fetch('/api/expenses/' + eid, {
+    method: 'PUT',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({
+      description: desc,
+      amount,
+      category: document.getElementById('ee-cat').value,
+      date: document.getElementById('ee-date').value,
+      currency: document.getElementById('ee-currency').value,
+      notes: '',
+    })
+  });
+  document.getElementById('modal-expense-edit').style.display = 'none';
+  loadWallets();
+}
+
+// Close modals on backdrop click
+document.addEventListener('click', function(e) {
+  if (e.target.id === 'modal-tenant-lease') closeTenantLeaseModal();
+  if (e.target.id === 'modal-maint-edit') document.getElementById('modal-maint-edit').style.display = 'none';
+  if (e.target.id === 'modal-expense-edit') document.getElementById('modal-expense-edit').style.display = 'none';
+});
 
 // ══════════ OWNERS PAGE ══════════
 

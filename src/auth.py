@@ -81,16 +81,18 @@ PUBLIC_PATHS = ['/api/whatsapp-query', '/whatsapp-bot.js', '/login', '/api/sync/
 
 # Paths that require owner role (managers get 403)
 OWNER_ONLY_RULES = [
+    # Destructive deletes — owner only
     ('DELETE', '/api/tasks/'),
     ('DELETE', '/api/properties/'),
     ('DELETE', '/api/apartments/'),
     ('DELETE', '/api/tenants/'),
     ('DELETE', '/api/leases/'),
     ('DELETE', '/api/owners/'),
+    # Structural changes — owner only
     ('POST',   '/api/properties'),
     ('POST',   '/api/owners'),
     ('POST',   '/api/sync'),
-    # Wallets + expenses: owner only for write
+    # Wallets + financial write — owner only
     ('POST',   '/api/transactions'),
     ('PUT',    '/api/transactions/'),
     ('DELETE', '/api/transactions/'),
@@ -99,6 +101,7 @@ OWNER_ONLY_RULES = [
     ('PUT',    '/api/expenses/'),
     ('DELETE', '/api/expenses/'),
 ]
+# Admin (manager) CAN: POST/PUT tenants, POST/PUT leases, PUT maintenance, PUT owners, upload docs
 
 def _is_owner_only_path(method, path):
     for m, prefix in OWNER_ONLY_RULES:
