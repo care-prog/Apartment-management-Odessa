@@ -339,3 +339,31 @@ Server runs at: http://localhost:5050
 - Triggered manual Render deploy (bf80ef7) — confirmed sync now works in production
 - Verified bot-pause endpoint live at `POST /api/whatsapp/conversations/{phone}/bot-pause`
 
+
+## 2026-04-20 — Architecture: per-apartment owner (apartments.owner_id)
+
+**Focus:** Tower Chekalov has multiple investors. Each apartment is independently owned.
+
+### Problem
+`owner_id` was only at the `properties` (building) level. All apartments in Tower Chekalov were forced to share one owner. David needs to assign individual apartments to different owners.
+
+### Design decision
+- `properties.owner_id` = building-level default / administrative grouping (unchanged)
+- `apartments.owner_id` = TRUE ownership — this is now the source of truth
+- Backfill: existing apartments get `owner_id` copied from their property
+- New apartments inherit from property as default, but can be overridden per-apartment
+
+### Done
+- `src/models.py` — safe_migrate: `ALTER TABLE apartments ADD COLUMN owner_id`; backfill from property
+- `src/routes/properties.py` — apartments CRUD now reads/writes `owner_id`; `GET /api/apartments` includes `owner_name`; new `POST /api/apartments/{id}/reassign` endpoint; `owner_detail` now aggregates by `apartment.owner_id` (not property)
+- `src/routes/finance.py` — `owners_financial_summary` now queries `WHERE apartments.owner_id = X`; shows apartments grouped by building (not properties list)
+- `src/monday_sync.py` — new apartments inherit property's `owner_id` at creation
+- `index.html` — apartment edit modal: owner dropdown (populated from `/api/owners`)
+- `index.html` — property modal apartments table: Owner column per row with colored badge
+- `index.html` — finance owner cards: shows "Apartments owned" grouped by building
+
+### Impact
+- Financial reports now correctly attribute income per apartment owner
+- Owner cards show which apartments (in which buildings) they own
+- Can reassign Tower Chekalov apt 138 from David to Investor B without touching other apts
+

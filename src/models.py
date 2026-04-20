@@ -80,6 +80,12 @@ def safe_migrate():
         _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS phone TEXT")
         _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS email TEXT")
         _pg_run("ALTER TABLE owners ADD COLUMN IF NOT EXISTS bank_details TEXT")
+        # Per-apartment owner: each apartment can belong to a different owner
+        # (e.g. Tower Chekalov has multiple investors, each owning different units)
+        _pg_run("ALTER TABLE apartments ADD COLUMN IF NOT EXISTS owner_id INTEGER REFERENCES owners(id) ON DELETE SET NULL")
+        _pg_run("""UPDATE apartments SET owner_id = (
+            SELECT owner_id FROM properties WHERE properties.id = apartments.property_id
+        ) WHERE owner_id IS NULL""")
         _pg_run("""CREATE TABLE IF NOT EXISTS cash_transactions (
             id SERIAL PRIMARY KEY, type TEXT NOT NULL DEFAULT 'expense',
             amount DOUBLE PRECISION NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',
@@ -144,6 +150,11 @@ def safe_migrate():
         except: pass
         try: execute_db("ALTER TABLE owners ADD COLUMN bank_details TEXT")
         except: pass
+        try: execute_db("ALTER TABLE apartments ADD COLUMN owner_id INTEGER REFERENCES owners(id) ON DELETE SET NULL")
+        except: pass
+        execute_db("""UPDATE apartments SET owner_id = (
+            SELECT owner_id FROM properties WHERE properties.id = apartments.property_id
+        ) WHERE owner_id IS NULL""")
         execute_db("""CREATE TABLE IF NOT EXISTS cash_transactions (
             id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL DEFAULT 'expense',
             amount REAL NOT NULL, currency TEXT NOT NULL DEFAULT 'USD',

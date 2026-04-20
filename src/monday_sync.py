@@ -246,10 +246,13 @@ def sync_to_db(items=None):
                 (db_status, p['rent'], notes_json, apt_id))
             updated += 1
         else:
+            # New apartment — inherit owner from property default
+            prop_row = query_db("SELECT owner_id FROM properties WHERE id=?", (property_id,), one=True)
+            apt_owner_id = prop_row['owner_id'] if prop_row else None
             apt_id = insert_db(
-                "INSERT INTO apartments (property_id, number, status, monthly_rent, currency, notes)"
-                " VALUES (?, ?, ?, ?, ?, ?)",
-                (property_id, apt_number, db_status, p['rent'], 'USD', notes_json))
+                "INSERT INTO apartments (property_id, number, status, monthly_rent, currency, notes, owner_id)"
+                " VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (property_id, apt_number, db_status, p['rent'], 'USD', notes_json, apt_owner_id))
             created += 1
 
         # ── UPSERT lease (only update rent + dates; preserve commission) ────

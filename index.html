@@ -1082,6 +1082,12 @@
                 <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label>
                 <input id="apt-edit-notes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
               </div>
+              <div style="grid-column:1/-1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Owner <span style="color:var(--text-muted);font-weight:400">(overrides building default)</span></label>
+                <select id="apt-edit-owner" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface);font-family:inherit">
+                  <option value="">— No specific owner —</option>
+                </select>
+              </div>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end">
               <button class="btn" onclick="closeAptEdit()">Cancel</button>
@@ -4116,17 +4122,33 @@ async function loadOwnerFinanceReport() {
       const owedC = fin.balance_owed > 0 ? 'var(--red)' : 'var(--green)';
       const owedLabel = fin.balance_owed > 0 ? '🔴 Owed to Owner' : '🟢 Overpaid';
 
-      // Properties breakdown
-      const propRows = (o.properties || []).map(p => `
-        <div style="display:flex;justify-content:space-between;padding:6px 10px;border-radius:6px;background:var(--surface-2);margin-bottom:4px">
-          <div>
-            <div style="font-size:12px;font-weight:600">${p.name}</div>
-            <div style="font-size:10px;color:var(--text-muted)">${p.occupied_units||0}/${p.total_units||0} units occupied</div>
-          </div>
-          <div style="text-align:right">
-            <div style="font-size:13px;font-weight:700;color:var(--green)">$${(p.monthly_rent||0).toLocaleString()}/mo</div>
-          </div>
-        </div>`).join('') || '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No properties assigned</div>';
+      // Apartments breakdown (per-apartment ownership model)
+      const aptList = o.apartments || [];
+      // Group by building for display
+      const byBuilding = {};
+      aptList.forEach(a => {
+        const bld = a.property_name || 'Unknown';
+        if (!byBuilding[bld]) byBuilding[bld] = [];
+        byBuilding[bld].push(a);
+      });
+      const propRows = Object.keys(byBuilding).length
+        ? Object.entries(byBuilding).map(([bld, apts]) => {
+            const bldRent = apts.reduce((s,a) => s + (parseFloat(a.monthly_rent)||0), 0);
+            const occupied = apts.filter(a => a.status === 'occupied').length;
+            const aptNums = apts.map(a => `#${a.number}`).join(', ');
+            return `<div style="padding:6px 10px;border-radius:6px;background:var(--surface-2);margin-bottom:4px">
+              <div style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                  <div style="font-size:12px;font-weight:600">${bld}</div>
+                  <div style="font-size:10px;color:var(--text-muted)">${occupied}/${apts.length} occupied · ${aptNums}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-size:13px;font-weight:700;color:var(--green)">$${bldRent.toLocaleString()}/mo</div>
+                </div>
+              </div>
+            </div>`;
+          }).join('')
+        : '<div style="color:var(--text-muted);font-size:12px;padding:8px 0">No apartments assigned</div>';
 
       // Last 3 payments
       const lastPays = (o.payments || []).slice(0, 3).map(p =>
@@ -4166,9 +4188,9 @@ async function loadOwnerFinanceReport() {
           </div>
         </div>
 
-        <!-- Properties -->
+        <!-- Apartments -->
         <div style="padding:14px 18px;border-bottom:1px solid var(--border)">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Properties</div>
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.7px;margin-bottom:8px">Apartments owned</div>
           ${propRows}
         </div>
 
@@ -4462,7 +4484,7 @@ async function openPropertyModal(pid) {
       </div>
     </div>`;
 
-  // ── Apartments list with edit buttons ──
+  // ── Apartments list with edit buttons (per-apartment owner shown) ──
   const aptsEl = document.getElementById('modal-prop-apartments');
   if (aptsEl) {
     const STATUS_COLOR = {occupied:'var(--green)',vacant:'var(--accent)',maintenance:'var(--red)',reserved:'var(--yellow)'};
@@ -4474,17 +4496,22 @@ async function openPropertyModal(pid) {
             <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Rooms</th>
             <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Status</th>
             <th style="text-align:right;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Rent</th>
+            <th style="text-align:left;padding:7px 10px;color:var(--text-muted);font-size:10px;text-transform:uppercase">Owner</th>
             <th style="padding:7px 10px" class="owner-only"></th>
           </tr></thead>
           <tbody>${data.apartments.map((a,i) => {
             const sc = STATUS_COLOR[a.status] || 'var(--text-muted)';
             const sym = a.currency === 'UAH' ? '₴' : '$';
+            const ownerLabel = a.owner_name
+              ? `<span style="font-size:11px;background:rgba(99,102,241,.12);color:var(--accent);border-radius:4px;padding:2px 6px">${a.owner_name}</span>`
+              : `<span style="font-size:11px;color:var(--text-muted)">—</span>`;
             return `<tr style="${i%2===0?'':'background:var(--surface-2)'}">
               <td style="padding:8px 10px;font-weight:700">${a.number}</td>
               <td style="padding:8px 10px;color:var(--text-muted)">${a.floor||'—'}</td>
               <td style="padding:8px 10px">${a.rooms||'—'}</td>
               <td style="padding:8px 10px"><span style="font-size:11px;font-weight:700;color:${sc}">${a.status}</span></td>
               <td style="padding:8px 10px;text-align:right;font-weight:700">${a.monthly_rent ? sym + Number(a.monthly_rent).toLocaleString() : '—'}</td>
+              <td style="padding:8px 10px">${ownerLabel}</td>
               <td style="padding:8px 10px" class="owner-only"><button onclick="openAptEdit(${JSON.stringify(a).replace(/"/g,'&quot;')})" style="background:none;border:1px solid var(--border);border-radius:6px;padding:3px 8px;cursor:pointer;font-size:11px;color:var(--accent)">✏️ Edit</button></td>
             </tr>`;
           }).join('')}</tbody>
@@ -4611,7 +4638,7 @@ async function saveProperty() {
 // ── Apartment edit ──
 let _currentAptId = null;
 
-function openAptEdit(aptData) {
+async function openAptEdit(aptData) {
   _currentAptId = aptData.id;
   document.getElementById('apt-edit-id').value = aptData.id;
   document.getElementById('apt-edit-number').value = aptData.number || '';
@@ -4621,6 +4648,21 @@ function openAptEdit(aptData) {
   document.getElementById('apt-edit-rent').value = aptData.monthly_rent || '';
   document.getElementById('apt-edit-currency').value = aptData.currency || 'USD';
   document.getElementById('apt-edit-notes').value = aptData.notes || '';
+
+  // Populate owner dropdown
+  const ownerSel = document.getElementById('apt-edit-owner');
+  ownerSel.innerHTML = '<option value="">— No specific owner —</option>';
+  try {
+    const owners = await apiFetch('/api/owners');
+    (owners || []).forEach(o => {
+      const opt = document.createElement('option');
+      opt.value = o.id;
+      opt.textContent = o.name;
+      if (o.id === aptData.owner_id) opt.selected = true;
+      ownerSel.appendChild(opt);
+    });
+  } catch(e) { /* non-fatal */ }
+
   document.getElementById('modal-apt-edit').style.display = 'block';
 }
 
@@ -4645,6 +4687,7 @@ async function saveApartmentEdit() {
   if (!_currentAptId) return;
   const number = document.getElementById('apt-edit-number').value.trim();
   if (!number) { alert('Apartment number is required'); return; }
+  const ownerVal = document.getElementById('apt-edit-owner').value;
   const payload = {
     number,
     floor:        document.getElementById('apt-edit-floor').value || null,
@@ -4653,19 +4696,21 @@ async function saveApartmentEdit() {
     monthly_rent: parseFloat(document.getElementById('apt-edit-rent').value) || 0,
     currency:     document.getElementById('apt-edit-currency').value,
     notes:        document.getElementById('apt-edit-notes').value.trim(),
+    // Always include owner_id so backend knows it was explicitly set/cleared
+    owner_id:     ownerVal ? parseInt(ownerVal) : null,
   };
-  const res = await fetch('/api/apartments/' + _currentAptId, {
+  const res = await apiFetch('/api/apartments/' + _currentAptId, {
     method: 'PUT',
-    headers: {'Content-Type': 'application/json'},
     body: JSON.stringify(payload)
   });
-  if (res.ok) {
+  if (res && !res.error) {
     closeAptEdit();
-    // Refresh property modal
+    // Refresh property modal and dashboard
     if (_currentPropertyId) openPropertyModal(_currentPropertyId);
     loadDashboard();
+    showToast('Apartment saved ✓');
   } else {
-    alert('Save failed — try again');
+    alert('Save failed — ' + (res?.error || 'try again'));
   }
 }
 

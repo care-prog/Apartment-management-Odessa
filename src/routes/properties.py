@@ -30,7 +30,12 @@ def get_property(pid):
     row = query_db('SELECT p.*, o.name as owner_name FROM properties p LEFT JOIN owners o ON p.owner_id = o.id WHERE p.id = ?', (pid,), one=True)
     if not row:
         return jsonify({'error': 'Not found'}), 404
-    row['apartments'] = query_db('SELECT * FROM apartments WHERE property_id = ? ORDER BY number', (pid,))
+    # Apartments include their own owner (may differ from property owner)
+    row['apartments'] = query_db('''
+        SELECT a.*, o.name as owner_name, o.id as owner_id
+        FROM apartments a LEFT JOIN owners o ON a.owner_id = o.id
+        WHERE a.property_id = ? ORDER BY a.number
+    ''', (pid,))
     return jsonify(row)
 
 @bp.route('/api/properties/<int:pid>', methods=['PUT'])
@@ -46,31 +51,90 @@ def update_property(pid):
 @bp.route('/api/apartments', methods=['GET'])
 def list_apartments():
     property_id = request.args.get('property_id')
+    owner_id = request.args.get('owner_id')
     if property_id:
-        rows = query_db('SELECT a.*, p.name as property_name FROM apartments a JOIN properties p ON a.property_id = p.id WHERE a.property_id = ? ORDER BY a.number', (property_id,))
+        rows = query_db('''
+            SELECT a.*, p.name as property_name, o.name as owner_name
+            FROM apartments a
+            JOIN properties p ON a.property_id = p.id
+            LEFT JOIN owners o ON a.owner_id = o.id
+            WHERE a.property_id = ? ORDER BY a.number
+        ''', (property_id,))
+    elif owner_id:
+        # All apartments owned by this specific owner (across all properties/buildings)
+        rows = query_db('''
+            SELECT a.*, p.name as property_name, o.name as owner_name
+            FROM apartments a
+            JOIN properties p ON a.property_id = p.id
+            LEFT JOIN owners o ON a.owner_id = o.id
+            WHERE a.owner_id = ? ORDER BY p.name, a.number
+        ''', (owner_id,))
     else:
-        rows = query_db('SELECT a.*, p.name as property_name FROM apartments a JOIN properties p ON a.property_id = p.id ORDER BY p.name, a.number')
+        rows = query_db('''
+            SELECT a.*, p.name as property_name, o.name as owner_name
+            FROM apartments a
+            JOIN properties p ON a.property_id = p.id
+            LEFT JOIN owners o ON a.owner_id = o.id
+            ORDER BY p.name, a.number
+        ''')
     return jsonify(rows)
 
 @bp.route('/api/apartments', methods=['POST'])
 def create_apartment():
     data = request.json
+    # If no owner_id supplied, inherit from the property's owner
+    owner_id = data.get('owner_id')
+    if owner_id is None:
+        prop = query_db('SELECT owner_id FROM properties WHERE id = ?', (data['property_id'],), one=True)
+        owner_id = prop['owner_id'] if prop else None
     aid = insert_db(
-        'INSERT INTO apartments (property_id, number, floor, rooms, status, monthly_rent, currency, notes) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        'INSERT INTO apartments (property_id, number, floor, rooms, status, monthly_rent, currency, notes, owner_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
         (data['property_id'], data['number'], data.get('floor'), data.get('rooms'),
-         data.get('status', 'vacant'), data.get('monthly_rent', 0), data.get('currency', 'USD'), data.get('notes'))
+         data.get('status', 'vacant'), data.get('monthly_rent', 0), data.get('currency', 'USD'),
+         data.get('notes'), owner_id)
     )
     return jsonify({'id': aid}), 201
+
+@bp.route('/api/apartments/<int:aid>', methods=['GET'])
+def get_apartment(aid):
+    row = query_db('''
+        SELECT a.*, p.name as property_name, o.name as owner_name
+        FROM apartments a
+        JOIN properties p ON a.property_id = p.id
+        LEFT JOIN owners o ON a.owner_id = o.id
+        WHERE a.id = ?
+    ''', (aid,), one=True)
+    if not row:
+        return jsonify({'error': 'Not found'}), 404
+    return jsonify(row)
 
 @bp.route('/api/apartments/<int:aid>', methods=['PUT'])
 def update_apartment(aid):
     data = request.json
-    execute_db(
-        'UPDATE apartments SET number=?, floor=?, rooms=?, status=?, monthly_rent=?, currency=?, notes=? WHERE id=?',
-        (data['number'], data.get('floor'), data.get('rooms'), data.get('status'),
-         data.get('monthly_rent'), data.get('currency', 'USD'), data.get('notes'), aid)
-    )
+    # owner_id can be explicitly set (or cleared with null)
+    # Use sentinel to detect "not provided" vs "explicitly null"
+    if 'owner_id' in data:
+        execute_db(
+            'UPDATE apartments SET number=?, floor=?, rooms=?, status=?, monthly_rent=?, currency=?, notes=?, owner_id=? WHERE id=?',
+            (data['number'], data.get('floor'), data.get('rooms'), data.get('status'),
+             data.get('monthly_rent'), data.get('currency', 'USD'), data.get('notes'),
+             data.get('owner_id'), aid)
+        )
+    else:
+        execute_db(
+            'UPDATE apartments SET number=?, floor=?, rooms=?, status=?, monthly_rent=?, currency=?, notes=? WHERE id=?',
+            (data['number'], data.get('floor'), data.get('rooms'), data.get('status'),
+             data.get('monthly_rent'), data.get('currency', 'USD'), data.get('notes'), aid)
+        )
     return jsonify({'ok': True})
+
+@bp.route('/api/apartments/<int:aid>/reassign', methods=['POST'])
+def reassign_apartment_owner(aid):
+    """Reassign an apartment to a different owner without touching the building's owner."""
+    data = request.json or {}
+    new_owner_id = data.get('owner_id')  # None = unassign
+    execute_db('UPDATE apartments SET owner_id = ? WHERE id = ?', (new_owner_id, aid))
+    return jsonify({'ok': True, 'apartment_id': aid, 'owner_id': new_owner_id})
 
 @bp.route('/api/properties/<int:pid>', methods=['DELETE'])
 def delete_property(pid):
@@ -139,14 +203,15 @@ def owner_detail(oid):
     if not owner:
         return jsonify({'error': 'Not found'}), 404
 
-    properties = query_db('''
-        SELECT p.*,
-            (SELECT COUNT(*) FROM apartments WHERE property_id = p.id) as total_units,
-            (SELECT COUNT(*) FROM apartments WHERE property_id = p.id AND status = 'occupied') as occupied_units,
+    # Apartments owned by this owner (across all properties/buildings)
+    apartments = query_db('''
+        SELECT a.*, p.name as property_name, p.address as property_address,
             (SELECT COALESCE(SUM(l.rent_amount), 0) FROM leases l
-             JOIN apartments a ON l.apartment_id = a.id
-             WHERE a.property_id = p.id AND l.status = 'active') as monthly_rent
-        FROM properties p WHERE p.owner_id = ?
+             WHERE l.apartment_id = a.id AND l.status = 'active') as monthly_rent
+        FROM apartments a
+        JOIN properties p ON a.property_id = p.id
+        WHERE a.owner_id = ?
+        ORDER BY p.name, a.number
     ''', (oid,))
 
     payments = query_db(
@@ -155,20 +220,22 @@ def owner_detail(oid):
     )
     total_paid = sum(p['amount'] for p in payments)
 
-    total_rent = sum(p['monthly_rent'] for p in properties)
+    total_rent = sum(float(a['monthly_rent']) for a in apartments)
     fee_pct = 0.10
     owner_monthly = round(total_rent * (1 - fee_pct), 2)
 
     documents = query_db('''
         SELECT d.* FROM documents d
         JOIN properties p ON d.property_id = p.id
-        WHERE p.owner_id = ?
+        JOIN apartments a ON a.property_id = p.id
+        WHERE a.owner_id = ?
         ORDER BY d.uploaded_at DESC
+        LIMIT 20
     ''', (oid,))
 
     return jsonify({
         'owner': owner,
-        'properties': properties,
+        'apartments': apartments,
         'payments': payments,
         'documents': documents,
         'financials': {
@@ -216,14 +283,20 @@ def upload_property_document(pid):
 @bp.route('/api/properties/<int:pid>/detail', methods=['GET'])
 def property_detail_page(pid):
     prop = query_db('''
-        SELECT p.*, o.name as owner_name, o.id as owner_id
+        SELECT p.*, o.name as owner_name, o.id as prop_owner_id
         FROM properties p LEFT JOIN owners o ON p.owner_id = o.id
         WHERE p.id = ?
     ''', (pid,), one=True)
     if not prop:
         return jsonify({'error': 'Not found'}), 404
 
-    apartments = query_db('SELECT * FROM apartments WHERE property_id = ? ORDER BY number', (pid,))
+    # Apartments with their individual owner info
+    apartments = query_db('''
+        SELECT a.*, o.name as owner_name, o.id as owner_id
+        FROM apartments a
+        LEFT JOIN owners o ON a.owner_id = o.id
+        WHERE a.property_id = ? ORDER BY a.number
+    ''', (pid,))
 
     leases = query_db('''
         SELECT l.*, t.name as tenant_name, a.number as apt_number
@@ -231,11 +304,13 @@ def property_detail_page(pid):
         WHERE a.property_id = ? AND l.status = 'active' ORDER BY a.number
     ''', (pid,))
 
+    # Owner payments: collect from all distinct owners of apartments in this property
+    owner_ids = list({a['owner_id'] for a in apartments if a.get('owner_id')})
     owner_payments = []
-    if prop.get('owner_id'):
-        owner_payments = query_db(
-            'SELECT * FROM owner_payments WHERE owner_id = ? ORDER BY payment_date DESC',
-            (prop['owner_id'],)
+    for oid in owner_ids:
+        owner_payments += query_db(
+            'SELECT * FROM owner_payments WHERE owner_id = ? ORDER BY payment_date DESC LIMIT 10',
+            (oid,)
         )
 
     documents = query_db(
@@ -243,11 +318,11 @@ def property_detail_page(pid):
         (pid,)
     )
 
-    total_rent = sum(l['rent_amount'] for l in leases)
+    total_rent = sum(float(l['rent_amount']) for l in leases)
     fee_pct = 0.10
     management_fee = round(total_rent * fee_pct, 2)
     owner_receives = round(total_rent - management_fee, 2)
-    total_paid = sum(op['amount'] for op in owner_payments)
+    total_paid = sum(float(op['amount']) for op in owner_payments)
 
     return jsonify({
         'property': prop,
