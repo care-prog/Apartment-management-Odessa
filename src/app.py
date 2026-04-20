@@ -83,6 +83,11 @@ def health_check():
     """Lightweight keepalive endpoint — no auth required."""
     return jsonify({'ok': True, 'status': 'running'}), 200
 
+@app.route('/api/version', methods=['GET'])
+def app_version():
+    """Public version endpoint — helps verify which commit is deployed."""
+    return jsonify({'version': 'df02bf0', 'features': ['owner-finance-reports', 'wa-token-ui', 'resilient-startup']}), 200
+
 @app.route('/api/me', methods=['GET'])
 def current_user():
     from src.auth import get_current_user
