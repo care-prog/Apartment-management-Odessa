@@ -700,6 +700,10 @@
     #lang-switcher { display: none; }
     #role-badge { display: none; }
   }
+  @keyframes pulse {
+    0%,100% { opacity:1; transform:scale(1); }
+    50% { opacity:.5; transform:scale(.7); }
+  }
 </style>
 </head>
 <body>
@@ -1466,17 +1470,21 @@
       <!-- ══════ PAGE: ACTIVITY LOG ══════ -->
       <!-- ══════ PAGE: WHATSAPP INBOX ══════ -->
       <div id="page-whatsapp" class="page" style="display:none;padding:0;height:calc(100vh - 56px);overflow:hidden">
-        <div style="display:grid;grid-template-columns:300px 1fr 280px;height:100%;gap:0">
+        <div style="display:grid;grid-template-columns:300px 1fr 260px;height:100%;gap:0">
 
           <!-- ── LEFT: Conversation List ── -->
           <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface)">
-            <div style="padding:16px;border-bottom:1px solid var(--border);flex-shrink:0">
-              <div style="font-size:15px;font-weight:700;color:var(--text-main);margin-bottom:10px">💬 Conversations</div>
-              <input id="wa-search" type="text" placeholder="Search contacts…"
-                oninput="filterWaConvos(this.value)"
+            <div style="padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <div style="font-size:14px;font-weight:700;color:var(--text-main)">💬 Conversations</div>
+                <div id="wa-live-dot" style="display:flex;align-items:center;gap:4px;font-size:11px;color:#10b981">
+                  <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 2s infinite"></span>Live
+                </div>
+              </div>
+              <input id="wa-search" type="text" placeholder="Search…" oninput="filterWaConvos(this.value)"
                 style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text-main);box-sizing:border-box">
             </div>
-            <div id="wa-convo-list" style="flex:1;overflow-y:auto;padding:4px 0">
+            <div id="wa-convo-list" style="flex:1;overflow-y:auto">
               <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px">Loading…</div>
             </div>
           </div>
@@ -1484,39 +1492,52 @@
           <!-- ── CENTER: Chat Thread ── -->
           <div style="display:flex;flex-direction:column;overflow:hidden;background:var(--bg)">
             <!-- Thread header -->
-            <div id="wa-thread-header" style="padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between">
-              <div>
-                <div id="wa-thread-name" style="font-size:15px;font-weight:700;color:var(--text-main)">Select a conversation</div>
-                <div id="wa-thread-sub" style="font-size:12px;color:var(--text-muted);margin-top:2px"></div>
+            <div id="wa-thread-header" style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+              <div style="min-width:0">
+                <div style="display:flex;align-items:center;gap:8px">
+                  <div id="wa-thread-name" style="font-size:15px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a conversation</div>
+                  <div id="wa-bot-badge" style="display:none"></div>
+                </div>
+                <div id="wa-thread-sub" style="font-size:11px;color:var(--text-muted);margin-top:1px"></div>
               </div>
-              <div style="display:flex;gap:8px">
-                <button onclick="refreshWaThread()" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer;color:var(--text-muted)">↻ Refresh</button>
+              <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+                <button id="wa-takeover-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #f59e0b;color:#f59e0b;background:transparent;transition:.2s">
+                  👤 Take over
+                </button>
+                <button id="wa-handback-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #10b981;color:#10b981;background:transparent;transition:.2s">
+                  🤖 Give back to bot
+                </button>
               </div>
             </div>
 
-            <!-- Messages -->
-            <div id="wa-thread-messages" style="flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:10px">
-              <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto">👈 Select a conversation to start</div>
+            <!-- Messages area -->
+            <div id="wa-thread-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
+              <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto;padding:40px">
+                <div style="font-size:32px;margin-bottom:12px">💬</div>
+                Select a conversation from the left
+              </div>
             </div>
 
             <!-- Composer -->
-            <div id="wa-composer" style="padding:14px 20px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;display:none">
-              <div style="display:flex;gap:10px;align-items:flex-end">
+            <div id="wa-composer" style="padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;display:none">
+              <div id="wa-composer-mode" style="font-size:11px;font-weight:600;margin-bottom:8px;padding:5px 10px;border-radius:6px;display:inline-block"></div>
+              <div style="display:flex;gap:8px;align-items:flex-end">
                 <textarea id="wa-reply-text" placeholder="Type a message…" rows="2"
                   onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendWaReply()}"
-                  style="flex:1;padding:10px 14px;border:1px solid var(--border);border-radius:10px;font-size:14px;resize:none;font-family:inherit;background:var(--bg);color:var(--text-main);line-height:1.5"></textarea>
-                <button onclick="sendWaReply()" class="btn btn-primary" style="padding:10px 20px;flex-shrink:0;border-radius:10px">
-                  Send ↗
+                  style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;resize:none;font-family:inherit;background:var(--bg);color:var(--text-main);line-height:1.5;transition:.2s"></textarea>
+                <button onclick="sendWaReply()" id="wa-send-btn" class="btn btn-primary" style="padding:10px 18px;flex-shrink:0;border-radius:12px;height:44px">
+                  ↗ Send
                 </button>
               </div>
-              <div id="wa-send-status" style="margin-top:6px;font-size:12px;color:var(--text-muted);min-height:16px"></div>
+              <div id="wa-send-status" style="margin-top:5px;font-size:12px;color:var(--text-muted);min-height:15px"></div>
             </div>
           </div>
 
-          <!-- ── RIGHT: Contact Context ── -->
-          <div id="wa-context-panel" style="border-left:1px solid var(--border);overflow-y:auto;background:var(--surface);padding:20px">
-            <div style="text-align:center;padding:40px 0;color:var(--text-muted);font-size:13px">
-              Select a conversation to see details
+          <!-- ── RIGHT: Contact Context Panel ── -->
+          <div id="wa-context-panel" style="border-left:1px solid var(--border);overflow-y:auto;background:var(--surface)">
+            <div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:13px">
+              <div style="font-size:28px;margin-bottom:8px">👈</div>
+              Select a conversation
             </div>
           </div>
 
@@ -2792,66 +2813,76 @@ async function loadTeamUsers() {
 // ══════════ WHATSAPP INBOX ══════════
 let _waConvos = [];
 let _waActivePhone = null;
-let _waPolling = null;      // thread polling (active convo)
-let _waListPolling = null;  // conversation list auto-refresh
+let _waActiveBotPaused = false;
+let _waListPolling = null;  // auto-refresh interval
 
 async function loadWaInbox() {
-  const list = document.getElementById('wa-convo-list');
   try {
     const data = await apiFetch('/api/whatsapp/conversations');
     _waConvos = data || [];
     renderWaConvoList(_waConvos);
-    // Update badge
+    // Update badge count
     const badge = document.getElementById('nav-wa-count');
-    if (_waConvos.length > 0) {
+    if (badge) {
       badge.textContent = _waConvos.length;
-      badge.style.display = '';
+      badge.style.display = _waConvos.length ? '' : 'none';
+    }
+    // If a conversation is open, update its bot/opt-out status
+    if (_waActivePhone) {
+      const c = _waConvos.find(x => x.phone === _waActivePhone);
+      if (c) updateBotPauseUI(c.bot_paused, c.opted_out);
     }
   } catch(e) {
+    const list = document.getElementById('wa-convo-list');
     if (list && !_waConvos.length)
-      list.innerHTML = `<div style="padding:20px;color:var(--text-muted);font-size:13px">Failed to load conversations</div>`;
+      list.innerHTML = `<div style="padding:20px;color:var(--text-muted);font-size:13px">⚠️ Failed to load</div>`;
   }
 }
 
 function startWaAutoRefresh() {
-  // Auto-refresh conversation list every 8 s; also refresh active thread
   if (_waListPolling) clearInterval(_waListPolling);
   _waListPolling = setInterval(async () => {
     await loadWaInbox();
-    if (_waActivePhone) loadWaThread(_waActivePhone);
-  }, 8000);
+    if (_waActivePhone) loadWaThread(_waActivePhone, false); // false = don't force-scroll
+  }, 7000);
 }
 
 function stopWaAutoRefresh() {
   if (_waListPolling) { clearInterval(_waListPolling); _waListPolling = null; }
-  if (_waPolling)     { clearInterval(_waPolling);     _waPolling = null; }
 }
 
 function renderWaConvoList(convos) {
   const list = document.getElementById('wa-convo-list');
   if (!convos.length) {
-    list.innerHTML = `<div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px">No conversations yet.<br>Messages will appear here when tenants or owners write.</div>`;
+    list.innerHTML = `<div style="text-align:center;padding:40px 16px;color:var(--text-muted);font-size:13px">
+      <div style="font-size:28px;margin-bottom:8px">💬</div>No conversations yet</div>`;
     return;
   }
   list.innerHTML = convos.map(c => {
     const isActive = c.phone === _waActivePhone;
     const roleColor = c.role === 'team' ? '#10b981' : c.role === 'property_owner' ? '#6366f1' : c.role === 'tenant' ? '#f59e0b' : '#94a3b8';
-    const roleLabel = c.role === 'team' ? 'Team' : c.role === 'property_owner' ? 'Owner' : c.role === 'tenant' ? 'Tenant' : 'Unknown';
-    const timeStr = c.last_time ? new Date(c.last_time).toLocaleTimeString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
-    const preview = (c.last_message || '').slice(0, 55) + (c.last_message?.length > 55 ? '…' : '');
-    const arrow = c.last_direction === 'out' ? '↗ ' : '';
-    return `<div onclick="openWaConvo('${c.phone}','${(c.contact_name||c.phone).replace(/'/g,"\\'")}','${c.role}')"
-      style="padding:12px 16px;cursor:pointer;border-bottom:1px solid var(--border);transition:background .15s;
-             ${isActive ? 'background:rgba(99,102,241,.1);border-left:3px solid #6366f1;' : 'border-left:3px solid transparent;'}
-             display:flex;flex-direction:column;gap:3px"
-      onmouseover="this.style.background='rgba(99,102,241,.05)'" onmouseout="this.style.background='${isActive ? 'rgba(99,102,241,.1)' : ''}'">
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:13px;font-weight:600;color:var(--text-main)">${c.contact_name || c.phone}</span>
-        <span style="font-size:11px;color:var(--text-muted)">${timeStr}</span>
+    const roleLabel = c.role === 'team' ? 'Team' : c.role === 'property_owner' ? 'Owner' : c.role === 'tenant' ? 'Tenant' : '?';
+    const timeStr = c.last_time ? new Date(c.last_time).toLocaleString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
+    const preview = (c.last_message || '').replace(/\n/g,' ').slice(0, 52) + ((c.last_message||'').length > 52 ? '…' : '');
+    const arrowPfx = c.last_direction === 'out' ? '<span style="color:var(--accent)">↗</span> ' : '';
+    // Status badges
+    const pausedBadge = c.bot_paused ? '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#f59e0b22;color:#f59e0b;font-weight:700;margin-left:4px">👤 YOU</span>' : '';
+    const optOutBadge = c.opted_out ? '<span style="font-size:9px;padding:1px 5px;border-radius:4px;background:#ef444422;color:#ef4444;font-weight:700;margin-left:2px">🔕</span>' : '';
+    const nameEsc = (c.contact_name||c.phone).replace(/'/g,"\\'").replace(/"/g,'&quot;');
+    return `<div onclick="openWaConvo('${c.phone}','${nameEsc}','${c.role}',${!!c.bot_paused},${!!c.opted_out})"
+      style="padding:11px 14px;cursor:pointer;border-bottom:1px solid var(--border);
+             transition:background .12s;position:relative;
+             ${isActive ? 'background:rgba(99,102,241,.12);border-left:3px solid var(--accent);' : 'border-left:3px solid transparent;'}">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;margin-bottom:3px">
+        <div style="display:flex;align-items:center;gap:0;min-width:0;flex:1;overflow:hidden">
+          <span style="font-size:13px;font-weight:600;color:var(--text-main);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${c.contact_name || c.phone}</span>
+          ${pausedBadge}${optOutBadge}
+        </div>
+        <span style="font-size:10px;color:var(--text-muted);flex-shrink:0">${timeStr}</span>
       </div>
-      <div style="display:flex;justify-content:space-between;align-items:center">
-        <span style="font-size:12px;color:var(--text-muted);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${arrow}${preview}</span>
-        <span style="margin-left:6px;font-size:10px;padding:2px 6px;border-radius:10px;background:${roleColor}22;color:${roleColor};font-weight:600;flex-shrink:0">${roleLabel}</span>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:6px">
+        <span style="font-size:12px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1">${arrowPfx}${preview}</span>
+        <span style="font-size:9px;padding:2px 6px;border-radius:8px;background:${roleColor}20;color:${roleColor};font-weight:700;flex-shrink:0">${roleLabel}</span>
       </div>
     </div>`;
   }).join('');
@@ -2866,128 +2897,262 @@ function filterWaConvos(q) {
   renderWaConvoList(filtered);
 }
 
-async function openWaConvo(phone, name, role) {
-  _waActivePhone = phone;
-  // Highlight active in list
-  renderWaConvoList(_waConvos.filter(c => {
-    const q = document.getElementById('wa-search').value;
-    return !q || (c.contact_name||'').toLowerCase().includes(q.toLowerCase()) || c.phone.includes(q);
-  }));
-  // Update header
-  const roleLabel = role === 'team' ? '🟢 Team member' : role === 'property_owner' ? '🔵 Property owner' : role === 'tenant' ? '🟡 Tenant' : '⚪ Unknown';
-  document.getElementById('wa-thread-name').textContent = name || phone;
-  document.getElementById('wa-thread-sub').textContent = `${phone} · ${roleLabel}`;
-  // Show composer
-  document.getElementById('wa-composer').style.display = '';
-  document.getElementById('wa-reply-text').placeholder = `Message to ${name || phone}…`;
-  // Load thread
-  await loadWaThread(phone);
-  // Update context panel
-  renderWaContext(phone, name, role);
-  // Auto-refresh is handled by startWaAutoRefresh() (8s) — no separate interval needed
+function updateBotPauseUI(paused, optedOut) {
+  _waActiveBotPaused = !!paused;
+  const takeoverBtn  = document.getElementById('wa-takeover-btn');
+  const handbackBtn  = document.getElementById('wa-handback-btn');
+  const badge        = document.getElementById('wa-bot-badge');
+  const modeLabel    = document.getElementById('wa-composer-mode');
+  const textarea     = document.getElementById('wa-reply-text');
+
+  if (takeoverBtn) takeoverBtn.style.display = paused ? 'none' : '';
+  if (handbackBtn) handbackBtn.style.display = paused ? '' : 'none';
+
+  if (badge) {
+    if (paused) {
+      badge.style.display = '';
+      badge.innerHTML = '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:#f59e0b22;color:#f59e0b;font-weight:700">👤 Manual mode</span>';
+    } else {
+      badge.style.display = '';
+      badge.innerHTML = '<span style="font-size:11px;padding:3px 9px;border-radius:8px;background:#10b98122;color:#10b981;font-weight:700">🤖 Bot active</span>';
+    }
+  }
+  if (modeLabel) {
+    if (paused) {
+      modeLabel.textContent = '👤 You are in control — bot is silent for this contact';
+      modeLabel.style.background = 'rgba(245,158,11,.1)';
+      modeLabel.style.color = '#f59e0b';
+    } else {
+      modeLabel.textContent = '';
+      modeLabel.style.background = '';
+    }
+  }
+  if (textarea) {
+    textarea.style.borderColor = paused ? '#f59e0b' : 'var(--border)';
+  }
 }
 
-async function loadWaThread(phone) {
+async function openWaConvo(phone, name, role, botPaused, optedOut) {
+  _waActivePhone = phone;
+
+  renderWaConvoList(_waConvos.filter(c => {
+    const q = (document.getElementById('wa-search')||{}).value || '';
+    return !q || (c.contact_name||'').toLowerCase().includes(q.toLowerCase()) || c.phone.includes(q);
+  }));
+  const roleLabel = role === 'team' ? '🟢 Team' : role === 'property_owner' ? '🔵 Owner' : role === 'tenant' ? '🟡 Tenant' : '⚪ Unknown';
+  document.getElementById('wa-thread-name').textContent = name || phone;
+  document.getElementById('wa-thread-sub').textContent = `${phone} · ${roleLabel}`;
+  document.getElementById('wa-takeover-btn').style.display = '';
+  document.getElementById('wa-handback-btn').style.display = '';
+  document.getElementById('wa-composer').style.display = '';
+  document.getElementById('wa-reply-text').placeholder = `Message to ${name || phone}…`;
+
+  updateBotPauseUI(!!botPaused, !!optedOut);
+  await loadWaThread(phone, true);
+  renderWaContext(phone, name, role, !!botPaused, !!optedOut);
+}
+
+async function toggleBotPause() {
+  if (!_waActivePhone) return;
+  const newPaused = !_waActiveBotPaused;
+  await apiFetch(`/api/whatsapp/conversations/${_waActivePhone}/bot-pause`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({paused: newPaused})
+  });
+  updateBotPauseUI(newPaused, false);
+  // Update local convo list state
+  const c = _waConvos.find(x => x.phone === _waActivePhone);
+  if (c) c.bot_paused = newPaused;
+  renderWaConvoList(_waConvos);
+  renderWaContext(_waActivePhone,
+    (document.getElementById('wa-thread-name')||{}).textContent || _waActivePhone,
+    '', newPaused, (c||{}).opted_out);
+  showToast(newPaused ? '👤 You took over — bot is silent' : '🤖 Bot is active again');
+}
+
+async function loadWaThread(phone, forceScroll) {
   const el = document.getElementById('wa-thread-messages');
+  if (!el) return;
   try {
     const msgs = await apiFetch(`/api/whatsapp/conversations/${phone}`);
-    if (!msgs.length) {
-      el.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto">No messages yet</div>`;
+    if (!msgs || !msgs.length) {
+      el.innerHTML = `<div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto;padding:40px">
+        <div style="font-size:28px;margin-bottom:8px">💬</div>No messages yet</div>`;
       return;
     }
-    const wasAtBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    const wasAtBottom = forceScroll || (el.scrollHeight - el.scrollTop - el.clientHeight < 80);
     el.innerHTML = msgs.map(m => {
-      const isOut = m.direction === 'out';
-      const time = m.created_at ? new Date(m.created_at).toLocaleString('he-IL', {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '';
-      const senderLabel = isOut ? (m.sender_name === 'Dashboard' ? '📊 Dashboard' : '🤖 Bot') : (m.sender_name || phone);
-      const bubbleBg = isOut ? 'rgba(99,102,241,.12)' : 'var(--surface)';
-      const align = isOut ? 'flex-end' : 'flex-start';
-      const borderRadius = isOut ? '16px 4px 16px 16px' : '4px 16px 16px 16px';
-      const bodyHtml = (m.body || '').replace(/\n/g, '<br>').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-      return `<div style="display:flex;flex-direction:column;align-items:${align};max-width:75%;align-self:${align}">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;padding:0 4px">${senderLabel}</div>
-        <div style="background:${bubbleBg};border:1px solid var(--border);border-radius:${borderRadius};padding:10px 14px;font-size:14px;line-height:1.5;color:var(--text-main);word-break:break-word">
+      const isDashboard = m.direction === 'out' && (m.from_phone === 'dashboard' || m.sender_name === 'Dashboard');
+      const isBot  = m.direction === 'out' && !isDashboard;
+      const isIn   = m.direction === 'in';
+      const time   = m.created_at ? new Date(m.created_at).toLocaleString('he-IL',
+        {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '';
+
+      // Sender label
+      let senderLabel, senderColor;
+      if (isIn) {
+        senderLabel = m.sender_name || phone;
+        senderColor = '#94a3b8';
+      } else if (isDashboard) {
+        senderLabel = '📊 You (Dashboard)';
+        senderColor = '#6366f1';
+      } else {
+        senderLabel = '🤖 Bot';
+        senderColor = '#10b981';
+      }
+
+      // Bubble style
+      const align  = isIn ? 'flex-start' : 'flex-end';
+      let bubbleBg, bubbleBorder, br;
+      if (isIn) {
+        bubbleBg     = 'var(--surface)';
+        bubbleBorder = 'var(--border)';
+        br           = '4px 16px 16px 16px';
+      } else if (isDashboard) {
+        bubbleBg     = 'rgba(99,102,241,.18)';
+        bubbleBorder = 'rgba(99,102,241,.3)';
+        br           = '16px 4px 16px 16px';
+      } else {
+        bubbleBg     = 'rgba(16,185,129,.12)';
+        bubbleBorder = 'rgba(16,185,129,.2)';
+        br           = '16px 4px 16px 16px';
+      }
+
+      // Format body — WhatsApp bold *text*, linebreaks
+      const bodyHtml = (m.body || '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/\*(.*?)\*/g, '<strong>$1</strong>')
+        .replace(/\n/g, '<br>');
+
+      return `<div style="display:flex;flex-direction:column;align-self:${align};max-width:72%">
+        <div style="font-size:10px;font-weight:600;color:${senderColor};margin-bottom:3px;padding:0 4px">${senderLabel}</div>
+        <div style="background:${bubbleBg};border:1px solid ${bubbleBorder};border-radius:${br};
+                    padding:9px 13px;font-size:14px;line-height:1.55;color:var(--text-main);word-break:break-word">
           ${bodyHtml}
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:4px;padding:0 4px">${time}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px;padding:0 4px;align-self:${align}">${time}</div>
       </div>`;
     }).join('');
     if (wasAtBottom) el.scrollTop = el.scrollHeight;
   } catch(e) {
-    el.innerHTML = `<div style="text-align:center;color:#ef4444;font-size:13px;margin:auto">Failed to load messages</div>`;
+    el.innerHTML = `<div style="text-align:center;color:#ef4444;font-size:13px;margin:auto">⚠️ Failed to load</div>`;
   }
-}
-
-async function refreshWaThread() {
-  if (_waActivePhone) await loadWaThread(_waActivePhone);
 }
 
 async function sendWaReply() {
-  const txt = document.getElementById('wa-reply-text').value.trim();
+  const txt    = (document.getElementById('wa-reply-text')||{}).value?.trim();
   const status = document.getElementById('wa-send-status');
   if (!txt || !_waActivePhone) return;
-  status.textContent = 'Sending…';
-  status.style.color = 'var(--text-muted)';
+  const btn = document.getElementById('wa-send-btn');
+  if (btn) btn.disabled = true;
+  status.textContent = 'Sending…'; status.style.color = 'var(--text-muted)';
   try {
     const res = await apiFetch('/api/whatsapp/send', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
+      method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({to: _waActivePhone, message: txt})
     });
-    if (res.ok) {
-      document.getElementById('wa-reply-text').value = '';
-      status.textContent = '✓ Sent';
-      status.style.color = '#10b981';
-      await loadWaThread(_waActivePhone);
-      await loadWaInbox();
-      setTimeout(() => { status.textContent = ''; }, 3000);
-    } else {
-      status.textContent = '✗ ' + (res.error || 'Send failed');
-      status.style.color = '#ef4444';
-    }
+    document.getElementById('wa-reply-text').value = '';
+    status.textContent = '✓ Sent'; status.style.color = '#10b981';
+    await loadWaThread(_waActivePhone, true);
+    setTimeout(() => { status.textContent = ''; }, 2500);
   } catch(e) {
-    status.textContent = '✗ Network error';
-    status.style.color = '#ef4444';
+    status.textContent = '✗ Failed: ' + e.message; status.style.color = '#ef4444';
+  } finally {
+    if (btn) btn.disabled = false;
   }
 }
 
-function renderWaContext(phone, name, role) {
+function renderWaContext(phone, name, role, botPaused, optedOut) {
   const panel = document.getElementById('wa-context-panel');
-  const roleColor = role === 'team' ? '#10b981' : role === 'property_owner' ? '#6366f1' : role === 'tenant' ? '#f59e0b' : '#94a3b8';
-  const roleLabel = role === 'team' ? 'Team Member' : role === 'property_owner' ? 'Property Owner' : role === 'tenant' ? 'Tenant' : 'Unknown';
-  const convo = _waConvos.find(c => c.phone === phone) || {};
+  if (!panel) return;
+  const c = _waConvos.find(x => x.phone === phone) || {};
+  const paused   = botPaused !== undefined ? botPaused : c.bot_paused;
+  const opted    = optedOut  !== undefined ? optedOut  : c.opted_out;
+  const roleColor= role === 'team' ? '#10b981' : role === 'property_owner' ? '#6366f1' : role === 'tenant' ? '#f59e0b' : '#94a3b8';
+  const roleLabel= role === 'team' ? 'Team Member' : role === 'property_owner' ? 'Property Owner' : role === 'tenant' ? 'Tenant' : 'Unknown';
+  const avatar   = role === 'team' ? '🟢' : role === 'property_owner' ? '🔵' : role === 'tenant' ? '🟡' : '⚪';
+
   panel.innerHTML = `
-    <div style="text-align:center;margin-bottom:20px">
-      <div style="width:56px;height:56px;border-radius:50%;background:${roleColor}22;display:flex;align-items:center;justify-content:center;font-size:24px;margin:0 auto 10px">
-        ${role === 'team' ? '🟢' : role === 'property_owner' ? '🔵' : role === 'tenant' ? '🟡' : '⚪'}
-      </div>
-      <div style="font-size:16px;font-weight:700;color:var(--text-main)">${name || phone}</div>
-      <div style="margin-top:6px">
-        <span style="font-size:11px;padding:3px 10px;border-radius:10px;background:${roleColor}22;color:${roleColor};font-weight:600">${roleLabel}</span>
+  <div style="padding:20px 16px">
+    <!-- Avatar + name -->
+    <div style="text-align:center;margin-bottom:18px;padding-bottom:18px;border-bottom:1px solid var(--border)">
+      <div style="width:52px;height:52px;border-radius:50%;background:${roleColor}22;display:flex;align-items:center;justify-content:center;font-size:22px;margin:0 auto 10px">${avatar}</div>
+      <div style="font-size:15px;font-weight:700;color:var(--text-main)">${name || phone}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin:2px 0 8px">+${phone}</div>
+      <span style="font-size:10px;padding:3px 9px;border-radius:8px;background:${roleColor}20;color:${roleColor};font-weight:700">${roleLabel}</span>
+    </div>
+
+    <!-- Bot status -->
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Bot Status</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div>
+          ${paused
+            ? '<span style="font-size:12px;padding:3px 8px;border-radius:6px;background:#f59e0b22;color:#f59e0b;font-weight:700">👤 Manual mode</span>'
+            : '<span style="font-size:12px;padding:3px 8px;border-radius:6px;background:#10b98122;color:#10b981;font-weight:700">🤖 Bot active</span>'}
+        </div>
+        <button onclick="toggleBotPause()"
+          style="font-size:11px;padding:5px 10px;border-radius:7px;cursor:pointer;font-weight:600;
+                 border:1.5px solid ${paused ? '#10b981' : '#f59e0b'};
+                 color:${paused ? '#10b981' : '#f59e0b'};background:transparent">
+          ${paused ? '🤖 Give back' : '👤 Take over'}
+        </button>
       </div>
     </div>
 
-    <div style="border-top:1px solid var(--border);padding-top:16px">
-      <div style="font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Contact</div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:6px;display:flex;gap:8px;align-items:center">
-        <span>📞</span><span>+${phone}</span>
-      </div>
-      <div style="font-size:13px;color:var(--text-muted);display:flex;gap:8px;align-items:center">
-        <span>💬</span><span>${convo.msg_count || 0} messages total</span>
+    <!-- Notification opt-in -->
+    <div style="margin-bottom:16px;padding-bottom:16px;border-bottom:1px solid var(--border)">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Notifications</div>
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          ${opted
+            ? '<span style="font-size:12px;padding:3px 8px;border-radius:6px;background:#ef444422;color:#ef4444;font-weight:700">🔕 Opted out</span>'
+            : '<span style="font-size:12px;padding:3px 8px;border-radius:6px;background:#10b98122;color:#10b981;font-weight:700">🔔 Subscribed</span>'}
+        </div>
+        <button onclick="toggleWaOptOut('${phone}',${opted})"
+          style="font-size:11px;padding:5px 10px;border-radius:7px;cursor:pointer;font-weight:600;
+                 border:1.5px solid ${opted ? '#10b981' : '#ef4444'};
+                 color:${opted ? '#10b981' : '#ef4444'};background:transparent">
+          ${opted ? '🔔 Re-subscribe' : '🔕 Opt out'}
+        </button>
       </div>
     </div>
 
-    <div style="border-top:1px solid var(--border);padding-top:16px;margin-top:16px">
-      <div style="font-size:11px;font-weight:600;color:var(--text-dim);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px">Quick Actions</div>
+    <!-- Stats -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Conversation</div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">💬 ${c.msg_count || 0} messages total</div>
+      ${c.last_time ? `<div style="font-size:12px;color:var(--text-muted)">🕐 Last: ${new Date(c.last_time).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+    </div>
+
+    <!-- Quick actions -->
+    <div>
+      <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Actions</div>
       <button onclick="document.getElementById('wa-reply-text').focus()"
-        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;background:var(--bg);color:var(--text-main);margin-bottom:6px">
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;background:var(--bg);color:var(--text-main);margin-bottom:6px;text-align:left">
         ✍️ Write message
       </button>
       <button onclick="showPage('tenants')"
-        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;background:var(--bg);color:var(--text-main)">
+        style="width:100%;padding:8px;border:1px solid var(--border);border-radius:8px;font-size:12px;cursor:pointer;background:var(--bg);color:var(--text-main);text-align:left">
         👤 View in Tenants
       </button>
-    </div>`;
+    </div>
+  </div>`;
+}
+
+async function toggleWaOptOut(phone, currentlyOptedOut) {
+  const newState = !currentlyOptedOut;
+  await apiFetch(`/api/whatsapp/conversations/${phone}/opt-out`, {
+    method: 'POST', headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({opted_out: newState})
+  });
+  const c = _waConvos.find(x => x.phone === phone);
+  if (c) c.opted_out = newState;
+  renderWaContext(phone,
+    (document.getElementById('wa-thread-name')||{}).textContent || phone,
+    '', _waActiveBotPaused, newState);
+  renderWaConvoList(_waConvos);
+  showToast(newState ? '🔕 Notifications disabled for this contact' : '🔔 Notifications re-enabled');
 }
 
 async function loadWaLog() {

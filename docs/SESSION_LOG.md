@@ -1,3 +1,20 @@
+## 2026-04-20 — WhatsApp inbox complete — bot takeover, opt-in status, real chat UI
+
+**Focus:** Full WhatsApp inbox: human takeover per contact, opt-in status, WA-style bubbles
+
+### Done
+- `src/routes/whatsapp.py` — `/api/whatsapp/conversations` now returns `bot_paused` + `opted_out` per conversation
+- `src/routes/whatsapp.py` — `POST /api/whatsapp/conversations/{phone}/bot-pause` — toggle bot silence per contact
+- `src/routes/whatsapp.py` — `POST /api/whatsapp/conversations/{phone}/opt-out` — toggle notification opt-out from dashboard
+- `src/routes/whatsapp.py` — Webhook checks `wa_bot_paused_{phone}` in system_settings before processing; if paused, message logged but bot stays silent
+- `index.html` — Conversation list cards: show 👤 YOU badge when bot paused, 🔕 badge when opted out
+- `index.html` — Thread header: bot status badge (🤖 Bot active / 👤 Manual mode) + "Take over" / "Give back to bot" toggle buttons
+- `index.html` — Composer: amber border + "You are in control" label when bot is paused
+- `index.html` — Messages: 3 distinct bubble styles — incoming (white), bot reply (green tint), dashboard/you (indigo tint)
+- `index.html` — Right panel: bot status card + notification status card, both with inline toggle buttons
+- `index.html` — `pulse` CSS animation for live dot in conversation list header
+- `index.html` — `toggleBotPause()`, `toggleWaOptOut()`, `updateBotPauseUI()`, `renderWaContext()` completely rewritten
+
 ## 2026-04-20 — WhatsApp image analysis, voice transcription, auto-refresh
 
 **Focus:** Handle media in WhatsApp; live inbox without pressing refresh

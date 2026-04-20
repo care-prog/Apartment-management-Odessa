@@ -537,6 +537,12 @@ def wa_webhook_receive():
                 wa_send(from_phone, '⚠️ Нет недавнего фото для сохранения. Сначала отправь фото.')
                 return jsonify({'status': 'no_recent_image'}), 200
 
+        # ── Bot pause check (owner took over manually) ────────────────────
+        from src.models import get_setting as _gs
+        if _gs(f'wa_bot_paused_{from_phone}') == '1':
+            # Message logged, but bot stays silent — owner handles it from dashboard
+            return jsonify({'status': 'bot_paused'}), 200
+
         # ── Opt-out / Opt-in commands ─────────────────────────────────────────
         msg_upper = message_body.strip().upper()
         if msg_upper in ('STOP', 'עצור', 'СТОП'):
@@ -941,6 +947,7 @@ CURRENT DATABASE STATE:
 @bp.route('/api/whatsapp/conversations', methods=['GET'])
 def wa_conversations():
     """Return list of conversations grouped by external phone, sorted by latest activity."""
+    from src.models import get_setting, query_db as _qdb
     rows = query_db(
         """SELECT direction, from_phone, to_phone, sender_name, sender_role, body, status, created_at
            FROM whatsapp_log
@@ -952,7 +959,7 @@ def wa_conversations():
     for r in rows:
         r = dict(r)
         ext = r['from_phone'] if r['direction'] == 'in' else r['to_phone']
-        if not ext or ext == 'bot':
+        if not ext or ext in ('bot', 'dashboard', 'cron'):
             continue
         if ext not in convos:
             convos[ext] = {
@@ -977,6 +984,15 @@ def wa_conversations():
             if r.get('sender_role'):
                 c['role'] = r['sender_role']
 
+    # Enrich with opt-out + bot-pause status
+    for phone, c in convos.items():
+        try:
+            pref = _qdb('SELECT opted_out FROM notification_prefs WHERE phone = ?', (phone,), one=True)
+            c['opted_out'] = bool(pref and pref.get('opted_out'))
+        except Exception:
+            c['opted_out'] = False
+        c['bot_paused'] = (get_setting(f'wa_bot_paused_{phone}') == '1')
+
     result = sorted(convos.values(), key=lambda x: x['last_time'] or '', reverse=True)
     return jsonify(result)
 
@@ -1000,6 +1016,26 @@ def wa_conversation_thread(phone):
             continue
         msgs.append(r)
     return jsonify(msgs)
+
+
+@bp.route('/api/whatsapp/conversations/<path:phone>/bot-pause', methods=['POST'])
+def wa_bot_pause(phone):
+    """Toggle bot-pause for a phone number. When paused, bot won't auto-reply."""
+    from src.models import get_setting, set_setting
+    d = request.json or {}
+    paused = bool(d.get('paused', True))
+    set_setting(f'wa_bot_paused_{phone}', '1' if paused else '0')
+    return jsonify({'ok': True, 'phone': phone, 'bot_paused': paused})
+
+
+@bp.route('/api/whatsapp/conversations/<path:phone>/opt-out', methods=['POST'])
+def wa_opt_out_toggle(phone):
+    """Owner can manually toggle opt-out for a contact from dashboard."""
+    d = request.json or {}
+    opted_out = bool(d.get('opted_out', True))
+    from src.notifications import set_opt_out
+    set_opt_out(phone, opt_out=opted_out)
+    return jsonify({'ok': True, 'phone': phone, 'opted_out': opted_out})
 
 
 @bp.route('/api/whatsapp/send', methods=['POST'])
