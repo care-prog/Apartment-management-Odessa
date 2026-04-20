@@ -117,6 +117,9 @@ def safe_migrate():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
         _pg_run("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS paid_by TEXT DEFAULT 'office'")
         _pg_run("ALTER TABLE maintenance_orders ADD COLUMN IF NOT EXISTS currency TEXT DEFAULT 'USD'")
+        _pg_run("ALTER TABLE leases ADD COLUMN IF NOT EXISTS commission_type TEXT DEFAULT 'percent'")
+        _pg_run("ALTER TABLE leases ADD COLUMN IF NOT EXISTS commission_value DOUBLE PRECISION DEFAULT 0")
+        _pg_run("ALTER TABLE leases ADD COLUMN IF NOT EXISTS payment_day INTEGER DEFAULT 1")
         _pg_run("""CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY, value TEXT,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
@@ -181,6 +184,12 @@ def safe_migrate():
         try: execute_db("ALTER TABLE maintenance_orders ADD COLUMN paid_by TEXT DEFAULT 'office'")
         except: pass
         try: execute_db("ALTER TABLE maintenance_orders ADD COLUMN currency TEXT DEFAULT 'USD'")
+        except: pass
+        try: execute_db("ALTER TABLE leases ADD COLUMN commission_type TEXT DEFAULT 'percent'")
+        except: pass
+        try: execute_db("ALTER TABLE leases ADD COLUMN commission_value REAL DEFAULT 0")
+        except: pass
+        try: execute_db("ALTER TABLE leases ADD COLUMN payment_day INTEGER DEFAULT 1")
         except: pass
         execute_db("""CREATE TABLE IF NOT EXISTS system_settings (
             key TEXT PRIMARY KEY, value TEXT,

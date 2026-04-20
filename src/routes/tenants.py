@@ -43,15 +43,41 @@ def update_tenant(tid):
 
 @bp.route('/api/leases', methods=['GET'])
 def list_leases():
+    import datetime as _dt
     rows = query_db('''
-        SELECT l.*, t.name as tenant_name, a.number as apt_number, p.name as property_name
+        SELECT l.*, t.name as tenant_name, a.number as apt_number, p.name as property_name,
+               l.commission_type, l.commission_value, l.payment_day
         FROM leases l
         JOIN tenants t ON l.tenant_id = t.id
         JOIN apartments a ON l.apartment_id = a.id
         JOIN properties p ON a.property_id = p.id
         ORDER BY l.end_date
     ''')
-    return jsonify(rows)
+    today = _dt.date.today()
+    result = []
+    for r in rows:
+        r = dict(r)
+        # Days until lease ends
+        if r.get('end_date'):
+            try:
+                end = _dt.date.fromisoformat(str(r['end_date'])[:10])
+                r['days_until_end'] = (end - today).days
+            except Exception:
+                r['days_until_end'] = None
+        else:
+            r['days_until_end'] = None
+        # Commission amount
+        rent = float(r.get('rent_amount') or 0)
+        ctype = r.get('commission_type') or 'percent'
+        cval  = float(r.get('commission_value') or 0)
+        if ctype == 'percent' and cval:
+            r['commission_amount'] = round(rent * cval / 100, 2)
+        elif ctype == 'fixed':
+            r['commission_amount'] = cval
+        else:
+            r['commission_amount'] = 0
+        result.append(r)
+    return jsonify(result)
 
 @bp.route('/api/leases', methods=['POST'])
 def create_lease():
@@ -82,13 +108,74 @@ def update_lease(lid):
     data = request.json
     before = query_db('SELECT * FROM leases WHERE id = ?', (lid,), one=True)
     execute_db(
-        'UPDATE leases SET start_date=?, end_date=?, rent_amount=?, deposit=?, status=?, notes=? WHERE id=?',
+        '''UPDATE leases SET start_date=?, end_date=?, rent_amount=?, deposit=?, status=?, notes=?,
+           commission_type=?, commission_value=?, payment_day=? WHERE id=?''',
         (data.get('start_date'), data.get('end_date'), data.get('rent_amount'),
-         data.get('deposit'), data.get('status'), data.get('notes'), lid)
+         data.get('deposit'), data.get('status'), data.get('notes'),
+         data.get('commission_type', 'percent'), data.get('commission_value', 0),
+         data.get('payment_day', 1), lid)
     )
     from src.routes.activity import log_action
     log_action('update', 'lease', lid, f"Updated lease #{lid} — rent: ${data.get('rent_amount')}", before_data=before)
     return jsonify({'ok': True})
+
+
+@bp.route('/api/leases/<int:lid>/commission', methods=['PUT'])
+def update_lease_commission(lid):
+    """Update commission settings for a lease."""
+    data = request.json or {}
+    execute_db(
+        'UPDATE leases SET commission_type=?, commission_value=? WHERE id=?',
+        (data.get('commission_type', 'percent'), data.get('commission_value', 0), lid)
+    )
+    return jsonify({'ok': True})
+
+
+@bp.route('/api/sync/rent-from-monday', methods=['POST'])
+def sync_rent_from_monday():
+    """
+    Pull rent amounts and lease dates from Monday Аренда$ column
+    and update existing leases WITHOUT wiping data.
+    """
+    import json as _json, re as _re
+    from src.monday_sync import fetch_board_items, parse_item
+    items = fetch_board_items()
+    updated = 0
+    for item in items:
+        p = parse_item(item)
+        if not p['rent']:
+            continue
+        # Find apartment by monday_id stored in notes JSON
+        apt = query_db("SELECT id FROM apartments WHERE notes::text LIKE ? OR notes LIKE ?",
+                       (f'%{p["monday_id"]}%', f'%{p["monday_id"]}%'), one=True)
+        if not apt:
+            continue
+        # Parse end date
+        end_date = None
+        if p.get('date_finish'):
+            m = _re.match(r'(\d{4}-\d{2}-\d{2})', str(p['date_finish']))
+            if m:
+                end_date = m.group(1)
+        start_date = None
+        if p.get('date_start'):
+            m = _re.match(r'(\d{4}-\d{2}-\d{2})', str(p['date_start']))
+            if m:
+                start_date = m.group(1)
+        # Update lease
+        if end_date:
+            execute_db(
+                'UPDATE leases SET rent_amount=?, start_date=COALESCE(?, start_date), end_date=? WHERE apartment_id=? AND status=?',
+                (p['rent'], start_date, end_date, apt['id'], 'active')
+            )
+        else:
+            execute_db(
+                'UPDATE leases SET rent_amount=?, start_date=COALESCE(?, start_date) WHERE apartment_id=? AND status=?',
+                (p['rent'], start_date, apt['id'], 'active')
+            )
+        # Also update apartment monthly_rent
+        execute_db('UPDATE apartments SET monthly_rent=? WHERE id=?', (p['rent'], apt['id']))
+        updated += 1
+    return jsonify({'ok': True, 'updated': updated})
 
 @bp.route('/api/tenants/<int:tid>', methods=['DELETE'])
 def delete_tenant(tid):
