@@ -8,7 +8,7 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
-| pending | 2026-04-20 | [phase2] WhatsApp inbox complete — bot takeover, opt-in UI, WA-style bubbles | 1 | 3 files |
+| bf80ef7 | 2026-04-20 | [phase2] WhatsApp inbox complete — bot takeover, opt-in UI, WA-style bubbles | 1 | 3 files |
 | 8a530f9 | 2026-04-20 | [phase2] WhatsApp image analysis + voice transcription + inbox auto-refresh | 1 | 5 files |
 | d69b33c | 2026-04-20 | [infra] non-destructive Monday sync — UPSERT by monday_id, permanent data protection | 1 | 6 files |
 | b4eac1b | 2026-04-19 | [phase1] feat: owner financial reports — KPI row, per-owner cards, record payment | 1 | 5 files |
