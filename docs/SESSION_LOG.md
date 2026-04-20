@@ -1,3 +1,10 @@
+## 2026-04-19 23:11 — WhatsApp Inbox built
+- Added GET /api/whatsapp/conversations (conversation list grouped by phone)
+- Added GET /api/whatsapp/conversations/<phone> (thread)
+- Added POST /api/whatsapp/send (dashboard send)
+- Added WhatsApp Inbox page: 3-panel UI (conversations, chat thread, context)
+- Added 💬 WhatsApp nav item
+
 # SESSION LOG: Apartment-management-Odessa
 
 > One entry per work session. Newest entries at the TOP.

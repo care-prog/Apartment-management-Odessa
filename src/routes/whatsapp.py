@@ -700,6 +700,93 @@ CURRENT DATABASE STATE:
     return jsonify({'reply': 'Reached max iterations', 'role': role, 'actions': actions_taken})
 
 
+@bp.route('/api/whatsapp/conversations', methods=['GET'])
+def wa_conversations():
+    """Return list of conversations grouped by external phone, sorted by latest activity."""
+    rows = query_db(
+        """SELECT direction, from_phone, to_phone, sender_name, sender_role, body, status, created_at
+           FROM whatsapp_log
+           WHERE (direction='in' AND from_phone IS NOT NULL AND from_phone != 'bot')
+              OR (direction='out' AND to_phone IS NOT NULL AND to_phone != 'bot')
+           ORDER BY created_at ASC"""
+    )
+    convos = {}
+    for r in rows:
+        r = dict(r)
+        ext = r['from_phone'] if r['direction'] == 'in' else r['to_phone']
+        if not ext or ext == 'bot':
+            continue
+        if ext not in convos:
+            convos[ext] = {
+                'phone': ext,
+                'contact_name': r.get('sender_name') or ext,
+                'role': r.get('sender_role') or 'unknown',
+                'last_message': r['body'] or '',
+                'last_direction': r['direction'],
+                'last_time': r['created_at'],
+                'msg_count': 0,
+                'unread': 0,
+            }
+        c = convos[ext]
+        c['last_message'] = r['body'] or ''
+        c['last_direction'] = r['direction']
+        c['last_time'] = r['created_at']
+        c['msg_count'] += 1
+        if r['direction'] == 'in':
+            # Update name/role from most recent inbound
+            if r.get('sender_name') and r['sender_name'] != ext:
+                c['contact_name'] = r['sender_name']
+            if r.get('sender_role'):
+                c['role'] = r['sender_role']
+
+    result = sorted(convos.values(), key=lambda x: x['last_time'] or '', reverse=True)
+    return jsonify(result)
+
+
+@bp.route('/api/whatsapp/conversations/<path:phone>', methods=['GET'])
+def wa_conversation_thread(phone):
+    """Return all messages for a specific phone number conversation."""
+    rows = query_db(
+        """SELECT id, direction, from_phone, to_phone, sender_name, sender_role,
+                  body, status, created_at
+           FROM whatsapp_log
+           WHERE from_phone = ? OR to_phone = ?
+           ORDER BY created_at ASC""",
+        (phone, phone)
+    )
+    msgs = []
+    for r in rows:
+        r = dict(r)
+        # Filter out bot↔bot rows
+        if r.get('from_phone') == 'bot' and r.get('to_phone') == 'bot':
+            continue
+        msgs.append(r)
+    return jsonify(msgs)
+
+
+@bp.route('/api/whatsapp/send', methods=['POST'])
+def wa_dashboard_send():
+    """Send a WhatsApp message from the dashboard."""
+    from src.auth import get_current_role
+    from src.models import insert_db
+    d = request.json or {}
+    to   = (d.get('to') or '').strip().lstrip('+')
+    body = (d.get('message') or '').strip()
+    if not to or not body:
+        return jsonify({'error': 'to and message required'}), 400
+    result = wa_send(to, body)
+    if 'error' in result:
+        return jsonify({'error': result['error']}), 400
+    try:
+        insert_db(
+            'INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body, status) VALUES (?, ?, ?, ?, ?, ?, ?)',
+            ('out', 'dashboard', to, 'Dashboard', 'team', body[:1000], 'sent')
+        )
+    except Exception:
+        pass
+    return jsonify({'ok': True, 'message_id': result.get('messages', [{}])[0].get('id', '')})
+
+
 @bp.route('/api/whatsapp-reset', methods=['POST'])
 def whatsapp_reset():
     """Clear conversation history for a phone number."""
