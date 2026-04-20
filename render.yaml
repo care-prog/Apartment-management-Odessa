@@ -3,7 +3,7 @@ services:
     name: apartment-mgmt-odessa
     runtime: python
     buildCommand: pip install -r requirements.txt
-    startCommand: gunicorn src.app:app --bind 0.0.0.0:$PORT --workers 1
+    startCommand: gunicorn src.app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: MONDAY_API_TOKEN
         sync: false
@@ -25,4 +25,4 @@ services:
         sync: false
       - key: PYTHON_VERSION
         value: 3.11.0
-# Render force redeploy Mon Apr 20 00:35:00 EDT 2026
+# Render force redeploy Mon Apr 20 00:38:00 EDT 2026
