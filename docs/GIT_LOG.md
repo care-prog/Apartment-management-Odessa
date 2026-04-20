@@ -8,6 +8,8 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
+| 37ef846 | 2026-04-20 | [phase1] feat: per-apartment owner — apartments.owner_id independent of building | 1 | 6 files |
+| 6a54c36 | 2026-04-20 | [fix] sync_to_db: fix PostgreSQL NULL type-inference error in lease UPDATE | 1 | 2 files |
 | bf80ef7 | 2026-04-20 | [phase2] WhatsApp inbox complete — bot takeover, opt-in UI, WA-style bubbles | 1 | 3 files |
 | 8a530f9 | 2026-04-20 | [phase2] WhatsApp image analysis + voice transcription + inbox auto-refresh | 1 | 5 files |
 | d69b33c | 2026-04-20 | [infra] non-destructive Monday sync — UPSERT by monday_id, permanent data protection | 1 | 6 files |
