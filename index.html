@@ -1108,8 +1108,9 @@
           <div class="table-wrap">
             <table><thead><tr>
               <th>Property</th><th>Apt</th><th>Tenant</th><th>Rent $</th>
+              <th>💼 Commission</th>
               <th>Payment Due</th><th>Payment Status</th>
-              <th>Lease Ends</th><th>Renewal</th>
+              <th>Lease Ends</th><th>Renewal</th><th></th>
             </tr></thead>
             <tbody id="rent-full-tbody"></tbody></table>
           </div>
@@ -1376,6 +1377,18 @@
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">End Date</label><input id="tl-end" type="date" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Monthly Rent ($) *</label><input id="tl-rent" type="number" min="0" step="0.01" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Deposit ($)</label><input id="tl-deposit" type="number" min="0" step="0.01" value="0" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Payment Day (1-31)</label><input id="tl-payment-day" type="number" min="1" max="31" value="1" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div style="grid-column:1/-1">
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:6px">💼 Office Commission</label>
+                <div style="display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:center">
+                  <select id="tl-comm-type" onchange="updateCommPreview()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
+                    <option value="percent">% Percent</option>
+                    <option value="fixed">$ Fixed</option>
+                  </select>
+                  <input id="tl-comm-value" type="number" min="0" step="0.01" placeholder="e.g. 10 or 200" onchange="updateCommPreview()" oninput="updateCommPreview()" style="padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                </div>
+                <div id="tl-comm-preview" style="margin-top:6px;font-size:12px;color:var(--text-muted);height:18px"></div>
+              </div>
               <div style="grid-column:1/-1"><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Notes</label><input id="tl-notes" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
             </div>
             <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
@@ -2257,7 +2270,20 @@ function rentRow(r) {
       else renewHtml='<span class="pill pill-active">'+days+' days</span>';
     }
   }
-  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><button onclick="collectRent(${r.lease_id},${r.rent_amount})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-right:4px">✓ Collected</button><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r)})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit lease">✏️</button></td></tr>`;
+  // Commission
+  const commType = r.commission_type || 'percent';
+  const commVal  = parseFloat(r.commission_value) || 0;
+  const rent     = parseFloat(r.rent_amount) || 0;
+  let commHtml = '—';
+  if (commVal) {
+    if (commType === 'fixed') {
+      commHtml = `<span style="color:#7c3aed;font-weight:600">$${commVal}</span>`;
+    } else {
+      const amt = Math.round(rent * commVal / 100);
+      commHtml = `<span style="color:#7c3aed;font-weight:600">${commVal}% = $${amt}</span>`;
+    }
+  }
+  return `<tr><td>${r.property_name}</td><td class="td-mono">${r.apt_number}</td><td>${r.tenant_name}</td><td class="td-mono">$${r.rent_amount}</td><td style="font-size:12px">${commHtml}</td><td class="td-mono">${payDue}</td><td><span class="pill ${payPill}">${payLabel}</span></td><td class="td-mono">${leaseEnd}</td><td>${renewHtml}</td><td><button onclick="collectRent(${r.lease_id},${r.rent_amount})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:4px 10px;font-size:11px;cursor:pointer;margin-right:4px">✓ Collected</button><button onclick="openTenantLeaseModal('edit',${JSON.stringify(r).replace(/'/g,"&#39;")})" style="background:none;border:none;cursor:pointer;font-size:15px;padding:2px 6px" title="Edit lease">✏️</button></td></tr>`;
 }
 
 // ── Task card builder (now draggable + clickable) ──
@@ -3612,6 +3638,10 @@ async function openTenantLeaseModal(mode, rowData) {
     document.getElementById('tl-deposit').value = '0';
     document.getElementById('tl-start').value = fmtDate(r.start_date);
     document.getElementById('tl-end').value = fmtDate(r.end_date);
+    document.getElementById('tl-payment-day').value = r.payment_day || 1;
+    document.getElementById('tl-comm-type').value = r.commission_type || 'percent';
+    document.getElementById('tl-comm-value').value = r.commission_value || '';
+    updateCommPreview();
 
     // Find the property for this row
     const matchProp = props.find(p => p.name === r.property_name);
@@ -3625,6 +3655,21 @@ async function openTenantLeaseModal(mode, rowData) {
         if (matchApt) aptSel.value = matchApt.id;
       }, 50);
     }
+  }
+}
+
+function updateCommPreview() {
+  const type = document.getElementById('tl-comm-type').value;
+  const val  = parseFloat(document.getElementById('tl-comm-value').value) || 0;
+  const rent = parseFloat(document.getElementById('tl-rent').value) || 0;
+  const el   = document.getElementById('tl-comm-preview');
+  if (!el) return;
+  if (!val) { el.textContent = ''; return; }
+  if (type === 'percent') {
+    const amt = Math.round(rent * val / 100 * 100) / 100;
+    el.textContent = `→ ${val}% of $${rent} = $${amt}/month office commission`;
+  } else {
+    el.textContent = `→ Fixed $${val}/month office commission`;
   }
 }
 
@@ -3677,6 +3722,9 @@ async function saveTenantLease() {
         deposit: parseFloat(document.getElementById('tl-deposit').value) || 0,
         status: 'active',
         notes: document.getElementById('tl-notes').value,
+        commission_type: document.getElementById('tl-comm-type').value,
+        commission_value: parseFloat(document.getElementById('tl-comm-value').value) || 0,
+        payment_day: parseInt(document.getElementById('tl-payment-day').value) || 1,
       })
     });
   } else {
@@ -3698,6 +3746,9 @@ async function saveTenantLease() {
           deposit: parseFloat(document.getElementById('tl-deposit').value) || 0,
           status: 'active',
           notes: document.getElementById('tl-notes').value,
+          commission_type: document.getElementById('tl-comm-type').value,
+          commission_value: parseFloat(document.getElementById('tl-comm-value').value) || 0,
+          payment_day: parseInt(document.getElementById('tl-payment-day').value) || 1,
         })
       });
     }
