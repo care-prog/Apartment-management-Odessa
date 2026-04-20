@@ -327,3 +327,15 @@ Server runs at: http://localhost:5050
 - Some Monday.com items have no status/rent (Pushkinskaya individual flats, Kladovka, etc.) — need clarification
 
 ---
+
+## 2026-04-20 — Fix: PostgreSQL sync CASE WHEN NULL type error
+
+**Focus:** Fix `sync_to_db` crash on PostgreSQL production
+
+### Done
+- `src/monday_sync.py` — Replaced `CASE WHEN ? IS NOT NULL THEN ? ELSE col END` pattern with dynamic Python-side UPDATE builder
+  - PostgreSQL can't infer the type of a `NULL` parameter in `CASE WHEN %s IS NOT NULL`
+  - Fix: build SET clause string dynamically in Python, only adding date columns when values are non-None
+- Triggered manual Render deploy (bf80ef7) — confirmed sync now works in production
+- Verified bot-pause endpoint live at `POST /api/whatsapp/conversations/{phone}/bot-pause`
+

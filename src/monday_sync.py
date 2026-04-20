@@ -263,16 +263,20 @@ def sync_to_db(items=None):
                 # commission_type, commission_value, payment_day, deposit, notes
                 date_start  = _safe_date(p['date_start'])
                 date_finish = _safe_date(p['date_finish'])
+                # Build dynamic UPDATE to avoid PostgreSQL type-inference issues
+                # with CASE WHEN NULL IS NOT NULL (psycopg can't infer type of NULL)
+                sets = ['rent_amount = ?']
+                vals = [p['rent']]
+                if date_start:
+                    sets.append('start_date = ?')
+                    vals.append(date_start)
+                if date_finish:
+                    sets.append('end_date = ?')
+                    vals.append(date_finish)
+                vals.append(active_lease['id'])
                 execute_db(
-                    """UPDATE leases
-                       SET rent_amount = ?,
-                           start_date  = CASE WHEN ? IS NOT NULL THEN ? ELSE start_date END,
-                           end_date    = CASE WHEN ? IS NOT NULL THEN ? ELSE end_date   END
-                       WHERE id = ?""",
-                    (p['rent'],
-                     date_start,  date_start,
-                     date_finish, date_finish,
-                     active_lease['id']))
+                    f"UPDATE leases SET {', '.join(sets)} WHERE id = ?",
+                    tuple(vals))
             else:
                 # No existing lease — create placeholder tenant + lease
                 tenant_name = f"Tenant {p['name']}"
