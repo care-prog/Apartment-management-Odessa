@@ -2215,7 +2215,8 @@ function showPage(page, fromHash) {
   if (DATA) renderPage(page, DATA);
   if (page === 'cash') { loadWallets(); loadCashSummary(); }
   if (page === 'log') loadActivityLog();
-  if (page === 'whatsapp') loadWaInbox();
+  if (page === 'whatsapp') { loadWaInbox(); startWaAutoRefresh(); }
+  else { stopWaAutoRefresh(); }
   if (page === 'owners') loadOwners();
   if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); loadWaLog(); }
   if (page === 'professionals') loadProfessionals();
@@ -2791,7 +2792,8 @@ async function loadTeamUsers() {
 // ══════════ WHATSAPP INBOX ══════════
 let _waConvos = [];
 let _waActivePhone = null;
-let _waPolling = null;
+let _waPolling = null;      // thread polling (active convo)
+let _waListPolling = null;  // conversation list auto-refresh
 
 async function loadWaInbox() {
   const list = document.getElementById('wa-convo-list');
@@ -2806,8 +2808,23 @@ async function loadWaInbox() {
       badge.style.display = '';
     }
   } catch(e) {
-    list.innerHTML = `<div style="padding:20px;color:var(--text-muted);font-size:13px">Failed to load conversations</div>`;
+    if (list && !_waConvos.length)
+      list.innerHTML = `<div style="padding:20px;color:var(--text-muted);font-size:13px">Failed to load conversations</div>`;
   }
+}
+
+function startWaAutoRefresh() {
+  // Auto-refresh conversation list every 8 s; also refresh active thread
+  if (_waListPolling) clearInterval(_waListPolling);
+  _waListPolling = setInterval(async () => {
+    await loadWaInbox();
+    if (_waActivePhone) loadWaThread(_waActivePhone);
+  }, 8000);
+}
+
+function stopWaAutoRefresh() {
+  if (_waListPolling) { clearInterval(_waListPolling); _waListPolling = null; }
+  if (_waPolling)     { clearInterval(_waPolling);     _waPolling = null; }
 }
 
 function renderWaConvoList(convos) {
@@ -2867,9 +2884,7 @@ async function openWaConvo(phone, name, role) {
   await loadWaThread(phone);
   // Update context panel
   renderWaContext(phone, name, role);
-  // Start polling
-  if (_waPolling) clearInterval(_waPolling);
-  _waPolling = setInterval(() => { if (_waActivePhone === phone) loadWaThread(phone); }, 8000);
+  // Auto-refresh is handled by startWaAutoRefresh() (8s) — no separate interval needed
 }
 
 async function loadWaThread(phone) {

@@ -258,6 +258,126 @@ def _get_wa_phone_id():
     return get_setting('whatsapp_phone_id') or WA_PHONE_ID
 
 
+# ── Media helpers ─────────────────────────────────────────────────────────────
+
+def wa_download_media(media_id):
+    """Download a WhatsApp media file. Returns (bytes, mime_type) or (None, None)."""
+    token = _get_wa_token()
+    if not token:
+        return None, None
+    try:
+        # Step 1: get the download URL
+        info_resp = _requests.get(
+            f'{WA_API_URL}/{media_id}',
+            headers={'Authorization': f'Bearer {token}'}, timeout=15)
+        info = info_resp.json()
+        url = info.get('url')
+        mime = info.get('mime_type', 'application/octet-stream')
+        if not url:
+            return None, None
+        # Step 2: download the file
+        file_resp = _requests.get(
+            url,
+            headers={'Authorization': f'Bearer {token}'}, timeout=30)
+        return file_resp.content, mime
+    except Exception as e:
+        print(f'[wa_download_media] error: {e}')
+        return None, None
+
+
+def analyze_image_with_claude(image_bytes, mime_type='image/jpeg', prompt=None):
+    """Send image bytes to Claude Vision and return a description string."""
+    import anthropic, base64
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        return 'Image received but Claude API key not configured.'
+    client = anthropic.Anthropic(api_key=api_key)
+    img_b64 = base64.standard_b64encode(image_bytes).decode()
+    # Clamp mime_type to what Claude accepts
+    if mime_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
+        mime_type = 'image/jpeg'
+    text_prompt = (prompt or
+        'Ты — помощник по управлению квартирами в Одессе. '
+        'Опиши что видишь на фото. Если это квартира/комната — опиши состояние, '
+        'любые повреждения или проблемы. Если это документ — кратко изложи его содержание. '
+        'Будь конкретным и кратким (3-5 предложений).')
+    resp = client.messages.create(
+        model='claude-haiku-4-5',
+        max_tokens=512,
+        messages=[{
+            'role': 'user',
+            'content': [
+                {'type': 'image', 'source': {'type': 'base64',
+                                              'media_type': mime_type,
+                                              'data': img_b64}},
+                {'type': 'text', 'text': text_prompt},
+            ]
+        }]
+    )
+    return resp.content[0].text.strip() if resp.content else 'Не удалось проанализировать изображение.'
+
+
+def transcribe_audio_with_whisper(audio_bytes, mime_type='audio/ogg'):
+    """Transcribe audio bytes using OpenAI Whisper. Returns text or None."""
+    openai_key = os.environ.get('OPENAI_API_KEY', '')
+    if not openai_key:
+        return None
+    try:
+        import openai, io
+        client = openai.OpenAI(api_key=openai_key)
+        # Determine file extension from mime_type
+        ext_map = {
+            'audio/ogg': 'ogg', 'audio/mpeg': 'mp3', 'audio/mp4': 'mp4',
+            'audio/wav': 'wav', 'audio/webm': 'webm', 'audio/aac': 'aac',
+        }
+        ext = ext_map.get(mime_type, 'ogg')
+        audio_file = io.BytesIO(audio_bytes)
+        audio_file.name = f'audio.{ext}'
+        transcript = client.audio.transcriptions.create(
+            model='whisper-1',
+            file=audio_file,
+            language=None,  # auto-detect language
+        )
+        return transcript.text.strip()
+    except Exception as e:
+        print(f'[whisper] error: {e}')
+        return None
+
+
+UPLOADS_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))),
+                            'database', 'uploads')
+
+
+def save_media_to_apartment(image_bytes, mime_type, apt_number, caption=''):
+    """Save image file locally and record in documents table. Returns saved path or None."""
+    try:
+        import time as _time2
+        from src.models import query_db as _qdb, insert_db as _idb
+        os.makedirs(UPLOADS_DIR, exist_ok=True)
+        # Determine extension
+        ext = 'jpg'
+        if 'png' in mime_type: ext = 'png'
+        elif 'webp' in mime_type: ext = 'webp'
+        elif 'gif' in mime_type: ext = 'gif'
+        filename = f'wa_{int(_time2.time())}_{apt_number}.{ext}'
+        filepath = os.path.join(UPLOADS_DIR, filename)
+        with open(filepath, 'wb') as f:
+            f.write(image_bytes)
+        # Find apartment
+        apt = _qdb("SELECT * FROM apartments WHERE number = ?", (str(apt_number),), one=True)
+        apt_id = apt['id'] if apt else None
+        # Record in documents table
+        _idb(
+            "INSERT INTO documents (apartment_id, filename, category, notes, created_at)"
+            " VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)",
+            (apt_id, filename, 'photo', caption or f'Фото из WhatsApp — кв. {apt_number}')
+        )
+        return filename
+    except Exception as e:
+        print(f'[save_media] error: {e}')
+        return None
+
+
 def wa_send(to_phone, text):
     """Send a WhatsApp text message via Meta Cloud API."""
     token   = _get_wa_token()
@@ -308,30 +428,114 @@ def wa_webhook_receive():
         msg_type  = msg.get('type', '')
         from_phone = msg.get('from', '')  # international format, no +
 
-        # Only handle text messages for now
-        if msg_type != 'text':
-            wa_send(from_phone, '⚠️ Sorry, I can only process text messages for now.')
-            return jsonify({'status': 'unsupported_type'}), 200
-
-        message_body = msg['text']['body'].strip()
-        if not message_body:
-            return jsonify({'status': 'empty'}), 200
-
-        # ── Identify sender & route ───────────────────────────────────────
+        # ── Media handling (image / audio / video) ───────────────────────
         from src.routes.chat import call_claude, gather_context, execute_tool, TOOLS, LANG_NAMES
+        from src.models import insert_db as _ins
         import json as _json
         import time as _time
 
         role, user = identify_sender(from_phone)
-
-        # Log every incoming message
-        from src.models import insert_db as _ins
         sender_name = (user or {}).get('name') or (user or {}).get('display_name') or from_phone
+
+        if msg_type == 'image':
+            media_id  = msg.get('image', {}).get('id', '')
+            caption   = msg.get('image', {}).get('caption', '') or ''
+            mime_type = msg.get('image', {}).get('mime_type', 'image/jpeg')
+            # Log as incoming image
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
+                     ('in', from_phone, sender_name, role, f'[IMAGE] {caption}'[:1000]))
+            except Exception:
+                pass
+            # Download + analyze
+            wa_send(from_phone, '📸 Analysing your photo…')
+            image_bytes, actual_mime = wa_download_media(media_id)
+            if not image_bytes:
+                wa_send(from_phone, '❌ Could not download the image. Please try again.')
+                return jsonify({'status': 'media_download_failed'}), 200
+            description = analyze_image_with_claude(image_bytes, actual_mime or mime_type)
+            # Store last image in session for follow-up save commands
+            norm_phone_img = normalize_phone(from_phone) or from_phone
+            if norm_phone_img not in WA_SESSIONS:
+                WA_SESSIONS[norm_phone_img] = {'history': [], 'last_activity': _time.time()}
+            WA_SESSIONS[norm_phone_img]['last_image'] = {
+                'bytes': image_bytes, 'mime': actual_mime or mime_type,
+                'caption': caption, 'media_id': media_id,
+            }
+            WA_SESSIONS[norm_phone_img]['last_activity'] = _time.time()
+            reply = f'📸 *Фото:*\n{description}\n\n_Чтобы сохранить — напиши: "сохрани к квартире [номер]"_'
+            wa_send(from_phone, reply)
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?, ?)',
+                     ('out', 'bot', from_phone, 'bot', 'bot', reply[:1000]))
+            except Exception:
+                pass
+            return jsonify({'status': 'image_analyzed'}), 200
+
+        elif msg_type in ('audio', 'voice'):
+            media_id  = msg.get(msg_type, {}).get('id', '')
+            mime_type = msg.get(msg_type, {}).get('mime_type', 'audio/ogg')
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
+                     ('in', from_phone, sender_name, role, '[VOICE MESSAGE]'))
+            except Exception:
+                pass
+            wa_send(from_phone, '🎙️ Transcribing…')
+            audio_bytes, actual_mime = wa_download_media(media_id)
+            if not audio_bytes:
+                wa_send(from_phone, '❌ Could not download audio. Please send as text.')
+                return jsonify({'status': 'media_download_failed'}), 200
+            text = transcribe_audio_with_whisper(audio_bytes, actual_mime or mime_type)
+            if not text:
+                wa_send(from_phone, '⚠️ Voice transcription not available. Please send your message as text.')
+                return jsonify({'status': 'no_whisper_key'}), 200
+            # Re-enter webhook logic with transcribed text
+            message_body = text
+            msg_type = 'text'  # Fall through to text handling below
+            log_prefix = f'[VOICE→TEXT] {text}'
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
+                     ('in', from_phone, sender_name, role, log_prefix[:1000]))
+            except Exception:
+                pass
+
+        elif msg_type != 'text':
+            # Unsupported type (video, sticker, document, etc.)
+            wa_send(from_phone, '⚠️ I can process text, images, and voice messages. Please send one of those.')
+            return jsonify({'status': 'unsupported_type'}), 200
+
+        if msg_type == 'text':
+            message_body = msg['text']['body'].strip()
+        if not message_body:
+            return jsonify({'status': 'empty'}), 200
+
+        # Log every incoming text message
         try:
             _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
                  ('in', from_phone, sender_name, role, message_body[:1000]))
         except Exception:
             pass
+
+        # ── Check for "save to apartment X" command ───────────────────────
+        norm_phone_check = normalize_phone(from_phone) or from_phone
+        save_match = re.search(
+            r'(?:сохрани|save|שמור).*?(?:кв(?:артир[уы]?)?\.?|дирк[уы]?|apartment|apt|#|דירה)\s*(\d+(?:/\d+)?)',
+            message_body, re.IGNORECASE)
+        if save_match:
+            apt_no = save_match.group(1)
+            last_img = (WA_SESSIONS.get(norm_phone_check) or {}).get('last_image')
+            if last_img:
+                saved = save_media_to_apartment(
+                    last_img['bytes'], last_img['mime'], apt_no,
+                    caption=last_img.get('caption') or f'Из WhatsApp от {sender_name}')
+                if saved:
+                    wa_send(from_phone, f'✅ Фото сохранено к квартире {apt_no} ({saved})')
+                else:
+                    wa_send(from_phone, f'❌ Не удалось сохранить фото к квартире {apt_no}')
+                return jsonify({'status': 'image_saved'}), 200
+            else:
+                wa_send(from_phone, '⚠️ Нет недавнего фото для сохранения. Сначала отправь фото.')
+                return jsonify({'status': 'no_recent_image'}), 200
 
         # ── Opt-out / Opt-in commands ─────────────────────────────────────────
         msg_upper = message_body.strip().upper()

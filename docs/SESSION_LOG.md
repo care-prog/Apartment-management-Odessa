@@ -1,3 +1,27 @@
+## 2026-04-20 — WhatsApp image analysis, voice transcription, auto-refresh
+
+**Focus:** Handle media in WhatsApp; live inbox without pressing refresh
+
+### Done
+- `src/routes/whatsapp.py` — Image analysis: download WhatsApp photo → Claude Vision → describe in chat
+  - Reply with description + hint: "Чтобы сохранить — напиши: сохрани к квартире [номер]"
+  - Follow-up "save to apartment X" → saves file to `database/uploads/` + records in documents table
+  - Session stores last image bytes for follow-up save command
+- `src/routes/whatsapp.py` — Voice message transcription via OpenAI Whisper (if OPENAI_API_KEY set)
+  - Downloads audio → Whisper → transcribed text treated as message → Claude answers
+  - Graceful fallback if key not set
+- `src/routes/whatsapp.py` — Helper functions: `wa_download_media`, `analyze_image_with_claude`,
+  `transcribe_audio_with_whisper`, `save_media_to_apartment`
+- `index.html` — WhatsApp inbox auto-refresh every 8s (conversation list + active thread)
+  - `startWaAutoRefresh()` / `stopWaAutoRefresh()` — start/stop on page enter/leave
+  - No more manual refresh button needed
+- `requirements.txt` — Added `openai>=1.0` for Whisper API
+
+### Context for next session
+- To enable voice transcription: set `OPENAI_API_KEY` env var on Render
+- Image save uses `documents` table with `apartment_id` — will appear in apartment docs section
+- WhatsApp templates: still pending
+
 ## 2026-04-20 — Permanent data protection + non-destructive Monday sync
 
 **Focus:** Prevent data loss — sync must never delete professionals, logs, commissions, payments
