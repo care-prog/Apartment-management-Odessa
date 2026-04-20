@@ -371,8 +371,18 @@ def wa_webhook_receive():
         display_name = user.get('name') or user.get('display_name') or 'שם לא ידוע'
 
         if role == 'team':
-            access_note = (f"This user is a TEAM MEMBER. Name: {display_name}, role: {user.get('role','')}. "
-                           "Full access — answer any question, take any action.")
+            user_role = user.get('role', '')
+            user_lang = user.get('language', 'he')
+            if user_lang == 'ru':
+                access_note = (
+                    f"This user is a TEAM MEMBER. Name: {display_name}, role: {user_role}. "
+                    "Full access — answer any question, take any action. "
+                    "IMPORTANT TONE: Always address her respectfully and warmly. She is a key manager. "
+                    "Be polite, professional, and eager to help. Show that you take her requests seriously."
+                )
+            else:
+                access_note = (f"This user is a TEAM MEMBER. Name: {display_name}, role: {user_role}. "
+                               "Full access — answer any question, take any action.")
         elif role == 'property_owner':
             prop_names = ', '.join(p['name'] for p in (user.get('properties') or []))
             access_note = (
@@ -389,12 +399,23 @@ def wa_webhook_receive():
             access_note = (f"This user is a TENANT. Name: {display_name}, renting {prop} #{apt_no}. "
                            "Only share info about THEIR apartment. NO other tenant info, NO financials.")
 
-        greeting_instruction = (
-            f"IMPORTANT: This is the FIRST message from this person in a new conversation. "
-            f"Start your reply with a warm greeting: 'שלום {display_name}! 👋' "
-            f"then immediately answer their question."
-            if is_new_session else ""
-        )
+        user_lang_code = user.get('language', 'he') if user else 'he'
+        if is_new_session:
+            if user_lang_code == 'ru':
+                greeting_instruction = (
+                    f"IMPORTANT: This is the FIRST message in a new conversation. "
+                    f"Start with a warm, respectful Russian greeting specifically for {display_name}. "
+                    f"Say something like: 'Катя, понимаю, что ты тут главная 😊 — чем могу помочь? "
+                    f"Сделаю всё возможное!' — then immediately answer their question in Russian."
+                )
+            else:
+                greeting_instruction = (
+                    f"IMPORTANT: This is the FIRST message from this person in a new conversation. "
+                    f"Start your reply with a warm greeting: 'שלום {display_name}! 👋' "
+                    f"then immediately answer their question."
+                )
+        else:
+            greeting_instruction = ""
 
         system_prompt = f"""You are the WhatsApp assistant for "Apartment Management Odessa".
 Be CONCISE — WhatsApp messages must be short. No markdown tables. Light emoji use only.
