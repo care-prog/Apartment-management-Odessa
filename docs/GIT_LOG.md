@@ -8,6 +8,7 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
+| pending | 2026-04-20 | [infra] non-destructive Monday sync — UPSERT by monday_id, permanent data protection | 1 | 4 files |
 | b4eac1b | 2026-04-19 | [phase1] feat: owner financial reports — KPI row, per-owner cards, record payment | 1 | 5 files |
 | pending | 2026-04-19 | [phase1] feat: WhatsApp token UI + Render keepalive + health endpoint | 1 | 5 files |
 | pending | 2026-04-19 | [phase1] feat: add New Owner UI — modal form + create endpoint fix | 1 | 2 files |

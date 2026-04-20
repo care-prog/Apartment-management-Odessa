@@ -201,6 +201,11 @@ def safe_migrate():
             sender_name TEXT, sender_role TEXT,
             body TEXT, status TEXT DEFAULT 'ok',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS team_members (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, phone TEXT UNIQUE,
+            role TEXT DEFAULT 'manager', language TEXT DEFAULT 'ru',
+            access_level TEXT DEFAULT 'full',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
 
 
 def init_db():

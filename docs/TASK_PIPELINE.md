@@ -50,3 +50,4 @@
 | Project scaffolding | 0 | 2026-04-01 | ProjectOS v3.3.0 template |
 | GitHub repo setup | 0 | 2026-04-01 | SSH keys, remote configured, pushed |
 | Requirements gathering | 0 | 2026-04-01 | Transcripts analyzed, task matrix reviewed |
+| Permanent data protection — non-destructive sync | 1 | 2026-04-20 | sync_to_db UPSERT by monday_id; never deletes professionals/logs/commissions/payments |

@@ -1,3 +1,23 @@
+## 2026-04-20 — Permanent data protection + non-destructive Monday sync
+
+**Focus:** Prevent data loss — sync must never delete professionals, logs, commissions, payments
+
+### Done
+- `src/monday_sync.py` — Completely rewrote `sync_to_db()`: now UPSERT by monday_id (stored in apartment notes JSON), never deletes anything
+  - Apartments: matched by `monday_id` in notes → UPDATE status/rent; INSERT if new
+  - Leases: UPDATE rent_amount + dates only; commission settings (type/value/payment_day) preserved forever
+  - Tenants: placeholder only created when no active lease exists; never deleted
+  - NEVER touched: professionals, professional_payments, whatsapp_log, activity_log, notification_prefs, app_users, team_members, payments
+- `src/models.py` — Added `team_members` table to SQLite safe_migrate (was only in PG path)
+- `index.html` — Sync button now shows breakdown: "✓ N apts (X new, Y updated)"
+- `index.html` — Fixed professionals sync alert to show `imported`/`skipped` (was wrongly showing `updated`)
+
+### Context for next session
+- Professionals sync from Monday is already built at `POST /api/professionals/sync-monday` — safe, UPSERT by monday_id, preserves manual edits
+- Main sync (`POST /api/sync`) is now fully safe to run without data loss
+- WhatsApp image analysis + voice message transcription: David requested — not yet built
+- WhatsApp templates: still pending (after notifications system, per David)
+
 ## 2026-04-19 23:11 — WhatsApp Inbox built
 - Added GET /api/whatsapp/conversations (conversation list grouped by phone)
 - Added GET /api/whatsapp/conversations/<phone> (thread)

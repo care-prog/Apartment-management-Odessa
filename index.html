@@ -2674,8 +2674,9 @@ async function syncMonday() {
   try {
     const res = await fetch('/api/sync', {method:'POST'});
     const d = await res.json();
-    btns.forEach(b => b.textContent = `Synced ${d.synced} items`);
-    setTimeout(() => { btns.forEach(b => { b.textContent = 'Sync Monday.com'; b.disabled = false; }); loadDashboard(); }, 1500);
+    const created = d.created ?? 0, upd = d.updated ?? 0;
+    btns.forEach(b => b.textContent = `✓ ${d.synced} apts (${created} new, ${upd} updated)`);
+    setTimeout(() => { btns.forEach(b => { b.textContent = 'Sync Monday.com'; b.disabled = false; }); loadDashboard(); }, 2500);
   } catch(e) { btns.forEach(b => { b.textContent = 'Sync failed'; b.disabled = false; }); }
 }
 
@@ -4864,7 +4865,7 @@ async function syncProsMonday() {
     btn.textContent='&#8635; Sync Monday';
     btn.disabled=false;
     loadProfessionals();
-    alert(`Synced: ${d.imported} imported, ${d.updated} updated`);
+    alert(d.message || `Synced: ${d.imported} imported, ${d.skipped} already in system`);
   } catch(e) {
     btn.textContent='&#8635; Sync Monday';
     btn.disabled=false;

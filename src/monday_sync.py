@@ -112,43 +112,78 @@ def parse_item(item):
         'subitems': item.get('subitems', []),
     }
 
+def _safe_date(v):
+    """Parse a date string to YYYY-MM-DD, or return None."""
+    if not v:
+        return None
+    m = re.match(r'(\d{4}-\d{2}-\d{2})', str(v))
+    return m.group(1) if m else None
+
+
+def _find_apt_by_monday_id(mid, query_db):
+    """Find apartment whose notes JSON contains the given monday_id."""
+    rows = query_db("SELECT * FROM apartments WHERE notes LIKE ?",
+                    (f'%"monday_id": "{mid}"%',))
+    if not rows:
+        # Fallback: broader search (handles different JSON spacing)
+        rows = query_db("SELECT * FROM apartments WHERE notes LIKE ?",
+                        (f'%{mid}%',))
+    return rows[0] if rows else None
+
+
 def sync_to_db(items=None):
-    """Sync Monday items to DB. Pass pre-fetched items to skip API call."""
+    """
+    Non-destructive UPSERT sync from Monday to DB.
+
+    NEVER DELETES:
+      - professionals / professional_payments
+      - whatsapp_log
+      - activity_log
+      - notification_prefs
+      - app_users / team_members
+      - payments (rent payment records)
+      - Any lease commission settings (commission_type, commission_value, payment_day)
+
+    Strategy:
+      - Apartments: matched by monday_id in notes JSON → UPDATE, or INSERT if new
+      - Leases:     find active lease for apt → UPDATE rent + dates only (preserve commission)
+                    No active lease → create placeholder tenant + lease
+      - Tenants:    never deleted; placeholder "Tenant X" only created if no lease exists
+
+    Pass pre-fetched `items` list to skip Monday API call.
+    """
     from src.models import query_db, insert_db, execute_db, init_db
+
     if items is None:
         items = fetch_board_items()
     if not items:
         return {'synced': 0, 'error': 'No items fetched'}
 
-    # Delete in FK-safe order (children before parents)
-    execute_db("DELETE FROM payments")
-    execute_db("DELETE FROM leases")
-    execute_db("DELETE FROM tenants")
-    execute_db("DELETE FROM meter_readings")
-    execute_db("DELETE FROM utility_bills")
-    execute_db("DELETE FROM maintenance_orders")
-    execute_db("DELETE FROM warranties")
-    execute_db("DELETE FROM documents WHERE apartment_id IS NOT NULL")
-    execute_db("DELETE FROM apartments")
-
     # Ensure we have a default property for Tower Chekalov
-    existing = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
+    existing = query_db(
+        "SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
     if not existing:
         init_db()
-        existing = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
+        existing = query_db(
+            "SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
     tower_id = existing['id'] if existing else 1
 
     def find_property(pattern):
         return query_db(f"SELECT id FROM properties WHERE name LIKE '%{pattern}%'", one=True)
 
     synced = []
+    created = 0
+    updated = 0
+
     for item in items:
         p = parse_item(item)
+        mid = str(p['monday_id'])
 
-        # Determine property_id based on name
+        # ── Determine property ──────────────────────────────────────────────
         name_lower = p['name'].lower()
         if 'chkalov' in name_lower or 'chekalo' in name_lower:
-            prop = query_db("SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
+            prop = query_db(
+                "SELECT id FROM properties WHERE name LIKE '%Chekalov%' OR name LIKE '%Chkalov%'", one=True)
         elif 'pushkin' in name_lower:
             prop = find_property('Pushkin')
         elif 'kanatn' in name_lower:
@@ -162,13 +197,15 @@ def sync_to_db(items=None):
         elif 'fontank' in name_lower:
             prop = find_property('Fontank')
             if not prop:
-                insert_db("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
+                insert_db(
+                    "INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
                     ("Fontanka Townhouse", "Fontanka, Odessa", "residential", "active", None))
                 prop = find_property('Fontank')
         elif 'platinum' in name_lower:
             prop = find_property('Platinum')
             if not prop:
-                insert_db("INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
+                insert_db(
+                    "INSERT INTO properties (name, address, type, status, owner_id) VALUES (?, ?, ?, ?, ?)",
                     ("Parking Platinum", "Odessa", "parking", "active", None))
                 prop = find_property('Platinum')
         else:
@@ -176,7 +213,7 @@ def sync_to_db(items=None):
 
         property_id = prop['id'] if prop else tower_id
 
-        # Extract apartment number from name
+        # ── Extract apartment number ────────────────────────────────────────
         num_match = re.search(r'(\d+(?:/\d+)?)\s*(?:fl|flat|parking|kladovka)', name_lower)
         if num_match:
             apt_number = num_match.group(1)
@@ -184,35 +221,82 @@ def sync_to_db(items=None):
             num_match = re.search(r'(?:fl|flat|parking)\s+(\d+)', name_lower)
             apt_number = num_match.group(1) if num_match else p['name'][:20]
 
-        # Status mapping
+        # ── Status mapping ──────────────────────────────────────────────────
         db_status = 'vacant'
-        if p['status'].lower() == 'rent':
+        status_lower = p['status'].lower()
+        if status_lower == 'rent':
             db_status = 'occupied'
-        elif p['status'].lower() == 'free':
+        elif status_lower == 'free':
             db_status = 'vacant'
-        elif p['status'].lower() == 'stuck':
+        elif status_lower == 'stuck':
             db_status = 'maintenance'
 
-        # Insert apartment
-        apt_id = insert_db(
-            "INSERT INTO apartments (property_id, number, status, monthly_rent, currency, notes) VALUES (?, ?, ?, ?, ?, ?)",
-            (property_id, apt_number, db_status, p['rent'], 'USD',
-             json.dumps({'monday_id': p['monday_id'], 'group': p['group'], 'meters': p['meters'],
-                         'code_box': p['code_box'], 'wifi_paid': p['wifi_paid'],
-                         'sold': p['sold'], 'timeline': p['timeline']}, ensure_ascii=False)))
+        notes_json = json.dumps({
+            'monday_id': mid, 'group': p['group'], 'meters': p['meters'],
+            'code_box': p['code_box'], 'wifi_paid': p['wifi_paid'],
+            'sold': p['sold'], 'timeline': p['timeline'],
+        }, ensure_ascii=False)
 
-        # If occupied, create a placeholder tenant + lease
+        # ── UPSERT apartment (never delete) ─────────────────────────────────
+        existing_apt = _find_apt_by_monday_id(mid, query_db)
+        if existing_apt:
+            apt_id = existing_apt['id']
+            execute_db(
+                "UPDATE apartments SET status=?, monthly_rent=?, notes=? WHERE id=?",
+                (db_status, p['rent'], notes_json, apt_id))
+            updated += 1
+        else:
+            apt_id = insert_db(
+                "INSERT INTO apartments (property_id, number, status, monthly_rent, currency, notes)"
+                " VALUES (?, ?, ?, ?, ?, ?)",
+                (property_id, apt_number, db_status, p['rent'], 'USD', notes_json))
+            created += 1
+
+        # ── UPSERT lease (only update rent + dates; preserve commission) ────
         if db_status == 'occupied' and p['rent'] > 0:
-            tenant_name = f"Tenant {p['name']}"
-            tenant_id = insert_db("INSERT INTO tenants (name, language) VALUES (?, ?)", (tenant_name, 'ru'))
-            def _safe_date(v, default=None):
-                if not v:
-                    return default
-                m = re.match(r'(\d{4})-(\d{2})-(\d{2})', str(v))
-                return m.group(0) if m else default
-            insert_db(
-                "INSERT INTO leases (apartment_id, tenant_id, start_date, end_date, rent_amount, status) VALUES (?, ?, ?, ?, ?, ?)",
-                (apt_id, tenant_id, _safe_date(p['date_start'], '2025-01-01'), _safe_date(p['date_finish']), p['rent'], 'active'))
+            active_lease = query_db(
+                "SELECT * FROM leases WHERE apartment_id=? AND status='active'",
+                (apt_id,), one=True)
 
-        synced.append({'name': p['name'], 'status': db_status, 'rent': p['rent']})
-    return {'synced': len(synced), 'items': synced}
+            if active_lease:
+                # Update rent and dates from Monday, but NEVER touch
+                # commission_type, commission_value, payment_day, deposit, notes
+                date_start  = _safe_date(p['date_start'])
+                date_finish = _safe_date(p['date_finish'])
+                execute_db(
+                    """UPDATE leases
+                       SET rent_amount = ?,
+                           start_date  = CASE WHEN ? IS NOT NULL THEN ? ELSE start_date END,
+                           end_date    = CASE WHEN ? IS NOT NULL THEN ? ELSE end_date   END
+                       WHERE id = ?""",
+                    (p['rent'],
+                     date_start,  date_start,
+                     date_finish, date_finish,
+                     active_lease['id']))
+            else:
+                # No existing lease — create placeholder tenant + lease
+                tenant_name = f"Tenant {p['name']}"
+                existing_tenant = query_db(
+                    "SELECT id FROM tenants WHERE name=?", (tenant_name,), one=True)
+                if existing_tenant:
+                    tenant_id = existing_tenant['id']
+                else:
+                    tenant_id = insert_db(
+                        "INSERT INTO tenants (name, language) VALUES (?, ?)",
+                        (tenant_name, 'ru'))
+                insert_db(
+                    "INSERT INTO leases (apartment_id, tenant_id, start_date, end_date,"
+                    " rent_amount, status) VALUES (?, ?, ?, ?, ?, ?)",
+                    (apt_id, tenant_id,
+                     _safe_date(p['date_start']) or '2025-01-01',
+                     _safe_date(p['date_finish']),
+                     p['rent'], 'active'))
+
+        synced.append({'name': p['name'], 'status': db_status, 'rent': p['rent'], 'id': apt_id})
+
+    return {
+        'synced': len(synced),
+        'created': created,
+        'updated': updated,
+        'items': synced,
+    }
