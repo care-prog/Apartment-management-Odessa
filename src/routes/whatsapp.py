@@ -333,6 +333,19 @@ def wa_webhook_receive():
         except Exception:
             pass
 
+        # ── Opt-out / Opt-in commands ─────────────────────────────────────────
+        msg_upper = message_body.strip().upper()
+        if msg_upper in ('STOP', 'עצור', 'СТОП'):
+            from src.notifications import set_opt_out
+            set_opt_out(from_phone, opt_out=True)
+            wa_send(from_phone, '🔕 הסרת את עצמך מרשימת ההתראות.\nשלח START כדי לחזור.')
+            return jsonify({'status': 'opted_out'}), 200
+        if msg_upper in ('START', 'התחל', 'СТАРТ'):
+            from src.notifications import set_opt_out
+            set_opt_out(from_phone, opt_out=False)
+            wa_send(from_phone, '🔔 נרשמת מחדש לקבלת התראות!')
+            return jsonify({'status': 'opted_in'}), 200
+
         # Unknown number → reject immediately, no Claude call
         if role == 'unknown':
             rejection = ("אני לא מזהה אותך במערכת.\n"

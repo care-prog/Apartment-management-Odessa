@@ -16,6 +16,12 @@ def create_expense():
         (data['description'], data['amount'], data.get('category', 'general'),
          data.get('date'), data.get('receipt_url'), data.get('notes'),
          data.get('currency', 'USD')))
+    try:
+        from src.notifications import notify_expense_added
+        cur = '$' if data.get('currency','USD') == 'USD' else data.get('currency','')
+        notify_expense_added(data['description'], float(data['amount']), data.get('category','general'), cur)
+    except Exception:
+        pass
     return jsonify({'id': eid}), 201
 
 @bp.route('/api/expenses/<int:eid>', methods=['PUT'])
@@ -53,6 +59,12 @@ def create_owner_payment():
         'INSERT INTO owner_payments (owner_id, amount, payment_date, method, period, notes) VALUES (?, ?, ?, ?, ?, ?)',
         (data['owner_id'], data['amount'], data['payment_date'],
          data.get('method', 'cash'), data.get('period'), data.get('notes')))
+    try:
+        from src.notifications import notify_owner_payment
+        owner = query_db('SELECT name FROM owners WHERE id=?', (data['owner_id'],), one=True)
+        notify_owner_payment(owner['name'] if owner else '?', float(data['amount']), data.get('period'))
+    except Exception:
+        pass
     return jsonify({'id': pid}), 201
 
 # ── Time-series cash flow for charts ──

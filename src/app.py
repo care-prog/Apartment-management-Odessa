@@ -178,11 +178,21 @@ def _start_scheduler():
             except Exception as e:
                 print(f'[scheduler] hourly report error: {e}')
 
+        def _daily_notifications():
+            try:
+                from src.notifications import run_daily_checks
+                run_daily_checks()
+                print('[scheduler] daily notifications sent')
+            except Exception as e:
+                print(f'[scheduler] daily notifications error: {e}')
+
         scheduler = BackgroundScheduler(timezone='Europe/Kiev')
         # Every hour at :02 (Odessa time)
         scheduler.add_job(_send_hourly_report, CronTrigger(minute=2), id='hourly_report')
+        # Daily at 9:02 AM Odessa time — rent due + lease expiry checks
+        scheduler.add_job(_daily_notifications, CronTrigger(hour=9, minute=2), id='daily_checks')
         scheduler.start()
-        print('[scheduler] started — hourly WhatsApp report at :02 every hour')
+        print('[scheduler] started — hourly report :02, daily checks 09:02')
     except Exception as e:
         print(f'[scheduler] failed to start: {e}')
 

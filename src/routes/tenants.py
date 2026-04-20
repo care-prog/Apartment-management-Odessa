@@ -65,6 +65,16 @@ def create_lease():
     from src.routes.activity import log_action
     tenant = query_db('SELECT name FROM tenants WHERE id = ?', (data['tenant_id'],), one=True)
     log_action('create', 'lease', lid, f"New lease: {tenant['name'] if tenant else '?'} — ${data['rent_amount']}/mo")
+    try:
+        from src.notifications import notify_lease_created
+        apt = query_db('''SELECT a.number, p.name as pname FROM apartments a
+                          JOIN properties p ON a.property_id=p.id WHERE a.id=?''',
+                       (data['apartment_id'],), one=True)
+        apt_label = f"{apt['pname']} #{apt['number']}" if apt else str(data['apartment_id'])
+        notify_lease_created(tenant['name'] if tenant else '?', apt_label,
+                             float(data['rent_amount']), data.get('end_date','?'))
+    except Exception:
+        pass
     return jsonify({'id': lid}), 201
 
 @bp.route('/api/leases/<int:lid>', methods=['PUT'])

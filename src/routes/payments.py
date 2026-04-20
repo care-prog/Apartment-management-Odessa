@@ -35,6 +35,18 @@ def create_payment():
          data.get('payment_date'), data.get('method', 'cash'),
          data.get('status', 'paid'), data.get('notes'))
     )
+    try:
+        from src.notifications import notify_payment_received
+        lease_info = query_db('''
+            SELECT t.name as tenant_name, a.number as apt_number, p.name as property_name
+            FROM leases l JOIN tenants t ON l.tenant_id=t.id
+            JOIN apartments a ON l.apartment_id=a.id JOIN properties p ON a.property_id=p.id
+            WHERE l.id=?''', (data['lease_id'],), one=True)
+        if lease_info:
+            apt_label = f"{lease_info['property_name']} #{lease_info['apt_number']}"
+            notify_payment_received(lease_info['tenant_name'], apt_label, float(data['amount']))
+    except Exception:
+        pass
     return jsonify({'id': pid}), 201
 
 @bp.route('/api/payments/<int:pid>', methods=['PUT'])

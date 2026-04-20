@@ -29,6 +29,11 @@ def create_task():
     )
     from src.routes.activity import log_action
     log_action('create', 'task', tid, f"Created task: {data['title']} → {data.get('assigned_to','?')}")
+    try:
+        from src.notifications import notify_task_created
+        notify_task_created(tid, data['title'], data.get('assigned_to'), data.get('priority','normal'), data.get('due_date'))
+    except Exception:
+        pass
     return jsonify({'id': tid}), 201
 
 @bp.route('/api/tasks/<int:tid>', methods=['PUT'])
@@ -45,6 +50,11 @@ def update_task(tid):
     new_status = data.get('status', old_status)
     desc = f"Task '{data.get('title')}': {old_status} → {new_status}" if old_status != new_status else f"Edited task: {data.get('title')}"
     log_action('update', 'task', tid, desc, before_data=before)
+    try:
+        from src.notifications import notify_task_status_changed
+        notify_task_status_changed(tid, data.get('title',''), old_status, new_status, data.get('assigned_to'))
+    except Exception:
+        pass
     return jsonify({'ok': True})
 
 @bp.route('/api/tasks/<int:tid>', methods=['DELETE'])
