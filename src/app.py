@@ -127,29 +127,35 @@ def index():
 def static_files(path):
     return send_from_directory(ROOT, path)
 
-# Auto-init DB on import (needed for gunicorn/Render)
-try:
-    init_db()
-    print('[startup] init_db OK')
-except Exception as _e:
-    print(f'[startup] init_db ERROR (non-fatal): {_e!r}')
+_db_initialized = False
 
-try:
-    from src.models import safe_migrate
-    safe_migrate()
-    print('[startup] safe_migrate OK')
-except Exception as _e:
-    print(f'[startup] safe_migrate ERROR (non-fatal): {_e!r}')
-
-try:
-    from src.models import query_db as _qdb
-    if not _qdb('SELECT COUNT(*) as c FROM properties', one=True)['c']:
-        seed_path = os.path.join(ROOT, 'database', 'seeds', 'seed_data.py')
-        if os.path.exists(seed_path):
-            exec(open(seed_path).read())
-            print('[startup] Database seeded with initial data.')
-except Exception as _e:
-    print(f'[startup] seed check ERROR (non-fatal): {_e!r}')
+@app.before_request
+def _lazy_init_db():
+    """Init DB on the very first request. Keeps gunicorn startup instant."""
+    global _db_initialized
+    if _db_initialized:
+        return
+    _db_initialized = True
+    try:
+        init_db()
+        print('[db] init_db OK')
+    except Exception as _e:
+        print(f'[db] init_db ERROR: {_e!r}')
+    try:
+        from src.models import safe_migrate
+        safe_migrate()
+        print('[db] safe_migrate OK')
+    except Exception as _e:
+        print(f'[db] safe_migrate ERROR: {_e!r}')
+    try:
+        from src.models import query_db as _qdb
+        if not _qdb('SELECT COUNT(*) as c FROM properties', one=True)['c']:
+            seed_path = os.path.join(ROOT, 'database', 'seeds', 'seed_data.py')
+            if os.path.exists(seed_path):
+                exec(open(seed_path).read())
+                print('[db] seeded.')
+    except Exception as _e:
+        print(f'[db] seed check ERROR: {_e!r}')
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
