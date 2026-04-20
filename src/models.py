@@ -56,7 +56,9 @@ def _translate(query: str) -> str:
 
 def get_db():
     if USE_PG:
-        return psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=False)
+        # connect_timeout=10 prevents hanging indefinitely on cold PG connections
+        return psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=False,
+                               connect_timeout=10)
     db = sqlite3.connect(DB_PATH)
     db.row_factory = sqlite3.Row
     db.execute("PRAGMA foreign_keys = ON")
