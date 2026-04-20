@@ -147,7 +147,7 @@ def _is_owner():
 
 
 # Paths accessible without any login
-PUBLIC_PATHS = ['/api/whatsapp-query', '/api/whatsapp/webhook', '/whatsapp-bot.js', '/login', '/api/sync/push', '/api/health', '/api/version']
+PUBLIC_PATHS = ['/api/whatsapp-query', '/api/whatsapp/webhook', '/whatsapp-bot.js', '/login', '/api/sync/push', '/api/health', '/api/version', '/api/cron/hourly-report']
 
 # Paths that require owner role
 OWNER_ONLY_RULES = [

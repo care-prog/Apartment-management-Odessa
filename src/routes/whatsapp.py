@@ -808,6 +808,108 @@ def wa_dashboard_send():
     return jsonify({'ok': True, 'message_id': result.get('messages', [{}])[0].get('id', '')})
 
 
+@bp.route('/api/cron/hourly-report', methods=['GET', 'POST'])
+def hourly_report():
+    """
+    Server-side hourly status report — sends WhatsApp update to owner.
+    Called by an external cron (cron-job.org / Make.com) every hour.
+    Protected by CRON_SECRET query param or X-Cron-Secret header.
+    Public endpoint (no login required) so external cron can hit it.
+    """
+    import datetime as _dt
+    from src.models import get_setting
+
+    # ── Auth: simple secret ─────────────────────────────────────────────────
+    expected_secret = os.environ.get('CRON_SECRET', 'odessa-cron-2026')
+    provided = (request.args.get('secret') or
+                request.headers.get('X-Cron-Secret') or
+                (request.json or {}).get('secret', '') if request.is_json else '')
+    if provided != expected_secret:
+        return jsonify({'error': 'Unauthorized'}), 401
+
+    # ── Gather status ───────────────────────────────────────────────────────
+    now_utc = _dt.datetime.utcnow()
+    now_str  = (now_utc + _dt.timedelta(hours=3)).strftime('%H:%M')  # Odessa time (UTC+3)
+
+    # Token check
+    try:
+        token   = _get_wa_token()
+        phone_id = _get_wa_phone_id()
+        import requests as _req
+        r = _req.get(
+            f'https://graph.facebook.com/debug_token',
+            params={'input_token': token, 'access_token': token},
+            timeout=8
+        )
+        tdata    = r.json().get('data', {})
+        tok_ok   = tdata.get('is_valid', False)
+        tok_icon = '✅' if tok_ok else '❌'
+        tok_text = 'תקין' if tok_ok else 'פג תוקף!'
+    except Exception:
+        tok_icon = '⚠️'
+        tok_text = 'לא ניתן לבדוק'
+
+    # Message counts
+    try:
+        all_msgs  = query_db('SELECT direction FROM whatsapp_log') or []
+        today_str = now_utc.strftime('%Y-%m-%d')
+        today_in  = query_db(
+            "SELECT COUNT(*) as c FROM whatsapp_log WHERE direction='in' AND created_at >= ?",
+            (today_str,), one=True
+        )
+        today_out = query_db(
+            "SELECT COUNT(*) as c FROM whatsapp_log WHERE direction='out' AND created_at >= ?",
+            (today_str,), one=True
+        )
+        count_in  = (today_in  or {}).get('c', 0)
+        count_out = (today_out or {}).get('c', 0)
+    except Exception:
+        count_in = count_out = '?'
+
+    # Pending items (hardcoded known list)
+    pending = [
+        'טוקן קבוע (System User) — ממתין לאישור אדמין שני',
+        'ממשק תבניות WhatsApp',
+        'שליחה המונית (broadcast)',
+    ]
+
+    # ── Build message ───────────────────────────────────────────────────────
+    pending_lines = '\n'.join(f'  • {p}' for p in pending)
+    message = (
+        f"🕐 דוח שעתי — {now_str} (אודסה)\n"
+        f"\n"
+        f"📡 טוקן WA: {tok_icon} {tok_text}\n"
+        f"💬 הודעות היום: {count_in} נכנסו / {count_out} יצאו\n"
+        f"🌐 שרת: פעיל ✅\n"
+        f"\n"
+        f"📋 ממתין לביצוע:\n{pending_lines}"
+    )
+
+    # ── Send ────────────────────────────────────────────────────────────────
+    owner_phone = os.environ.get('OWNER_PHONE', '972543006771')
+    result = wa_send(owner_phone, message)
+    ok     = 'error' not in result
+
+    # Log it
+    try:
+        from src.models import insert_db as _ins
+        _ins(
+            'INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body, status) VALUES (?,?,?,?,?,?,?)',
+            ('out', 'cron', owner_phone, 'Cron', 'system', message[:1000], 'sent' if ok else 'error')
+        )
+    except Exception:
+        pass
+
+    return jsonify({
+        'ok': ok,
+        'time': now_str,
+        'token_valid': tok_ok if isinstance(tok_ok, bool) else None,
+        'messages_today_in': count_in,
+        'messages_today_out': count_out,
+        'wa_result': result,
+    })
+
+
 @bp.route('/api/whatsapp-reset', methods=['POST'])
 def whatsapp_reset():
     """Clear conversation history for a phone number."""
