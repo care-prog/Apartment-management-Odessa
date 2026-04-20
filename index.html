@@ -927,23 +927,22 @@
           </div>
           <!-- Financial summary -->
           <div id="modal-owner-financials" style="padding:20px 24px;border-bottom:1px solid var(--border)"></div>
-          <!-- Properties list -->
+          <!-- Apartments owned list -->
           <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Properties</div>
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Apartments Owned</div>
             <div id="modal-owner-properties"></div>
           </div>
-          <!-- Assign / remove properties -->
+          <!-- Assign apartments to this owner -->
           <div style="padding:20px 24px;border-bottom:1px solid var(--border)">
-            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Manage Properties</div>
-            <div id="modal-owner-prop-manage"></div>
-            <div style="margin-top:12px;display:flex;gap:8px;align-items:flex-end">
+            <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Assign Apartment</div>
+            <div style="display:flex;gap:8px;align-items:flex-end">
               <div style="flex:1">
-                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Add unassigned property</label>
+                <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Pick any apartment (from any building)</label>
                 <select id="ow-prop-select" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--surface)">
-                  <option value="">— select property —</option>
+                  <option value="">— pick apartment —</option>
                 </select>
               </div>
-              <button class="btn btn-primary" onclick="assignPropertyToOwner()" style="font-size:12px;white-space:nowrap">Add Property</button>
+              <button class="btn btn-primary" onclick="assignPropertyToOwner()" style="font-size:12px;white-space:nowrap">Assign ✓</button>
             </div>
           </div>
           <!-- Payment history -->
@@ -1799,6 +1798,23 @@
 
 <script>
 let DATA = null;
+
+// ══════════ API FETCH HELPER ══════════
+// Wrapper around fetch() that handles Content-Type, JSON parse, and errors.
+// Used throughout the app for all API calls.
+async function apiFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+  });
+  try {
+    const json = await res.json();
+    if (!res.ok) return { error: json.error || `HTTP ${res.status}`, ...json };
+    return json;
+  } catch(e) {
+    return res.ok ? {} : { error: `HTTP ${res.status}` };
+  }
+}
 
 // ══════════ I18N (Hebrew / English / Russian) ══════════
 const I18N = {
@@ -4351,19 +4367,29 @@ async function openOwnerModal(oid) {
       </div>
     </div>`;
 
-  // Properties list
-  document.getElementById('modal-owner-properties').innerHTML = data.properties.length
-    ? `<div style="display:flex;flex-direction:column;gap:8px">${data.properties.map(p =>
-        `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface-2);border-radius:8px">
-          <div style="cursor:pointer;flex:1" onclick="openPropertyModal(${p.id})"><div style="font-weight:600;font-size:13px">${p.name}</div><div style="font-size:11px;color:var(--text-muted)">${p.address||''} · ${p.total_units} units · ${p.occupied_units} occupied</div></div>
-          <div style="display:flex;align-items:center;gap:8px"><div style="text-align:right"><div style="font-weight:700;color:var(--green)">$${(p.monthly_rent||0).toLocaleString()}/mo</div><div style="font-size:11px;color:var(--accent)">View →</div></div><button onclick="removePropertyFromOwner(${oid}, ${p.id}, '${p.name.replace(/'/g, "\\'")}')" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:12px;padding:2px 6px">✕ Remove</button></div>
-        </div>`).join('')}</div>`
-    : '<div style="color:var(--text-muted);font-size:13px">No properties assigned to this owner.</div>';
+  // Apartments list (per-apartment ownership model)
+  const ownerApts = data.apartments || [];
+  document.getElementById('modal-owner-properties').innerHTML = ownerApts.length
+    ? `<div style="display:flex;flex-direction:column;gap:6px">${ownerApts.map(a => {
+        const sym = a.currency === 'UAH' ? '₴' : '$';
+        const rent = a.monthly_rent ? `${sym}${Number(a.monthly_rent).toLocaleString()}/mo` : '—';
+        const statusColor = {occupied:'var(--green)',vacant:'var(--accent)',maintenance:'var(--red)'}[a.status]||'var(--text-muted)';
+        return `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--surface-2);border-radius:8px">
+          <div style="flex:1">
+            <div style="font-weight:600;font-size:13px">Apt #${a.number} <span style="color:var(--text-muted);font-weight:400;font-size:11px">— ${a.property_name||''}</span></div>
+            <div style="font-size:11px;color:${statusColor}">${a.status}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px">
+            <div style="font-weight:700;color:var(--green);font-size:13px">${rent}</div>
+            <button onclick="unassignApartmentFromOwner(${a.id}, '${(a.number||'').replace(/'/g,'\\')}', ${oid})" style="background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px;padding:2px 6px" title="Remove from this owner">✕</button>
+          </div>
+        </div>`;
+      }).join('')}</div>`
+    : '<div style="color:var(--text-muted);font-size:13px">No apartments assigned to this owner.</div>';
 
-  // Populate manage properties section
-  document.getElementById('modal-owner-prop-manage').innerHTML = '';
+  // Populate assign-apartment dropdown
   window._currentOwnerId = oid;
-  loadUnassignedProperties();
+  loadAllApartmentsForAssign(oid);
 
   // Payment history
   document.getElementById('modal-owner-payments').innerHTML = data.payments.length
@@ -4378,31 +4404,47 @@ function closeOwnerModal() {
   _currentOwnerId = null;
 }
 
-async function loadUnassignedProperties() {
-  const r = await fetch('/api/properties/unassigned');
-  const props = await r.json();
+async function loadAllApartmentsForAssign(currentOwnerId) {
+  // Load all apartments so owner can pick which ones to assign
+  const apts = await apiFetch('/api/apartments');
   const sel = document.getElementById('ow-prop-select');
   if (!sel) return;
-  sel.innerHTML = '<option value="">— select property —</option>' +
-    props.map(p => `<option value="${p.id}">${p.name}${p.address?' — '+p.address:''}</option>`).join('');
+  // Show all apartments, marking their current owner
+  const options = (apts || []).map(a => {
+    const ownerInfo = a.owner_name ? ` (now: ${a.owner_name})` : ' (unassigned)';
+    return `<option value="${a.id}">#${a.number} — ${a.property_name||'?'}${ownerInfo}</option>`;
+  });
+  sel.innerHTML = '<option value="">— pick apartment —</option>' + options.join('');
 }
 
 async function assignPropertyToOwner() {
+  // Now assigns an individual apartment (not a whole property)
   const oid = window._currentOwnerId;
-  const pid = document.getElementById('ow-prop-select').value;
-  if (!pid) return showToast('Select a property first');
-  await fetch(`/api/owners/${oid}/assign-property`, {
-    method:'POST', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({property_id: parseInt(pid)})
+  const aid = document.getElementById('ow-prop-select').value;
+  if (!aid) return showToast('Select an apartment first');
+  await apiFetch(`/api/apartments/${aid}/reassign`, {
+    method: 'POST',
+    body: JSON.stringify({ owner_id: parseInt(oid) })
   });
-  showToast('Property assigned ✓');
+  showToast('Apartment assigned ✓');
+  openOwnerModal(oid);
+}
+
+async function unassignApartmentFromOwner(aid, aptNum, oid) {
+  if (!confirm(`Remove apartment #${aptNum} from this owner?`)) return;
+  await apiFetch(`/api/apartments/${aid}/reassign`, {
+    method: 'POST',
+    body: JSON.stringify({ owner_id: null })
+  });
+  showToast('Apartment unassigned');
   openOwnerModal(oid);
 }
 
 async function removePropertyFromOwner(oid, pid, propName) {
+  // Legacy: kept for backward compatibility
   if (!confirm(`Remove "${propName}" from this owner?`)) return;
   await fetch(`/api/owners/${oid}/remove-property/${pid}`, {method:'DELETE'});
-  showToast('Property removed');
+  showToast('Removed');
   openOwnerModal(oid);
 }
 
