@@ -157,6 +157,41 @@ def _lazy_init_db():
     except Exception as _e:
         print(f'[db] seed check ERROR: {_e!r}')
 
+def _start_scheduler():
+    """Start APScheduler for server-side cron jobs (hourly WhatsApp report)."""
+    try:
+        from apscheduler.schedulers.background import BackgroundScheduler
+        from apscheduler.triggers.cron import CronTrigger
+        import requests as _req
+
+        def _send_hourly_report():
+            try:
+                secret = os.environ.get('CRON_SECRET', 'odessa-cron-2026')
+                _req.post(
+                    'http://localhost:{}/api/cron/hourly-report'.format(
+                        os.environ.get('PORT', 5050)
+                    ),
+                    json={'secret': secret},
+                    headers={'X-Cron-Secret': secret},
+                    timeout=30
+                )
+            except Exception as e:
+                print(f'[scheduler] hourly report error: {e}')
+
+        scheduler = BackgroundScheduler(timezone='Europe/Kiev')
+        # Every hour at :02 (Odessa time)
+        scheduler.add_job(_send_hourly_report, CronTrigger(minute=2), id='hourly_report')
+        scheduler.start()
+        print('[scheduler] started — hourly WhatsApp report at :02 every hour')
+    except Exception as e:
+        print(f'[scheduler] failed to start: {e}')
+
+
+# Start scheduler once (not in debug reloader child process)
+if os.environ.get('WERKZEUG_RUN_MAIN') != 'true':
+    _start_scheduler()
+
+
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5050))
     print(f"Starting server at http://localhost:{port}")
