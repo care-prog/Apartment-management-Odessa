@@ -208,8 +208,8 @@ def _start_scheduler():
 
         scheduler = BackgroundScheduler(timezone='Europe/Kiev')
 
-        # Hourly WhatsApp report at :02
-        scheduler.add_job(_send_hourly_report, CronTrigger(minute=2), id='hourly_report')
+        # Hourly WhatsApp report — disabled per David's request
+        # scheduler.add_job(_send_hourly_report, CronTrigger(minute=2), id='hourly_report')
         # Daily notifications at 9:02 AM Odessa time
         scheduler.add_job(_daily_notifications, CronTrigger(hour=9, minute=2), id='daily_checks')
         # Auto-sync apartments from Monday every 30 minutes

@@ -437,6 +437,7 @@ def wa_webhook_receive():
 
         role, user = identify_sender(from_phone)
         sender_name = (user or {}).get('name') or (user or {}).get('display_name') or from_phone
+        message_body = ''  # Initialize here — set by text/voice blocks below
 
         if msg_type == 'image':
             media_id  = msg.get('image', {}).get('id', '')
