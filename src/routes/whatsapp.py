@@ -504,8 +504,8 @@ def wa_webhook_receive():
             wa_send(from_phone, '⚠️ I can process text, images, and voice messages. Please send one of those.')
             return jsonify({'status': 'unsupported_type'}), 200
 
-        if msg_type == 'text':
-            message_body = msg['text']['body'].strip()
+        if msg_type == 'text' and not message_body:
+            message_body = msg.get('text', {}).get('body', '').strip()
         if not message_body:
             return jsonify({'status': 'empty'}), 200
 
