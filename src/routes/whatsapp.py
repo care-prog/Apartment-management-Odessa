@@ -427,6 +427,7 @@ def wa_webhook_receive():
         msg       = messages[0]
         msg_type  = msg.get('type', '')
         from_phone = msg.get('from', '')  # international format, no +
+        print(f'[webhook] from={from_phone} type={msg_type} keys={list(msg.keys())}')
 
         # ── Media handling (image / audio / video) ───────────────────────
         from src.routes.chat import call_claude, gather_context, execute_tool, TOOLS, LANG_NAMES
@@ -441,6 +442,7 @@ def wa_webhook_receive():
             media_id  = msg.get('image', {}).get('id', '')
             caption   = msg.get('image', {}).get('caption', '') or ''
             mime_type = msg.get('image', {}).get('mime_type', 'image/jpeg')
+            print(f'[webhook] IMAGE media_id={media_id} mime={mime_type} caption={caption!r}')
             # Log as incoming image
             try:
                 _ins('INSERT INTO whatsapp_log (direction, from_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?)',
@@ -450,10 +452,12 @@ def wa_webhook_receive():
             # Download + analyze
             wa_send(from_phone, '📸 Analysing your photo…')
             image_bytes, actual_mime = wa_download_media(media_id)
+            print(f'[webhook] IMAGE download: got {len(image_bytes) if image_bytes else 0} bytes, mime={actual_mime}')
             if not image_bytes:
                 wa_send(from_phone, '❌ Could not download the image. Please try again.')
                 return jsonify({'status': 'media_download_failed'}), 200
             description = analyze_image_with_claude(image_bytes, actual_mime or mime_type)
+            print(f'[webhook] IMAGE claude desc: {description[:100] if description else "NONE"}')
             # Store last image in session for follow-up save commands
             norm_phone_img = normalize_phone(from_phone) or from_phone
             if norm_phone_img not in WA_SESSIONS:
