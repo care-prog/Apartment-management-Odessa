@@ -705,11 +705,13 @@ CURRENT DATA:
 # ── Settings API (WhatsApp token + status) ─────────────────────────────────
 @bp.route('/api/whatsapp/log', methods=['GET'])
 def wa_log():
-    """Return recent WhatsApp message log."""
-    limit = int(request.args.get('limit', 50))
+    """Return recent WhatsApp message log. Supports ?limit=50&offset=0 for pagination."""
+    limit  = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
     rows = query_db(
-        'SELECT * FROM whatsapp_log ORDER BY created_at DESC LIMIT ?', (limit,))
-    return jsonify([dict(r) for r in rows])
+        'SELECT * FROM whatsapp_log ORDER BY created_at DESC LIMIT ? OFFSET ?', (limit, offset))
+    total = (query_db('SELECT COUNT(*) as c FROM whatsapp_log', one=True) or {}).get('c', 0)
+    return jsonify({'messages': [dict(r) for r in rows], 'total': total, 'offset': offset, 'limit': limit})
 
 
 @bp.route('/api/whatsapp/token-status', methods=['GET'])

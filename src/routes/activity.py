@@ -38,19 +38,24 @@ def log_action(action, entity_type, entity_id=None, description=None, before_dat
 
 @bp.route('/api/activity', methods=['GET'])
 def list_activity():
-    limit = int(request.args.get('limit', 200))
+    limit  = int(request.args.get('limit', 50))
+    offset = int(request.args.get('offset', 0))
     entity = request.args.get('entity_type')
     action = request.args.get('action')
     query = 'SELECT * FROM activity_log WHERE 1=1'
+    count_query = 'SELECT COUNT(*) as c FROM activity_log WHERE 1=1'
     args = []
     if entity:
         query += ' AND entity_type = ?'
+        count_query += ' AND entity_type = ?'
         args.append(entity)
     if action:
         query += ' AND action = ?'
+        count_query += ' AND action = ?'
         args.append(action)
-    query += ' ORDER BY created_at DESC LIMIT ?'
-    args.append(limit)
+    total = (query_db(count_query, args, one=True) or {}).get('c', 0)
+    query += ' ORDER BY created_at DESC LIMIT ? OFFSET ?'
+    args.extend([limit, offset])
     rows = query_db(query, args)
     # Parse before_data JSON for frontend
     for r in rows:
@@ -59,7 +64,7 @@ def list_activity():
                 r['before_data'] = json.loads(r['before_data'])
             except Exception:
                 pass
-    return jsonify(rows)
+    return jsonify({'entries': rows, 'total': total, 'offset': offset, 'limit': limit})
 
 
 @bp.route('/api/activity/<int:lid>/restore', methods=['POST'])

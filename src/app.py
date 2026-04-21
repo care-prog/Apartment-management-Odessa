@@ -158,10 +158,11 @@ def _lazy_init_db():
         print(f'[db] seed check ERROR: {_e!r}')
 
 def _start_scheduler():
-    """Start APScheduler for server-side cron jobs (hourly WhatsApp report)."""
+    """Start APScheduler — auto-syncs Monday, sends reports, daily notifications."""
     try:
         from apscheduler.schedulers.background import BackgroundScheduler
         from apscheduler.triggers.cron import CronTrigger
+        from apscheduler.triggers.interval import IntervalTrigger
         import requests as _req
 
         def _send_hourly_report():
@@ -186,13 +187,39 @@ def _start_scheduler():
             except Exception as e:
                 print(f'[scheduler] daily notifications error: {e}')
 
+        def _auto_sync_monday():
+            """Auto-sync apartments from Monday every 30 minutes."""
+            try:
+                from src.monday_sync import sync_to_db
+                result = sync_to_db()
+                print(f'[scheduler] Monday auto-sync: {result.get("synced")} apts, '
+                      f'{result.get("updated")} updated, {result.get("created")} new')
+            except Exception as e:
+                print(f'[scheduler] Monday auto-sync error: {e}')
+
+        def _auto_sync_professionals():
+            """Auto-sync professionals from Monday every 2 hours."""
+            try:
+                from src.routes.professionals import run_professionals_sync
+                result = run_professionals_sync()
+                print(f'[scheduler] Professionals auto-sync: {result}')
+            except Exception as e:
+                print(f'[scheduler] Professionals auto-sync error: {e}')
+
         scheduler = BackgroundScheduler(timezone='Europe/Kiev')
-        # Every hour at :02 (Odessa time)
+
+        # Hourly WhatsApp report at :02
         scheduler.add_job(_send_hourly_report, CronTrigger(minute=2), id='hourly_report')
-        # Daily at 9:02 AM Odessa time — rent due + lease expiry checks
+        # Daily notifications at 9:02 AM Odessa time
         scheduler.add_job(_daily_notifications, CronTrigger(hour=9, minute=2), id='daily_checks')
+        # Auto-sync apartments from Monday every 30 minutes
+        scheduler.add_job(_auto_sync_monday, IntervalTrigger(minutes=30), id='monday_sync',
+                          next_run_time=__import__('datetime').datetime.now())  # run immediately on start
+        # Auto-sync professionals from Monday every 2 hours
+        scheduler.add_job(_auto_sync_professionals, IntervalTrigger(hours=2), id='pros_sync')
+
         scheduler.start()
-        print('[scheduler] started — hourly report :02, daily checks 09:02')
+        print('[scheduler] started — Monday sync every 30min, pros every 2h, daily checks 09:02')
     except Exception as e:
         print(f'[scheduler] failed to start: {e}')
 

@@ -1,3 +1,26 @@
+## 2026-04-21 — Auto-sync Monday + paginated logs + no more manual refresh
+
+**Focus:** Remove all manual refresh/sync buttons; everything auto-updates. Paginated log views.
+
+### Done
+- `src/app.py` — APScheduler: Monday apartments auto-sync every 30min (`IntervalTrigger`), professionals every 2h, runs on startup
+- `src/routes/professionals.py` — Extracted `run_professionals_sync()` as standalone function callable from scheduler without HTTP context
+- `src/routes/whatsapp.py` — `wa_log()` pagination: `limit/offset` query params, returns `{messages, total, offset, limit}`
+- `src/routes/activity.py` — Activity log pagination: `limit/offset` params, default limit 50 (was 200)
+- `index.html` — Removed all manual "Sync Monday.com" and "Refresh" buttons for logs
+- `index.html` — WA inbox auto-refreshes every 7s (conversation list + active thread)
+- `index.html` — WA log auto-refreshes every 15s via `startWaLogAutoRefresh()` / `stopWaLogAutoRefresh()`
+- `index.html` — Activity log auto-refreshes every 30s via `startActivityLogAutoRefresh()` / `stopActivityLogAutoRefresh()`
+- `index.html` — Both logs show "Load 50 more" pagination button; `_waLogOffset` / `_actLogOffset` state vars
+- `index.html` — `showPage()` starts/stops log auto-refresh on page enter/leave
+- `index.html` — Monday sync UI changed: "Force sync" small button + "🔄 auto-syncing" status label
+- `index.html` — `apiFetch()` global helper defined (was missing — all modal saves crashed silently)
+
+### Context for next session
+- Voice transcription: needs `OPENAI_API_KEY` on Render env vars
+- WhatsApp permanent system user token: still pending
+- WhatsApp message templates: still pending
+
 ## 2026-04-20 — WhatsApp inbox complete — bot takeover, opt-in status, real chat UI
 
 **Focus:** Full WhatsApp inbox: human takeover per contact, opt-in status, WA-style bubbles

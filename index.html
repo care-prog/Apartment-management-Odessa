@@ -793,7 +793,8 @@
           <div class="section-head">
             <div class="section-title"><span class="icon">&#9872;</span> Properties</div>
             <div class="section-actions">
-              <button class="btn owner-only" onclick="syncMonday()" id="sync-btn">Sync Monday.com</button>
+              <span id="sync-status" style="font-size:11px;color:var(--text-muted)">🔄 auto-syncing</span>
+              <button class="btn owner-only" onclick="syncMonday()" id="sync-btn" style="font-size:11px;padding:4px 10px">Force sync</button>
             </div>
           </div>
           <div id="property-grid" class="property-grid"></div>
@@ -833,7 +834,7 @@
         <div class="section">
           <div class="section-head">
             <div class="section-title"><span class="icon">&#9872;</span> All Properties</div>
-            <div class="section-actions"><button class="btn owner-only" onclick="syncMonday()" id="sync-btn2">Sync Monday.com</button></div>
+            <div class="section-actions"><button class="btn owner-only" onclick="syncMonday()" id="sync-btn2" style="font-size:11px;padding:4px 10px">Force sync</button></div>
           </div>
           <div id="properties-full"></div>
         </div>
@@ -1570,7 +1571,7 @@
                 <option value="delete">Deleted</option>
                 <option value="restore">Restored</option>
               </select>
-              <button class="btn" onclick="loadActivityLog()" style="font-size:12px">&#8635; Refresh</button>
+              <span id="activity-log-status" style="font-size:11px;color:var(--text-muted)">auto-updating</span>
             </div>
           </div>
           <div class="table-wrap">
@@ -1578,6 +1579,10 @@
               <thead><tr><th>Time</th><th>Action</th><th>Type</th><th>Description</th><th>Who</th><th>Restore</th></tr></thead>
               <tbody id="activity-log-body"><tr><td colspan="6" style="text-align:center;padding:30px;color:var(--text-muted)">Loading...</td></tr></tbody>
             </table>
+          </div>
+          <div id="activity-log-pagination" style="text-align:center;padding:12px;display:none">
+            <button class="btn" onclick="loadActivityLog(true)" style="font-size:12px">Load 50 more ↓</button>
+            <span id="activity-log-count" style="font-size:11px;color:var(--text-muted);margin-left:12px"></span>
           </div>
         </div>
       </div>
@@ -1600,7 +1605,7 @@
             <option>Neighbor Contact</option><option>Internet/TV</option><option>Other</option>
           </select>
           <button class="btn btn-primary" onclick="openProModal(null)">+ Add</button>
-          <button class="btn owner-only" onclick="syncProsMonday()" style="font-size:12px">&#8635; Sync Monday</button>
+          <button class="btn owner-only" onclick="syncProsMonday()" style="font-size:11px;padding:4px 10px">Force sync</button>
         </div>
         <!-- Stats row -->
         <div id="pros-stats" class="stats-row" style="margin-bottom:16px"></div>
@@ -1653,10 +1658,14 @@
         <div class="section owner-only" style="margin-top:20px">
           <div class="section-head">
             <div class="section-title">📩 WhatsApp Message Log</div>
-            <button class="btn" onclick="loadWaLog()" style="font-size:12px">↻ Refresh</button>
+            <span id="wa-log-status" style="font-size:11px;color:var(--text-muted)">auto-updating</span>
           </div>
           <div id="wa-log-table" style="margin-top:8px">
-            <div style="color:var(--text-muted);font-size:13px;padding:12px 0">Click Refresh to load messages.</div>
+            <div style="color:var(--text-muted);font-size:13px;padding:12px 0">Loading...</div>
+          </div>
+          <div id="wa-log-pagination" style="text-align:center;padding:12px;display:none">
+            <button class="btn" onclick="loadWaLog(true)" style="font-size:12px">Load 50 more ↓</button>
+            <span id="wa-log-count" style="font-size:11px;color:var(--text-muted);margin-left:12px"></span>
           </div>
         </div>
 
@@ -2257,11 +2266,13 @@ function showPage(page, fromHash) {
   }
   if (DATA) renderPage(page, DATA);
   if (page === 'cash') { loadWallets(); loadCashSummary(); }
-  if (page === 'log') loadActivityLog();
+  if (page === 'log') { loadActivityLog(); startActivityLogAutoRefresh(); }
+  else { stopActivityLogAutoRefresh(); }
   if (page === 'whatsapp') { loadWaInbox(); startWaAutoRefresh(); }
   else { stopWaAutoRefresh(); }
   if (page === 'owners') loadOwners();
-  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); loadWaLog(); }
+  if (page === 'team') { loadTeamUsers(); renderPermissionsMatrix(); checkWaTokenStatus(); loadWaLog(); startWaLogAutoRefresh(); }
+  else { stopWaLogAutoRefresh(); }
   if (page === 'professionals') loadProfessionals();
   closeSidebar();
 }
@@ -3177,18 +3188,52 @@ async function toggleWaOptOut(phone, currentlyOptedOut) {
   showToast(newState ? '🔕 Notifications disabled for this contact' : '🔔 Notifications re-enabled');
 }
 
-async function loadWaLog() {
+let _waLogOffset = 0;
+let _waLogPolling = null;
+
+function _renderWaLogRows(rows) {
+  return rows.map(r => {
+    const isIn = r.direction === 'in';
+    const dirBadge = isIn
+      ? '<span style="background:rgba(99,102,241,.15);color:var(--accent);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">IN</span>'
+      : '<span style="background:rgba(0,168,107,.12);color:var(--green);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">OUT</span>';
+    const ts = (r.created_at || '').replace('T',' ').slice(0,16);
+    const phone = isIn ? (r.from_phone || '') : (r.to_phone || '');
+    const name  = isIn ? (r.sender_name || phone) : 'Bot';
+    const role  = isIn ? (r.sender_role || '') : '';
+    const body  = (r.body || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<tr style="border-bottom:1px solid var(--border)">
+      <td style="padding:8px 12px;color:var(--text-muted);white-space:nowrap">${ts}</td>
+      <td style="padding:8px 12px">${dirBadge}</td>
+      <td style="padding:8px 12px;white-space:nowrap"><div style="font-weight:600">${name}</div><div style="color:var(--text-muted);font-size:10px">${phone}</div></td>
+      <td style="padding:8px 12px"><span style="font-size:10px;color:var(--text-muted)">${role}</span></td>
+      <td style="padding:8px 12px;max-width:320px;word-break:break-word">${body}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadWaLog(loadMore = false) {
   const el = document.getElementById('wa-log-table');
   if (!el) return;
-  el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Loading...</div>';
+
+  if (loadMore) {
+    _waLogOffset += 50;
+  } else {
+    _waLogOffset = 0;
+    el.innerHTML = '<div style="color:var(--text-muted);font-size:13px">Loading...</div>';
+  }
+
   try {
-    const r = await fetch('/api/whatsapp/log?limit=30');
-    const rows = await r.json();
-    if (!rows.length) {
+    const d = await apiFetch(`/api/whatsapp/log?limit=50&offset=${_waLogOffset}`);
+    const rows = d.messages || [];
+    const total = d.total || 0;
+
+    if (!rows.length && _waLogOffset === 0) {
       el.innerHTML = '<div style="color:var(--text-muted);font-size:13px;padding:12px 0">No messages yet.</div>';
       return;
     }
-    el.innerHTML = `<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">
+
+    const tableHtml = `<div class="table-wrap"><table style="width:100%;border-collapse:collapse;font-size:12px">
       <thead><tr style="background:var(--surface-2)">
         <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Time</th>
         <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Dir</th>
@@ -3196,28 +3241,39 @@ async function loadWaLog() {
         <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Role</th>
         <th style="text-align:left;padding:8px 12px;color:var(--text-muted);font-size:11px;border-bottom:1px solid var(--border)">Message</th>
       </tr></thead>
-      <tbody>${rows.map(r => {
-        const isIn = r.direction === 'in';
-        const dirBadge = isIn
-          ? '<span style="background:rgba(99,102,241,.15);color:var(--accent);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">IN</span>'
-          : '<span style="background:rgba(0,168,107,.12);color:var(--green);padding:2px 7px;border-radius:4px;font-size:10px;font-weight:700">OUT</span>';
-        const ts = (r.created_at || '').replace('T',' ').slice(0,16);
-        const phone = isIn ? (r.from_phone || '') : (r.to_phone || '');
-        const name  = isIn ? (r.sender_name || phone) : 'Bot';
-        const role  = isIn ? (r.sender_role || '') : '';
-        const body  = (r.body || '').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-        return `<tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:8px 12px;color:var(--text-muted);white-space:nowrap">${ts}</td>
-          <td style="padding:8px 12px">${dirBadge}</td>
-          <td style="padding:8px 12px;white-space:nowrap"><div style="font-weight:600">${name}</div><div style="color:var(--text-muted);font-size:10px">${phone}</div></td>
-          <td style="padding:8px 12px"><span style="font-size:10px;color:var(--text-muted)">${role}</span></td>
-          <td style="padding:8px 12px;max-width:320px;word-break:break-word">${body}</td>
-        </tr>`;
-      }).join('')}</tbody>
+      <tbody id="wa-log-tbody">${_renderWaLogRows(rows)}</tbody>
     </table></div>`;
+
+    if (loadMore) {
+      // Append rows to existing table
+      const tbody = document.getElementById('wa-log-tbody');
+      if (tbody) tbody.innerHTML += _renderWaLogRows(rows);
+    } else {
+      el.innerHTML = tableHtml;
+    }
+
+    // Pagination button
+    const shown = _waLogOffset + rows.length;
+    const pagEl = document.getElementById('wa-log-pagination');
+    const cntEl = document.getElementById('wa-log-count');
+    if (pagEl) pagEl.style.display = shown < total ? '' : 'none';
+    if (cntEl) cntEl.textContent = `Showing ${shown} of ${total}`;
+
+    // Update status indicator
+    const st = document.getElementById('wa-log-status');
+    if (st) st.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
   } catch(e) {
-    el.innerHTML = '<div style="color:var(--red);font-size:13px">Error loading log</div>';
+    if (!loadMore) el.innerHTML = '<div style="color:var(--red);font-size:13px">Error loading log</div>';
   }
+}
+
+function startWaLogAutoRefresh() {
+  if (_waLogPolling) return;
+  _waLogPolling = setInterval(() => loadWaLog(false), 15000); // refresh top-50 every 15s
+}
+function stopWaLogAutoRefresh() {
+  if (_waLogPolling) { clearInterval(_waLogPolling); _waLogPolling = null; }
 }
 
 async function checkWaTokenStatus() {
@@ -4763,52 +4819,90 @@ document.addEventListener('click', function(e) {
 });
 
 // ══════════ ACTIVITY LOG ══════════
-async function loadActivityLog() {
+let _actLogOffset = 0;
+let _actLogPolling = null;
+
+function _renderActivityRows(rows) {
+  const actionColors = {
+    delete: 'var(--red)', create: 'var(--green)', update: 'var(--accent)',
+    restore: 'var(--purple)', sync: 'var(--cyan)'
+  };
+  const entityIcons = {
+    task: '✓', expense: '$', tenant: '👤', lease: '📄', property: '🏠',
+    apartment: '🚪', transaction: '💰', owner: '👔', maintenance: '🔧'
+  };
+  return rows.map(r => {
+    const color = actionColors[r.action] || 'var(--text-dim)';
+    const icon = entityIcons[r.entity_type] || '•';
+    const ts = r.created_at ? r.created_at.replace('T', ' ').slice(0, 16) : '—';
+    const hasSnapshot = r.before_data && r.before_data !== 'null';
+    const canRestore = r.action === 'delete' && hasSnapshot;
+    return `<tr>
+      <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${ts}</td>
+      <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:${color};background:${color}18;text-transform:uppercase">${r.action}</span></td>
+      <td style="font-size:12px">${icon} ${r.entity_type}${r.entity_id ? ' #'+r.entity_id : ''}</td>
+      <td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description || '—'}</td>
+      <td style="font-size:12px;font-weight:500">${r.user_name || r.user_role || 'Owner'}</td>
+      <td>${canRestore ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:var(--green);color:#fff;border:none" onclick="restoreAction(${r.id})">Restore</button>` : ''}</td>
+    </tr>`;
+  }).join('');
+}
+
+async function loadActivityLog(loadMore = false) {
   const entityFilter = document.getElementById('log-filter-entity');
   const actionFilter = document.getElementById('log-filter-action');
   const tbody = document.getElementById('activity-log-body');
   if (!tbody) return;
 
+  if (loadMore) {
+    _actLogOffset += 50;
+  } else {
+    _actLogOffset = 0;
+    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Loading...</td></tr>';
+  }
+
   const entity = entityFilter ? entityFilter.value : '';
   const action = actionFilter ? actionFilter.value : '';
-  let url = '/api/activity?limit=100';
+  let url = `/api/activity?limit=50&offset=${_actLogOffset}`;
   if (entity) url += '&entity_type=' + entity;
   if (action) url += '&action=' + action;
 
-  tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">Loading...</td></tr>';
   try {
-    const res = await fetch(url);
-    const rows = await res.json();
-    if (!rows.length) {
+    const d = await apiFetch(url);
+    const rows = d.entries || [];
+    const total = d.total || 0;
+
+    if (!rows.length && _actLogOffset === 0) {
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--text-muted)">No activity yet</td></tr>';
       return;
     }
-    const actionColors = {
-      delete: 'var(--red)', create: 'var(--green)', update: 'var(--accent)',
-      restore: 'var(--purple)', sync: 'var(--cyan)'
-    };
-    const entityIcons = {
-      task: '✓', expense: '$', tenant: '👤', lease: '📄', property: '🏠',
-      apartment: '🚪', transaction: '💰', owner: '👔', maintenance: '🔧'
-    };
-    tbody.innerHTML = rows.map(r => {
-      const color = actionColors[r.action] || 'var(--text-dim)';
-      const icon = entityIcons[r.entity_type] || '•';
-      const ts = r.created_at ? r.created_at.replace('T', ' ').slice(0, 16) : '—';
-      const hasSnapshot = r.before_data && r.before_data !== 'null';
-      const canRestore = r.action === 'delete' && hasSnapshot;
-      return `<tr>
-        <td style="font-size:11px;color:var(--text-muted);white-space:nowrap">${ts}</td>
-        <td><span style="display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;color:${color};background:${color}18;text-transform:uppercase">${r.action}</span></td>
-        <td style="font-size:12px">${icon} ${r.entity_type}${r.entity_id ? ' #'+r.entity_id : ''}</td>
-        <td style="font-size:12px;max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${r.description || '—'}</td>
-        <td style="font-size:12px;font-weight:500">${r.user_name || r.user_role || 'Owner'}</td>
-        <td>${canRestore ? `<button class="btn btn-sm" style="font-size:11px;padding:3px 10px;background:var(--green);color:#fff;border:none" onclick="restoreAction(${r.id})">Restore</button>` : ''}</td>
-      </tr>`;
-    }).join('');
+
+    if (loadMore) {
+      tbody.innerHTML += _renderActivityRows(rows);
+    } else {
+      tbody.innerHTML = _renderActivityRows(rows);
+    }
+
+    const shown = _actLogOffset + rows.length;
+    const pagEl = document.getElementById('activity-log-pagination');
+    const cntEl = document.getElementById('activity-log-count');
+    if (pagEl) pagEl.style.display = shown < total ? '' : 'none';
+    if (cntEl) cntEl.textContent = `Showing ${shown} of ${total}`;
+
+    const st = document.getElementById('activity-log-status');
+    if (st) st.textContent = `Updated ${new Date().toLocaleTimeString()}`;
+
   } catch(e) {
-    tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">Error loading log</td></tr>';
+    if (!loadMore) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--red)">Error loading log</td></tr>';
   }
+}
+
+function startActivityLogAutoRefresh() {
+  if (_actLogPolling) return;
+  _actLogPolling = setInterval(() => loadActivityLog(false), 30000); // refresh every 30s
+}
+function stopActivityLogAutoRefresh() {
+  if (_actLogPolling) { clearInterval(_actLogPolling); _actLogPolling = null; }
 }
 
 async function restoreAction(logId) {

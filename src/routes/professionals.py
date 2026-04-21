@@ -174,33 +174,35 @@ def delete_payment(payid):
 
 
 # ── Sync from Monday.com ────────────────────────────────────────────────────
-@bp.route('/api/professionals/sync-monday', methods=['POST'])
-def sync_monday():
+def run_professionals_sync():
+    """
+    Core sync logic — callable directly from the scheduler (no HTTP context needed).
+    Returns dict: {ok, imported, skipped, total, error?}
+    """
     token = os.environ.get('MONDAY_API_TOKEN', '').strip()
     if not token:
-        return jsonify({'error': 'MONDAY_API_TOKEN not set'}), 500
+        return {'error': 'MONDAY_API_TOKEN not set'}
 
-    query = ('{ boards(ids:[' + str(MONDAY_BOARD_ID) + ']){ '
-             'items_page(limit:100){ items{ id name '
-             'column_values{ id text } } } } }')
+    q = ('{ boards(ids:[' + str(MONDAY_BOARD_ID) + ']){ '
+         'items_page(limit:100){ items{ id name '
+         'column_values{ id text } } } } }')
     try:
         resp = requests.post(
             MONDAY_API_URL,
-            json={'query': query},
+            json={'query': q},
             headers={'Authorization': token, 'Content-Type': 'application/json'},
             timeout=30
         )
         resp.raise_for_status()
         data = resp.json()
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        return {'error': str(e)}
 
     boards = (data.get('data') or {}).get('boards') or []
     if not boards:
-        return jsonify({'error': 'No boards returned', 'raw': data}), 500
+        return {'error': 'No boards returned'}
 
     items = boards[0].get('items_page', {}).get('items', [])
-
     imported = 0
     skipped = 0
     for item in items:
@@ -208,14 +210,10 @@ def sync_monday():
         name = item['name'].strip()
         if not name:
             continue
-
-        # If already exists in our system — skip (preserve manual edits)
         existing = query_db('SELECT id FROM professionals WHERE monday_id = ?', (mid,), one=True)
         if existing:
             skipped += 1
             continue
-
-        # New contact — import from Monday
         cols = {cv['id']: cv['text'] for cv in item.get('column_values', [])}
         phone = cols.get('phone', '') or ''
         phone_2 = cols.get('phone_1', '') or ''
@@ -224,12 +222,19 @@ def sync_monday():
             messenger = 'Viber'
         notes = cols.get('text', '') or ''
         category = detect_category(name)
-
         insert_db(
             'INSERT OR IGNORE INTO professionals (name, phone, phone_2, messenger, category, notes, monday_id) VALUES (?, ?, ?, ?, ?, ?, ?)',
             (name, phone, phone_2, messenger, category, notes, mid)
         )
         imported += 1
 
-    return jsonify({'ok': True, 'imported': imported, 'skipped': skipped, 'total': len(items),
-                    'message': f'Added {imported} new contacts. Skipped {skipped} existing (your edits preserved).'})
+    return {'ok': True, 'imported': imported, 'skipped': skipped, 'total': len(items),
+            'message': f'Added {imported} new. Skipped {skipped} existing.'}
+
+
+@bp.route('/api/professionals/sync-monday', methods=['POST'])
+def sync_monday():
+    result = run_professionals_sync()
+    if result.get('error'):
+        return jsonify(result), 500
+    return jsonify(result)

@@ -8,6 +8,7 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
+| pending | 2026-04-21 | [phase1] auto-sync Monday every 30min + paginated logs + no manual refresh | 1 | 5 files |
 | 2b2a4ab | 2026-04-21 | [fix] owner assignment — define apiFetch, fix owner modal for apartment model | 1 | 1 file |
 | 37ef846 | 2026-04-20 | [phase1] feat: per-apartment owner — apartments.owner_id independent of building | 1 | 6 files |
 | 6a54c36 | 2026-04-20 | [fix] sync_to_db: fix PostgreSQL NULL type-inference error in lease UPDATE | 1 | 2 files |
