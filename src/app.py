@@ -4,6 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
 from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity, users, professionals as professionals_mod
+from src.routes import wa_contacts, wa_templates
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
@@ -49,6 +50,8 @@ app.register_blueprint(wallets.bp)
 app.register_blueprint(activity.bp)
 app.register_blueprint(users.bp)
 app.register_blueprint(professionals_mod.bp)
+app.register_blueprint(wa_contacts.bp)
+app.register_blueprint(wa_templates.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
@@ -217,6 +220,26 @@ def _start_scheduler():
                           next_run_time=__import__('datetime').datetime.now())  # run immediately on start
         # Auto-sync professionals from Monday every 2 hours
         scheduler.add_job(_auto_sync_professionals, IntervalTrigger(hours=2), id='pros_sync')
+
+        def _sync_pending_templates():
+            """Sync status of PENDING WA templates from Meta every 5 minutes."""
+            try:
+                from src.routes.wa_templates import sync_all_templates
+                from flask import current_app
+                with app.app_context():
+                    from src.models import query_db as _qdb, execute_db as _edb
+                    from src.routes.wa_templates import _sync_status_from_meta
+                    pending = _qdb("SELECT * FROM wa_templates WHERE status IN ('pending', 'draft')")
+                    for row in pending:
+                        result = _sync_status_from_meta(row['name'], row.get('meta_template_id'))
+                        if result and result['status'] != row['status']:
+                            _edb('UPDATE wa_templates SET status=?, meta_template_id=?, rejection_reason=?, updated_at=CURRENT_TIMESTAMP WHERE id=?',
+                                 (result['status'], result['meta_id'], result.get('rejection_reason', ''), row['id']))
+                            print(f'[scheduler] template {row["name"]} → {result["status"]}')
+            except Exception as e:
+                print(f'[scheduler] template sync error: {e}')
+
+        scheduler.add_job(_sync_pending_templates, IntervalTrigger(minutes=5), id='template_sync')
 
         scheduler.start()
         print('[scheduler] started — Monday sync every 30min, pros every 2h, daily checks 09:02')

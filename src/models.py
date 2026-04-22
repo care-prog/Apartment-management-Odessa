@@ -141,6 +141,39 @@ def safe_migrate():
             role TEXT DEFAULT 'manager', language TEXT DEFAULT 'ru',
             access_level TEXT DEFAULT 'full',
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        # WA contacts registry
+        _pg_run("""CREATE TABLE IF NOT EXISTS wa_contacts (
+            id SERIAL PRIMARY KEY, phone TEXT NOT NULL UNIQUE,
+            name TEXT, email TEXT,
+            entity_type TEXT, entity_id INTEGER,
+            language TEXT DEFAULT 'ru',
+            preferred_channel TEXT DEFAULT 'whatsapp',
+            user_fields TEXT, opted_out INTEGER DEFAULT 0,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        # WA message templates
+        _pg_run("""CREATE TABLE IF NOT EXISTS wa_templates (
+            id SERIAL PRIMARY KEY, name TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'UTILITY',
+            language TEXT DEFAULT 'ru',
+            status TEXT DEFAULT 'draft',
+            meta_template_id TEXT, components TEXT,
+            rejection_reason TEXT,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        # WA template send log
+        _pg_run("""CREATE TABLE IF NOT EXISTS wa_template_sends (
+            id SERIAL PRIMARY KEY,
+            template_id INTEGER,
+            template_name TEXT, contact_phone TEXT, contact_name TEXT,
+            parameters TEXT,
+            frequency TEXT DEFAULT 'one-time',
+            schedule_date TEXT,
+            status TEXT DEFAULT 'sent',
+            platform TEXT DEFAULT 'whatsapp',
+            sent_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        # Extend whatsapp_log with entity info
+        _pg_run("ALTER TABLE whatsapp_log ADD COLUMN IF NOT EXISTS entity_type TEXT")
+        _pg_run("ALTER TABLE whatsapp_log ADD COLUMN IF NOT EXISTS entity_id INTEGER")
     else:
         try: execute_db("ALTER TABLE office_expenses ADD COLUMN currency TEXT DEFAULT 'USD'")
         except: pass
@@ -217,6 +250,37 @@ def safe_migrate():
             role TEXT DEFAULT 'manager', language TEXT DEFAULT 'ru',
             access_level TEXT DEFAULT 'full',
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS wa_contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, phone TEXT NOT NULL UNIQUE,
+            name TEXT, email TEXT,
+            entity_type TEXT, entity_id INTEGER,
+            language TEXT DEFAULT 'ru',
+            preferred_channel TEXT DEFAULT 'whatsapp',
+            user_fields TEXT, opted_out INTEGER DEFAULT 0,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS wa_templates (
+            id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+            category TEXT NOT NULL DEFAULT 'UTILITY',
+            language TEXT DEFAULT 'ru',
+            status TEXT DEFAULT 'draft',
+            meta_template_id TEXT, components TEXT,
+            rejection_reason TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        execute_db("""CREATE TABLE IF NOT EXISTS wa_template_sends (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER,
+            template_name TEXT, contact_phone TEXT, contact_name TEXT,
+            parameters TEXT,
+            frequency TEXT DEFAULT 'one-time',
+            schedule_date TEXT,
+            status TEXT DEFAULT 'sent',
+            platform TEXT DEFAULT 'whatsapp',
+            sent_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        try: execute_db("ALTER TABLE whatsapp_log ADD COLUMN entity_type TEXT")
+        except: pass
+        try: execute_db("ALTER TABLE whatsapp_log ADD COLUMN entity_id INTEGER")
+        except: pass
 
 
 def init_db():

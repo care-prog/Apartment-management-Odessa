@@ -726,12 +726,28 @@ CURRENT DATA:
 # ── Settings API (WhatsApp token + status) ─────────────────────────────────
 @bp.route('/api/whatsapp/log', methods=['GET'])
 def wa_log():
-    """Return recent WhatsApp message log. Supports ?limit=50&offset=0 for pagination."""
+    """Return WA log. Supports ?limit=50&offset=0&entity_type=professional&entity_id=5&phone=xxx"""
     limit  = int(request.args.get('limit', 50))
     offset = int(request.args.get('offset', 0))
-    rows = query_db(
-        'SELECT * FROM whatsapp_log ORDER BY created_at DESC LIMIT ? OFFSET ?', (limit, offset))
-    total = (query_db('SELECT COUNT(*) as c FROM whatsapp_log', one=True) or {}).get('c', 0)
+    entity_type = request.args.get('entity_type', '')
+    entity_id   = request.args.get('entity_id', '')
+    phone       = request.args.get('phone', '')
+
+    where = 'WHERE 1=1'
+    args = []
+    if entity_type:
+        where += ' AND entity_type = ?'
+        args.append(entity_type)
+    if entity_id:
+        where += ' AND entity_id = ?'
+        args.append(int(entity_id))
+    if phone:
+        where += ' AND (from_phone = ? OR to_phone = ?)'
+        args.extend([phone, phone])
+
+    total = (query_db(f'SELECT COUNT(*) as c FROM whatsapp_log {where}', args, one=True) or {}).get('c', 0)
+    rows  = query_db(f'SELECT * FROM whatsapp_log {where} ORDER BY created_at DESC LIMIT ? OFFSET ?',
+                     args + [limit, offset])
     return jsonify({'messages': [dict(r) for r in rows], 'total': total, 'offset': offset, 'limit': limit})
 
 

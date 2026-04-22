@@ -704,6 +704,9 @@
     0%,100% { opacity:1; transform:scale(1); }
     50% { opacity:.5; transform:scale(.7); }
   }
+  .wa-tab { background: none; border: none; padding: 8px 16px; font-size: 13px; font-weight: 500; color: #56606b; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; border-radius: 6px 6px 0 0; transition: all 0.15s; }
+  .wa-tab:hover { color: #5e6ad2; background: #f5f6ff; }
+  .wa-tab.active { color: #5e6ad2; border-bottom-color: #5e6ad2; background: none; }
 </style>
 </head>
 <body>
@@ -909,7 +912,10 @@
               </div>
               <div>
                 <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Phone</label>
-                <input id="ow-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                <div style="display:flex;gap:6px;align-items:center">
+                  <input id="ow-phone" placeholder="+380..." style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+                  <button id="ow-wa-btn" style="display:none;padding:5px 10px;border:1px solid #86efac;border-radius:8px;background:#dcfce7;color:#166534;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">📲 WA</button>
+                </div>
               </div>
               <div>
                 <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:4px">Email</label>
@@ -1367,7 +1373,7 @@
             <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px">Tenant Info</div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:20px">
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Full Name *</label><input id="tl-name" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
-              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone</label><input id="tl-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
+              <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone</label><div style="display:flex;gap:6px;align-items:center"><input id="tl-phone" placeholder="+380..." style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"><button id="tl-wa-btn" style="display:none;padding:5px 10px;border:1px solid #86efac;border-radius:8px;background:#dcfce7;color:#166534;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">📲 WA</button></div></div>
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Email</label><input id="tl-email" type="email" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
               <div><label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Passport / ID</label><input id="tl-passport" style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px"></div>
             </div>
@@ -1404,6 +1410,11 @@
             <div style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end">
               <button class="btn" onclick="closeTenantLeaseModal()">Cancel</button>
               <button class="btn btn-primary" onclick="saveTenantLease()">Save</button>
+            </div>
+            <!-- Scoped WA log for tenant -->
+            <div id="tl-scoped-log" style="display:none;margin-top:20px;padding-top:16px;border-top:1px solid var(--border)">
+              <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">💬 Recent WhatsApp Messages</div>
+              <div id="tl-scoped-log-list" style="font-size:12px;color:var(--text-dim)">Loading...</div>
             </div>
           </div>
         </div>
@@ -1475,79 +1486,160 @@
 
       <!-- ══════ PAGE: ACTIVITY LOG ══════ -->
       <!-- ══════ PAGE: WHATSAPP INBOX ══════ -->
-      <div id="page-whatsapp" class="page" style="display:none;padding:0;height:calc(100vh - 56px);overflow:hidden">
-        <div style="display:grid;grid-template-columns:300px 1fr 260px;height:100%;gap:0">
-
-          <!-- ── LEFT: Conversation List ── -->
-          <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface)">
-            <div style="padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
-              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-                <div style="font-size:14px;font-weight:700;color:var(--text-main)">💬 Conversations</div>
-                <div id="wa-live-dot" style="display:flex;align-items:center;gap:4px;font-size:11px;color:#10b981">
-                  <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 2s infinite"></span>Live
-                </div>
-              </div>
-              <input id="wa-search" type="text" placeholder="Search…" oninput="filterWaConvos(this.value)"
-                style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text-main);box-sizing:border-box">
-            </div>
-            <div id="wa-convo-list" style="flex:1;overflow-y:auto">
-              <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px">Loading…</div>
-            </div>
-          </div>
-
-          <!-- ── CENTER: Chat Thread ── -->
-          <div style="display:flex;flex-direction:column;overflow:hidden;background:var(--bg)">
-            <!-- Thread header -->
-            <div id="wa-thread-header" style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px">
-              <div style="min-width:0">
-                <div style="display:flex;align-items:center;gap:8px">
-                  <div id="wa-thread-name" style="font-size:15px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a conversation</div>
-                  <div id="wa-bot-badge" style="display:none"></div>
-                </div>
-                <div id="wa-thread-sub" style="font-size:11px;color:var(--text-muted);margin-top:1px"></div>
-              </div>
-              <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
-                <button id="wa-takeover-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #f59e0b;color:#f59e0b;background:transparent;transition:.2s">
-                  👤 Take over
-                </button>
-                <button id="wa-handback-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #10b981;color:#10b981;background:transparent;transition:.2s">
-                  🤖 Give back to bot
-                </button>
-              </div>
-            </div>
-
-            <!-- Messages area -->
-            <div id="wa-thread-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
-              <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto;padding:40px">
-                <div style="font-size:32px;margin-bottom:12px">💬</div>
-                Select a conversation from the left
-              </div>
-            </div>
-
-            <!-- Composer -->
-            <div id="wa-composer" style="padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;display:none">
-              <div id="wa-composer-mode" style="font-size:11px;font-weight:600;margin-bottom:8px;padding:5px 10px;border-radius:6px;display:inline-block"></div>
-              <div style="display:flex;gap:8px;align-items:flex-end">
-                <textarea id="wa-reply-text" placeholder="Type a message…" rows="2"
-                  onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendWaReply()}"
-                  style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;resize:none;font-family:inherit;background:var(--bg);color:var(--text-main);line-height:1.5;transition:.2s"></textarea>
-                <button onclick="sendWaReply()" id="wa-send-btn" class="btn btn-primary" style="padding:10px 18px;flex-shrink:0;border-radius:12px;height:44px">
-                  ↗ Send
-                </button>
-              </div>
-              <div id="wa-send-status" style="margin-top:5px;font-size:12px;color:var(--text-muted);min-height:15px"></div>
-            </div>
-          </div>
-
-          <!-- ── RIGHT: Contact Context Panel ── -->
-          <div id="wa-context-panel" style="border-left:1px solid var(--border);overflow-y:auto;background:var(--surface)">
-            <div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:13px">
-              <div style="font-size:28px;margin-bottom:8px">👈</div>
-              Select a conversation
-            </div>
-          </div>
-
+      <div id="page-whatsapp" class="page" style="display:none;padding:0;height:calc(100vh - 56px);overflow:hidden;flex-direction:column">
+        <!-- ── WA Tab Bar ── -->
+        <div style="display:flex;gap:4px;padding:12px 16px 0;background:#fff;border-bottom:1px solid #e8eaed;flex-shrink:0">
+          <button class="wa-tab active" onclick="switchWaTab('inbox',this)">💬 Inbox</button>
+          <button class="wa-tab" onclick="switchWaTab('contacts',this)">👥 Contacts</button>
+          <button class="wa-tab" onclick="switchWaTab('templates',this)">📋 Templates</button>
+          <button class="wa-tab" onclick="switchWaTab('sendlog',this)">📊 Send Log</button>
         </div>
+
+        <!-- ── TAB: Inbox (original 3-panel layout) ── -->
+        <div id="wa-tab-inbox" style="display:flex;flex:1;overflow:hidden">
+          <div style="display:grid;grid-template-columns:300px 1fr 260px;height:100%;gap:0;width:100%">
+
+            <!-- ── LEFT: Conversation List ── -->
+            <div style="border-right:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden;background:var(--surface)">
+              <div style="padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                  <div style="font-size:14px;font-weight:700;color:var(--text-main)">💬 Conversations</div>
+                  <div id="wa-live-dot" style="display:flex;align-items:center;gap:4px;font-size:11px;color:#10b981">
+                    <span style="width:6px;height:6px;border-radius:50%;background:#10b981;display:inline-block;animation:pulse 2s infinite"></span>Live
+                  </div>
+                </div>
+                <input id="wa-search" type="text" placeholder="Search…" oninput="filterWaConvos(this.value)"
+                  style="width:100%;padding:7px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;background:var(--bg);color:var(--text-main);box-sizing:border-box">
+              </div>
+              <div id="wa-convo-list" style="flex:1;overflow-y:auto">
+                <div style="text-align:center;padding:32px 16px;color:var(--text-muted);font-size:13px">Loading…</div>
+              </div>
+            </div>
+
+            <!-- ── CENTER: Chat Thread ── -->
+            <div style="display:flex;flex-direction:column;overflow:hidden;background:var(--bg)">
+              <!-- Thread header -->
+              <div id="wa-thread-header" style="padding:12px 18px;border-bottom:1px solid var(--border);background:var(--surface);flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:12px">
+                <div style="min-width:0">
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <div id="wa-thread-name" style="font-size:15px;font-weight:700;color:var(--text-main);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">Select a conversation</div>
+                    <div id="wa-bot-badge" style="display:none"></div>
+                  </div>
+                  <div id="wa-thread-sub" style="font-size:11px;color:var(--text-muted);margin-top:1px"></div>
+                </div>
+                <div style="display:flex;gap:6px;flex-shrink:0;align-items:center">
+                  <button id="wa-takeover-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #f59e0b;color:#f59e0b;background:transparent;transition:.2s">
+                    👤 Take over
+                  </button>
+                  <button id="wa-handback-btn" onclick="toggleBotPause()" style="display:none;padding:6px 12px;border-radius:8px;font-size:12px;cursor:pointer;font-weight:600;border:1.5px solid #10b981;color:#10b981;background:transparent;transition:.2s">
+                    🤖 Give back to bot
+                  </button>
+                </div>
+              </div>
+
+              <!-- Messages area -->
+              <div id="wa-thread-messages" style="flex:1;overflow-y:auto;padding:16px 20px;display:flex;flex-direction:column;gap:8px;background:var(--bg)">
+                <div style="text-align:center;color:var(--text-muted);font-size:13px;margin:auto;padding:40px">
+                  <div style="font-size:32px;margin-bottom:12px">💬</div>
+                  Select a conversation from the left
+                </div>
+              </div>
+
+              <!-- Composer -->
+              <div id="wa-composer" style="padding:12px 16px;border-top:1px solid var(--border);background:var(--surface);flex-shrink:0;display:none">
+                <div id="wa-composer-mode" style="font-size:11px;font-weight:600;margin-bottom:8px;padding:5px 10px;border-radius:6px;display:inline-block"></div>
+                <div style="display:flex;gap:8px;align-items:flex-end">
+                  <textarea id="wa-reply-text" placeholder="Type a message…" rows="2"
+                    onkeydown="if(event.key==='Enter'&&!event.shiftKey){event.preventDefault();sendWaReply()}"
+                    style="flex:1;padding:10px 14px;border:1.5px solid var(--border);border-radius:12px;font-size:14px;resize:none;font-family:inherit;background:var(--bg);color:var(--text-main);line-height:1.5;transition:.2s"></textarea>
+                  <button onclick="sendWaReply()" id="wa-send-btn" class="btn btn-primary" style="padding:10px 18px;flex-shrink:0;border-radius:12px;height:44px">
+                    ↗ Send
+                  </button>
+                </div>
+                <div id="wa-send-status" style="margin-top:5px;font-size:12px;color:var(--text-muted);min-height:15px"></div>
+              </div>
+            </div>
+
+            <!-- ── RIGHT: Contact Context Panel ── -->
+            <div id="wa-context-panel" style="border-left:1px solid var(--border);overflow-y:auto;background:var(--surface)">
+              <div style="text-align:center;padding:60px 20px;color:var(--text-muted);font-size:13px">
+                <div style="font-size:28px;margin-bottom:8px">👈</div>
+                Select a conversation
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- ── TAB: Contacts ── -->
+        <div id="wa-tab-contacts" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 120px)">
+          <div style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap">
+            <input id="wac-search" placeholder="Search contacts..." oninput="loadWaContacts()" style="flex:1;min-width:180px;padding:8px 12px;border:1px solid #e8eaed;border-radius:8px;font-size:13px">
+            <select id="wac-filter-type" onchange="loadWaContacts()" style="padding:8px;border:1px solid #e8eaed;border-radius:8px;font-size:13px">
+              <option value="">All types</option>
+              <option value="tenant">🏠 Tenants</option>
+              <option value="professional">🔧 Professionals</option>
+              <option value="owner">👤 Owners</option>
+              <option value="team">👔 Team</option>
+            </select>
+          </div>
+          <div id="wac-list"><div style="color:#8b95a1;text-align:center;padding:40px">Loading...</div></div>
+        </div>
+
+        <!-- ── TAB: Templates ── -->
+        <div id="wa-tab-templates" style="display:none;height:calc(100vh - 120px)">
+          <div style="display:flex;height:100%">
+            <!-- Left: template list -->
+            <div style="width:320px;border-right:1px solid #e8eaed;overflow-y:auto;padding:12px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+                <b style="font-size:13px">Templates</b>
+                <button onclick="openTemplateBuilder()" style="background:#5e6ad2;color:#fff;border:none;border-radius:6px;padding:5px 10px;font-size:12px;cursor:pointer">+ New</button>
+              </div>
+              <div style="display:flex;gap:4px;margin-bottom:8px;flex-wrap:wrap">
+                <select id="tmpl-filter-status" onchange="loadTemplates()" style="font-size:12px;padding:4px 6px;border:1px solid #e8eaed;border-radius:6px;flex:1">
+                  <option value="">All status</option>
+                  <option value="draft">Draft</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                </select>
+                <select id="tmpl-filter-cat" onchange="loadTemplates()" style="font-size:12px;padding:4px 6px;border:1px solid #e8eaed;border-radius:6px;flex:1">
+                  <option value="">All categories</option>
+                  <option value="MARKETING">Marketing</option>
+                  <option value="UTILITY">Utility</option>
+                  <option value="AUTHENTICATION">Auth</option>
+                </select>
+              </div>
+              <div id="tmpl-list"><div style="color:#8b95a1;text-align:center;padding:20px;font-size:13px">Loading...</div></div>
+            </div>
+            <!-- Right: template builder/detail -->
+            <div id="tmpl-builder-panel" style="flex:1;overflow-y:auto;padding:20px">
+              <div style="color:#8b95a1;text-align:center;padding:60px;font-size:14px">Select a template or click + New</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ── TAB: Send Log ── -->
+        <div id="wa-tab-sendlog" style="display:none;padding:16px;overflow-y:auto;height:calc(100vh - 120px)">
+          <div style="display:flex;gap:8px;margin-bottom:12px">
+            <input id="sendlog-phone" placeholder="Filter by phone..." oninput="loadSendLog()" style="padding:8px 12px;border:1px solid #e8eaed;border-radius:8px;font-size:13px;width:200px">
+            <span id="sendlog-auto" style="font-size:12px;color:#8b95a1;align-self:center">auto-updating</span>
+          </div>
+          <div id="sendlog-table-wrap">
+            <table style="width:100%;border-collapse:collapse;font-size:13px">
+              <thead><tr style="border-bottom:2px solid #e8eaed">
+                <th style="text-align:left;padding:8px;color:#56606b">Time</th>
+                <th style="text-align:left;padding:8px;color:#56606b">Template</th>
+                <th style="text-align:left;padding:8px;color:#56606b">Recipient</th>
+                <th style="text-align:left;padding:8px;color:#56606b">Frequency</th>
+                <th style="text-align:left;padding:8px;color:#56606b">Status</th>
+              </tr></thead>
+              <tbody id="sendlog-tbody"><tr><td colspan="5" style="text-align:center;padding:20px;color:#8b95a1">Loading...</td></tr></tbody>
+            </table>
+          </div>
+          <button id="sendlog-more-btn" onclick="loadSendLog(true)" style="display:none;margin-top:12px;padding:8px 16px;border:1px solid #e8eaed;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Load 50 more</button>
+        </div>
+
       </div>
 
       <div id="page-log" class="page" style="display:none">
@@ -1653,21 +1745,6 @@
           </div>
         </div>
       </div>
-
-        <!-- ── WhatsApp Message Log ── -->
-        <div class="section owner-only" style="margin-top:20px">
-          <div class="section-head">
-            <div class="section-title">📩 WhatsApp Message Log</div>
-            <span id="wa-log-status" style="font-size:11px;color:var(--text-muted)">auto-updating</span>
-          </div>
-          <div id="wa-log-table" style="margin-top:8px">
-            <div style="color:var(--text-muted);font-size:13px;padding:12px 0">Loading...</div>
-          </div>
-          <div id="wa-log-pagination" style="text-align:center;padding:12px;display:none">
-            <button class="btn" onclick="loadWaLog(true)" style="font-size:12px">Load 50 more ↓</button>
-            <span id="wa-log-count" style="font-size:11px;color:var(--text-muted);margin-left:12px"></span>
-          </div>
-        </div>
 
         <!-- ── WhatsApp Settings ── -->
         <div class="section owner-only" style="margin-top:20px">
@@ -2253,7 +2330,7 @@ function showPage(page, fromHash) {
   if (!PAGES.includes(page)) page = 'dashboard';
   document.querySelectorAll('.page').forEach(p => p.style.display = 'none');
   const pageEl = document.getElementById('page-' + page);
-  if (pageEl) pageEl.style.display = 'block';
+  if (pageEl) pageEl.style.display = (page === 'whatsapp') ? 'flex' : 'block';
   document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
   // Mark active nav item
   document.querySelectorAll('.nav-item').forEach(n => {
@@ -3871,6 +3948,8 @@ async function openTenantLeaseModal(mode, rowData) {
     _tlLeaseId = null;
     _tlTenantId = null;
     ['tl-name','tl-phone','tl-email','tl-passport','tl-notes'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('tl-wa-btn').style.display = 'none';
+    const tlScoped = document.getElementById('tl-scoped-log'); if (tlScoped) tlScoped.style.display = 'none';
     document.getElementById('tl-rent').value = '';
     document.getElementById('tl-deposit').value = '0';
     document.getElementById('tl-start').value = new Date().toISOString().slice(0,10);
@@ -3901,6 +3980,22 @@ async function openTenantLeaseModal(mode, rowData) {
     document.getElementById('tl-comm-type').value = r.commission_type || 'percent';
     document.getElementById('tl-comm-value').value = r.commission_value || '';
     updateCommPreview();
+
+    // WA button for edit mode
+    const tlWaBtn = document.getElementById('tl-wa-btn');
+    if (tlWaBtn && _tlTenantId && tenant?.phone) {
+      tlWaBtn.style.display = '';
+      tlWaBtn.textContent = '📲 WA';
+      tlWaBtn.style.background = '#dcfce7'; tlWaBtn.style.color = '#166534'; tlWaBtn.style.borderColor = '#86efac';
+      tlWaBtn.onclick = () => registerWaContact('tenant', _tlTenantId, tlWaBtn);
+      initWaBtn(tenant.phone, 'tenant', _tlTenantId, tlWaBtn);
+    } else if (tlWaBtn) { tlWaBtn.style.display = 'none'; }
+    // Scoped WA log for tenant
+    const tlScoped = document.getElementById('tl-scoped-log');
+    if (tlScoped && _tlTenantId && tenant?.phone) {
+      tlScoped.style.display = '';
+      loadScopedWaLog('tenant', _tlTenantId, tenant.phone, 'tl-scoped-log-list');
+    }
 
     // Find the property for this row
     const matchProp = props.find(p => p.name === r.property_name);
@@ -4395,6 +4490,16 @@ async function openOwnerModal(oid) {
   document.getElementById('ow-email').value = o.email || '';
   document.getElementById('ow-bank').value = o.bank_details || '';
   document.getElementById('ow-notes').value = o.notes || '';
+
+  // WA button for owner
+  const owWaBtn = document.getElementById('ow-wa-btn');
+  if (owWaBtn && o.phone) {
+    owWaBtn.style.display = '';
+    owWaBtn.textContent = '📲 WA';
+    owWaBtn.style.background = '#dcfce7'; owWaBtn.style.color = '#166534'; owWaBtn.style.borderColor = '#86efac';
+    owWaBtn.onclick = () => registerWaContact('owner', oid, owWaBtn);
+    initWaBtn(o.phone, 'owner', oid, owWaBtn);
+  } else if (owWaBtn) { owWaBtn.style.display = 'none'; }
 
   // Financial summary
   const owedColor = fin.balance_owed > 0 ? 'var(--red)' : 'var(--green)';
@@ -5083,7 +5188,7 @@ function renderProsGrid(pros) {
             <span style="font-size:11px;font-weight:700;padding:2px 8px;border-radius:10px;background:${color}22;color:${color}">${p.category}</span>
             <span style="font-size:12px">${MESS_ICON[p.messenger]||'📱'} ${p.messenger||''}</span>
           </div>
-          ${p.phone ? `<div style="font-size:12px;color:var(--text-dim)">📞 ${p.phone}</div>` : ''}
+          ${p.phone ? `<div style="font-size:12px;color:var(--text-dim);display:flex;align-items:center;gap:6px">📞 ${p.phone}<button id="wa-pro-${p.id}" onclick="event.stopPropagation();registerWaContact('professional',${p.id},this)" style="padding:2px 8px;border:1px solid #86efac;border-radius:6px;background:#dcfce7;color:#166534;font-size:10px;cursor:pointer">📲 WA</button></div>` : ''}
           ${p.apartments_worked ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">🏠 ${p.apartments_worked}</div>` : ''}
           ${p.notes ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${p.notes}</div>` : ''}
         </div>
@@ -5094,6 +5199,8 @@ function renderProsGrid(pros) {
       </div>
     </div>`;
   }).join('');
+  // Init WA buttons for all pro cards
+  setTimeout(() => pros.forEach(p => { if (p.phone) { const b = document.getElementById('wa-pro-'+p.id); if (b) initWaBtn(p.phone,'professional',p.id,b); } }), 0);
 }
 
 async function openProModal(pid) {
@@ -5110,6 +5217,8 @@ async function openProModal(pid) {
     document.getElementById('pro-messenger').value='Viber';
     document.getElementById('pro-rating').value='5';
     delBtn.style.display='none';
+    const pwb = document.getElementById('pro-wa-btn'); if (pwb) pwb.style.display='none';
+    const psl = document.getElementById('pro-scoped-log'); if (psl) psl.style.display='none';
     return;
   }
 
@@ -5126,6 +5235,23 @@ async function openProModal(pid) {
   document.getElementById('pro-rating').value = p.rating||5;
   document.getElementById('pro-apts').value = p.apartments_worked||'';
   document.getElementById('pro-notes').value = p.notes||'';
+
+  // WA button
+  const proWaBtn = document.getElementById('pro-wa-btn');
+  if (proWaBtn && p.phone) {
+    proWaBtn.style.display = '';
+    proWaBtn.textContent = '📲 WA';
+    proWaBtn.style.background = '#dcfce7'; proWaBtn.style.color = '#166534'; proWaBtn.style.borderColor = '#86efac';
+    proWaBtn.onclick = () => registerWaContact('professional', pid, proWaBtn);
+    initWaBtn(p.phone, 'professional', pid, proWaBtn);
+  } else if (proWaBtn) { proWaBtn.style.display = 'none'; }
+
+  // Scoped WA log
+  const proScopedLog = document.getElementById('pro-scoped-log');
+  if (proScopedLog && p.phone) {
+    proScopedLog.style.display = '';
+    loadScopedWaLog('professional', pid, p.phone, 'pro-scoped-log-list');
+  }
 
   // Payment history
   document.getElementById('pro-payments-section').style.display='';
@@ -5233,6 +5359,535 @@ async function syncProsMonday() {
     alert('Sync failed: '+e.message);
   }
 }
+
+// ── WA Tab switching ─────────────────────────────────────────────────────
+function switchWaTab(tab, btn) {
+  document.querySelectorAll('.wa-tab').forEach(b => b.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  ['inbox','contacts','templates','sendlog'].forEach(t => {
+    const el = document.getElementById('wa-tab-' + t);
+    if (el) el.style.display = (t === tab) ? (t === 'templates' ? 'flex' : 'block') : 'none';
+  });
+  if (tab === 'contacts') loadWaContacts();
+  if (tab === 'templates') loadTemplates();
+  if (tab === 'sendlog') loadSendLog();
+}
+
+// ── WA Contacts ──────────────────────────────────────────────────────────
+async function loadWaContacts() {
+  const search = (document.getElementById('wac-search') || {}).value || '';
+  const type = (document.getElementById('wac-filter-type') || {}).value || '';
+  const params = new URLSearchParams();
+  if (search) params.set('search', search);
+  if (type) params.set('entity_type', type);
+  const contacts = await apiFetch('/api/wa/contacts?' + params);
+  const list = document.getElementById('wac-list');
+  if (!list) return;
+  if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
+    list.innerHTML = '<div style="color:#8b95a1;text-align:center;padding:40px;font-size:13px">No contacts registered yet.<br>Use the 📲 button next to any phone number to register.</div>';
+    return;
+  }
+  const TYPE_BADGE = { tenant:'🏠 Tenant', professional:'🔧 Pro', owner:'👤 Owner', team:'👔 Team' };
+  list.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="border-bottom:2px solid #e8eaed">
+      <th style="text-align:left;padding:8px;color:#56606b">Name</th>
+      <th style="text-align:left;padding:8px;color:#56606b">Phone</th>
+      <th style="text-align:left;padding:8px;color:#56606b">Type</th>
+      <th style="text-align:left;padding:8px;color:#56606b">Fields</th>
+      <th style="text-align:left;padding:8px;color:#56606b">Actions</th>
+    </tr></thead>
+    <tbody>${contacts.map(c => {
+      const fields = c.user_fields || {};
+      const fieldCount = Object.keys(fields).filter(k => fields[k]).length;
+      const optBadge = c.opted_out ? '<span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:2px 8px;font-size:11px">Opted out</span>' : '';
+      return `<tr style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+        <td style="padding:8px;font-weight:500">${c.name || '—'} ${optBadge}</td>
+        <td style="padding:8px;color:#56606b">${c.phone}</td>
+        <td style="padding:8px"><span style="background:#f0f4ff;color:#5e6ad2;border-radius:10px;padding:2px 8px;font-size:11px">${TYPE_BADGE[c.entity_type] || c.entity_type || '?'}</span></td>
+        <td style="padding:8px;color:#8b95a1">${fieldCount} fields</td>
+        <td style="padding:8px">
+          <button onclick="showWaContactFields('${c.phone}')" style="font-size:11px;padding:3px 8px;border:1px solid #e8eaed;border-radius:5px;background:#fff;cursor:pointer">View fields</button>
+          <button onclick="openSendTemplateModal('${c.phone}','${(c.name||'').replace(/'/g,"\\'")}')  " style="font-size:11px;padding:3px 8px;border:1px solid #5e6ad2;border-radius:5px;background:#5e6ad2;color:#fff;cursor:pointer;margin-left:4px">Send template</button>
+        </td>
+      </tr>`;
+    }).join('')}</tbody>
+  </table>`;
+}
+
+async function showWaContactFields(phone) {
+  const c = await apiFetch('/api/wa/contacts/' + encodeURIComponent(phone));
+  if (!c || c.error) return alert('Contact not found');
+  const fields = c.user_fields || {};
+  const rows = Object.entries(fields).filter(([k,v]) => v).map(([k,v]) =>
+    `<tr><td style="padding:6px 8px;color:#56606b;font-size:13px">${k}</td>
+     <td style="padding:6px 8px;font-size:13px;font-weight:500">{{${k}}}</td>
+     <td style="padding:6px 8px;font-size:12px;color:#8b95a1">${v}</td>
+     <td style="padding:6px 8px"><button onclick="navigator.clipboard.writeText('{{${k}}}')" style="font-size:11px;padding:2px 6px;border:1px solid #e8eaed;border-radius:4px;background:#fff;cursor:pointer">Copy</button></td></tr>`
+  ).join('');
+  showModal(`<h3 style="margin:0 0 12px">${c.name || phone} — Fields</h3>
+    <p style="font-size:12px;color:#8b95a1;margin:0 0 12px">Use these as placeholders in templates</p>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr style="border-bottom:2px solid #e8eaed">
+        <th style="text-align:left;padding:6px 8px;font-size:12px;color:#56606b">Field</th>
+        <th style="text-align:left;padding:6px 8px;font-size:12px;color:#56606b">Placeholder</th>
+        <th style="text-align:left;padding:6px 8px;font-size:12px;color:#56606b">Value</th>
+        <th style="padding:6px 8px"></th>
+      </tr></thead>
+      <tbody>${rows || '<tr><td colspan="4" style="padding:20px;text-align:center;color:#8b95a1">No fields</td></tr>'}</tbody>
+    </table>`);
+}
+
+// ── Templates ────────────────────────────────────────────────────────────
+let _currentTemplate = null;
+let _placeholderFields = [];
+
+async function loadTemplates() {
+  const status = (document.getElementById('tmpl-filter-status') || {}).value || '';
+  const cat = (document.getElementById('tmpl-filter-cat') || {}).value || '';
+  const params = new URLSearchParams();
+  if (status) params.set('status', status);
+  if (cat) params.set('category', cat);
+  const templates = await apiFetch('/api/wa/templates?' + params);
+  const list = document.getElementById('tmpl-list');
+  if (!list) return;
+
+  // Load placeholder fields for template builder
+  if (!_placeholderFields.length) {
+    const pf = await apiFetch('/api/wa/placeholder-fields');
+    if (Array.isArray(pf)) _placeholderFields = pf;
+  }
+
+  const STATUS_STYLE = {
+    draft:    { bg:'#f3f4f6', color:'#56606b', label:'📝 Draft' },
+    pending:  { bg:'#fef9c3', color:'#854d0e', label:'🟡 Pending' },
+    approved: { bg:'#dcfce7', color:'#166534', label:'✅ Approved' },
+    rejected: { bg:'#fee2e2', color:'#991b1b', label:'❌ Rejected' },
+    paused:   { bg:'#fff7ed', color:'#9a3412', label:'⏸ Paused' },
+  };
+  const CAT_COLOR = { MARKETING:'#5e6ad2', UTILITY:'#0891b2', AUTHENTICATION:'#7c3aed' };
+
+  if (!templates || !Array.isArray(templates) || templates.length === 0) {
+    list.innerHTML = '<div style="color:#8b95a1;text-align:center;padding:20px;font-size:12px">No templates yet. Click + New to create one.</div>';
+    return;
+  }
+  list.innerHTML = templates.map(t => {
+    const st = STATUS_STYLE[t.status] || STATUS_STYLE.draft;
+    return `<div onclick="selectTemplate(${t.id})" style="border:1px solid #e8eaed;border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;transition:all 0.15s" onmouseover="this.style.borderColor='#5e6ad2'" onmouseout="this.style.borderColor='#e8eaed'">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+        <span style="font-size:13px;font-weight:600">${t.name}</span>
+        <span style="font-size:11px;background:${st.bg};color:${st.color};border-radius:10px;padding:2px 8px">${st.label}</span>
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <span style="font-size:11px;background:${CAT_COLOR[t.category]||'#5e6ad2'}22;color:${CAT_COLOR[t.category]||'#5e6ad2'};border-radius:6px;padding:1px 7px">${t.category}</span>
+        <span style="font-size:11px;color:#8b95a1">${t.language}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function selectTemplate(tid) {
+  const t = await apiFetch('/api/wa/templates/' + tid);
+  if (!t || t.error) return;
+  _currentTemplate = t;
+  renderTemplateDetail(t);
+}
+
+function renderTemplateDetail(t) {
+  const panel = document.getElementById('tmpl-builder-panel');
+  if (!panel) return;
+  const STATUS_STYLE = {
+    draft:    { bg:'#f3f4f6', color:'#56606b', label:'📝 Draft' },
+    pending:  { bg:'#fef9c3', color:'#854d0e', label:'🟡 Pending' },
+    approved: { bg:'#dcfce7', color:'#166534', label:'✅ Approved' },
+    rejected: { bg:'#fee2e2', color:'#991b1b', label:'❌ Rejected' },
+    paused:   { bg:'#fff7ed', color:'#9a3412', label:'⏸ Paused' },
+  };
+  const st = STATUS_STYLE[t.status] || STATUS_STYLE.draft;
+  const bodyComp = (t.components || []).find(c => c.type === 'BODY') || {};
+  const headerComp = (t.components || []).find(c => c.type === 'HEADER') || {};
+  const footerComp = (t.components || []).find(c => c.type === 'FOOTER') || {};
+  const canSubmit = t.status === 'draft' || t.status === 'rejected';
+  const canSend = t.status === 'approved';
+
+  panel.innerHTML = `
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+      <div>
+        <h3 style="margin:0;font-size:16px">${t.name}</h3>
+        <span style="font-size:12px;background:${st.bg};color:${st.color};border-radius:10px;padding:2px 10px;margin-top:4px;display:inline-block">${st.label}</span>
+        ${t.rejection_reason ? `<div style="margin-top:6px;font-size:12px;color:#dc2626;background:#fee2e2;border-radius:6px;padding:6px 10px">❌ ${t.rejection_reason}</div>` : ''}
+      </div>
+      <div style="display:flex;gap:6px">
+        ${canSubmit ? `<button onclick="submitTemplate(${t.id})" style="background:#5e6ad2;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer">🚀 Submit for Approval</button>` : ''}
+        ${canSend ? `<button onclick="openSendTemplateModal(null,null,${t.id})" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer">📤 Send</button>` : ''}
+        <button onclick="syncTemplateStatus(${t.id})" style="background:#fff;border:1px solid #e8eaed;border-radius:6px;padding:7px 12px;font-size:13px;cursor:pointer">🔄 Sync status</button>
+        <button onclick="deleteTemplate(${t.id})" style="background:#fff;border:1px solid #fca5a5;color:#dc2626;border-radius:6px;padding:7px 10px;font-size:13px;cursor:pointer">🗑</button>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <!-- Builder column -->
+      <div>
+        <div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#56606b;margin-bottom:8px">HEADER</div>
+          <div style="font-size:12px;color:#56606b">${headerComp.format || 'None'}: ${headerComp.text || (headerComp.example ? '[media]' : '—')}</div>
+        </div>
+        <div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#56606b;margin-bottom:8px">BODY</div>
+          <div style="font-size:13px;line-height:1.5;white-space:pre-wrap">${(bodyComp.text || '').replace(/\{\{(\w+)\}\}/g,'<mark style="background:#fef9c3;border-radius:3px;padding:1px 3px">{{$1}}</mark>') || '—'}</div>
+        </div>
+        ${footerComp.text ? `<div style="background:#f9fafb;border-radius:10px;padding:14px;margin-bottom:12px">
+          <div style="font-size:12px;font-weight:600;color:#56606b;margin-bottom:4px">FOOTER</div>
+          <div style="font-size:12px;color:#8b95a1">${footerComp.text}</div>
+        </div>` : ''}
+        <button onclick="openTemplateBuilder(${t.id})" style="width:100%;padding:8px;border:1px dashed #c7d2fe;border-radius:8px;background:#f0f4ff;color:#5e6ad2;cursor:pointer;font-size:13px">✏️ Edit template</button>
+      </div>
+
+      <!-- Preview column -->
+      <div>
+        <div style="font-size:12px;font-weight:600;color:#56606b;margin-bottom:8px">PREVIEW</div>
+        <div style="background:#e5ddd5;border-radius:12px;padding:12px;min-height:150px">
+          <div style="background:#fff;border-radius:8px;padding:10px 12px;max-width:90%;font-size:13px;line-height:1.5;box-shadow:0 1px 3px rgba(0,0,0,0.1)">
+            ${headerComp.text ? `<div style="font-weight:700;margin-bottom:6px">${headerComp.text}</div>` : ''}
+            <div style="white-space:pre-wrap">${(bodyComp.text || '(no body)').replace(/\{\{(\w+)\}\}/g,'<em style="color:#5e6ad2">[{{$1}}]</em>')}</div>
+            ${footerComp.text ? `<div style="font-size:11px;color:#8b95a1;margin-top:6px;border-top:1px solid #f0f0f0;padding-top:4px">${footerComp.text}</div>` : ''}
+          </div>
+        </div>
+        <div style="margin-top:10px">
+          <div style="font-size:12px;font-weight:600;color:#56606b;margin-bottom:6px">Available placeholders</div>
+          ${_placeholderFields.map(f => `<span onclick="navigator.clipboard.writeText('{{${f.key}}}')" title="${f.label}: ${f.example}" style="display:inline-block;margin:2px;background:#f0f4ff;color:#5e6ad2;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer">{{${f.key}}}</span>`).join('')}
+          <div style="font-size:11px;color:#8b95a1;margin-top:4px">Click to copy placeholder</div>
+        </div>
+      </div>
+    </div>`;
+}
+
+function openTemplateBuilder(tid) {
+  const isNew = !tid;
+  const t = isNew ? {name:'', category:'UTILITY', language:'ru', components:[
+    {type:'HEADER', format:'TEXT', text:''},
+    {type:'BODY', text:''},
+    {type:'FOOTER', text:''},
+  ]} : (_currentTemplate || {});
+
+  const headerComp = (t.components || []).find(c => c.type === 'HEADER') || {format:'TEXT', text:''};
+  const bodyComp   = (t.components || []).find(c => c.type === 'BODY')   || {text:''};
+  const footerComp = (t.components || []).find(c => c.type === 'FOOTER') || {text:''};
+  const phButtons = _placeholderFields.map(f =>
+    `<button type="button" onclick="insertPlaceholder('${f.key}')" title="${f.example}" style="font-size:11px;padding:2px 7px;border:1px solid #c7d2fe;border-radius:5px;background:#f0f4ff;color:#5e6ad2;cursor:pointer;margin:2px">{{${f.key}}}</button>`
+  ).join('');
+
+  showModal(`<h3 style="margin:0 0 16px">${isNew ? 'New Template' : 'Edit: ' + t.name}</h3>
+    <div style="display:grid;gap:12px">
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Name *</label>
+          <input id="tb-name" value="${t.name || ''}" placeholder="e.g. rent_reminder" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+          <div style="font-size:11px;color:#8b95a1;margin-top:2px">lowercase, underscores only</div>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Category *</label>
+          <select id="tb-category" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+            <option value="UTILITY" ${t.category==='UTILITY'?'selected':''}>Utility</option>
+            <option value="MARKETING" ${t.category==='MARKETING'?'selected':''}>Marketing</option>
+            <option value="AUTHENTICATION" ${t.category==='AUTHENTICATION'?'selected':''}>Authentication</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Language *</label>
+          <select id="tb-language" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+            <option value="ru" ${t.language==='ru'?'selected':''}>Russian (ru)</option>
+            <option value="he" ${t.language==='he'?'selected':''}>Hebrew (he)</option>
+            <option value="en" ${t.language==='en_US'?'selected':''}>English (en_US)</option>
+            <option value="uk" ${t.language==='uk'?'selected':''}>Ukrainian (uk)</option>
+          </select>
+        </div>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Header</label>
+        <div style="display:flex;gap:6px;margin-bottom:6px">
+          <select id="tb-header-format" onchange="toggleHeaderMedia()" style="padding:6px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+            <option value="TEXT" ${headerComp.format==='TEXT'?'selected':''}>Text</option>
+            <option value="IMAGE" ${headerComp.format==='IMAGE'?'selected':''}>Image (URL)</option>
+            <option value="DOCUMENT" ${headerComp.format==='DOCUMENT'?'selected':''}>Document (URL)</option>
+            <option value="VIDEO" ${headerComp.format==='VIDEO'?'selected':''}>Video (URL)</option>
+            <option value="NONE" ${!headerComp.format||headerComp.format==='NONE'?'selected':''}>No header</option>
+          </select>
+        </div>
+        <input id="tb-header-text" value="${headerComp.text || ''}" placeholder="Header text or media URL" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Body * <span style="font-weight:400;color:#8b95a1">(use {{placeholder}} for variables)</span></label>
+        <div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px">${phButtons}</div>
+        <textarea id="tb-body" rows="5" placeholder="Hello {{name}}, your rent payment of {{rent}} USD is due by {{lease_end}}." style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical">${bodyComp.text || ''}</textarea>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Footer <span style="font-weight:400;color:#8b95a1">(optional, max 60 chars)</span></label>
+        <input id="tb-footer" value="${footerComp.text || ''}" maxlength="60" placeholder="Apartment Management Odessa" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
+        <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #e8eaed;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Cancel</button>
+        <button onclick="saveTemplateDraft(${tid || 'null'})" style="padding:8px 16px;border:none;border-radius:6px;background:#f3f4f6;color:#56606b;cursor:pointer;font-size:13px">💾 Save Draft</button>
+        <button onclick="saveAndSubmitTemplate(${tid || 'null'})" style="padding:8px 16px;border:none;border-radius:6px;background:#5e6ad2;color:#fff;cursor:pointer;font-size:13px">🚀 Save & Submit</button>
+      </div>
+    </div>`);
+}
+
+function insertPlaceholder(key) {
+  const ta = document.getElementById('tb-body');
+  if (!ta) return;
+  const pos = ta.selectionStart;
+  const before = ta.value.substring(0, pos);
+  const after = ta.value.substring(pos);
+  ta.value = before + '{{' + key + '}}' + after;
+  ta.focus();
+}
+
+function _buildTemplateComponents() {
+  const format = (document.getElementById('tb-header-format') || {}).value || 'NONE';
+  const headerText = (document.getElementById('tb-header-text') || {}).value || '';
+  const body = (document.getElementById('tb-body') || {}).value || '';
+  const footer = (document.getElementById('tb-footer') || {}).value || '';
+  const components = [];
+  if (format && format !== 'NONE' && headerText) {
+    const hComp = {type: 'HEADER', format};
+    if (format === 'TEXT') {
+      hComp.text = headerText;
+    } else {
+      hComp.example = {header_handle: [headerText]};
+    }
+    components.push(hComp);
+  }
+  if (body) {
+    const bComp = {type: 'BODY', text: body};
+    // Build example values for any {{placeholders}}
+    const vars = [...new Set(body.match(/\{\{(\w+)\}\}/g) || [])].map(v => v.slice(2,-2));
+    if (vars.length) {
+      const exampleVals = vars.map(v => {
+        const pf = _placeholderFields.find(f => f.key === v);
+        return pf ? pf.example : `sample_${v}`;
+      });
+      bComp.example = {body_text: [exampleVals]};
+    }
+    components.push(bComp);
+  }
+  if (footer) components.push({type: 'FOOTER', text: footer});
+  return components;
+}
+
+async function saveTemplateDraft(tid) {
+  const name = ((document.getElementById('tb-name') || {}).value || '').trim().toLowerCase().replace(/\s+/g,'_');
+  if (!name) { alert('Template name is required'); return; }
+  const payload = {
+    name,
+    category: (document.getElementById('tb-category') || {}).value || 'UTILITY',
+    language: (document.getElementById('tb-language') || {}).value || 'ru',
+    components: _buildTemplateComponents(),
+  };
+  const r = tid
+    ? await apiFetch('/api/wa/templates/' + tid, {method:'PUT', body:JSON.stringify(payload)})
+    : await apiFetch('/api/wa/templates', {method:'POST', body:JSON.stringify(payload)});
+  if (r.error) { alert('Error: ' + r.error); return; }
+  closeModal();
+  _currentTemplate = r;
+  loadTemplates();
+  renderTemplateDetail(r);
+}
+
+async function saveAndSubmitTemplate(tid) {
+  await saveTemplateDraft(tid);
+  if (_currentTemplate) {
+    await submitTemplate(_currentTemplate.id);
+  }
+}
+
+async function submitTemplate(tid) {
+  const r = await apiFetch('/api/wa/templates/' + tid + '/submit', {method:'POST', body:'{}'});
+  if (r.error) { alert('Meta error: ' + r.error); return; }
+  _currentTemplate = r;
+  loadTemplates();
+  renderTemplateDetail(r);
+}
+
+async function syncTemplateStatus(tid) {
+  const r = await apiFetch('/api/wa/templates/' + tid + '/sync-status', {method:'POST', body:'{}'});
+  if (r.error) { alert('Error: ' + r.error); return; }
+  _currentTemplate = r;
+  renderTemplateDetail(r);
+  loadTemplates();
+}
+
+async function deleteTemplate(tid) {
+  if (!confirm('Delete this template?')) return;
+  await apiFetch('/api/wa/templates/' + tid, {method:'DELETE'});
+  _currentTemplate = null;
+  document.getElementById('tmpl-builder-panel').innerHTML = '<div style="color:#8b95a1;text-align:center;padding:60px;font-size:14px">Select a template or click + New</div>';
+  loadTemplates();
+}
+
+// ── Send Template Modal ──────────────────────────────────────────────────
+async function openSendTemplateModal(phone, name, templateId) {
+  const templates = await apiFetch('/api/wa/templates?status=approved');
+  const tmplOptions = (templates || []).map(t => `<option value="${t.id}" ${templateId==t.id?'selected':''}>${t.name}</option>`).join('');
+  if (!tmplOptions) { alert('No approved templates yet. Submit a template for approval first.'); return; }
+  showModal(`<h3 style="margin:0 0 16px">📤 Send Template</h3>
+    <div style="display:grid;gap:12px">
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Template *</label>
+        <select id="stm-template" onchange="previewSendTemplate()" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">${tmplOptions}</select>
+      </div>
+      <div>
+        <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">To (phone) *</label>
+        <input id="stm-phone" value="${phone || ''}" placeholder="+380..." style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+      </div>
+      <div id="stm-params-area"></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Frequency</label>
+          <select id="stm-freq" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+            <option value="one-time">One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+          </select>
+        </div>
+        <div>
+          <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Schedule date</label>
+          <input id="stm-date" type="date" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #e8eaed;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Cancel</button>
+        <button onclick="sendTemplate()" style="padding:8px 16px;border:none;border-radius:6px;background:#16a34a;color:#fff;cursor:pointer;font-size:13px">📤 Send Now</button>
+      </div>
+    </div>`);
+  await previewSendTemplate();
+}
+
+async function previewSendTemplate() {
+  const tid = (document.getElementById('stm-template') || {}).value;
+  if (!tid) return;
+  const t = await apiFetch('/api/wa/templates/' + tid);
+  const bodyComp = (t.components || []).find(c => c.type === 'BODY') || {};
+  const vars = [...new Set((bodyComp.text || '').match(/\{\{(\w+)\}\}/g) || [])].map(v => v.slice(2,-2));
+  const area = document.getElementById('stm-params-area');
+  if (!area) return;
+  if (!vars.length) { area.innerHTML = ''; return; }
+  area.innerHTML = `<div><label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:6px">Fill placeholders</label>
+    ${vars.map(v => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+      <span style="font-size:12px;color:#5e6ad2;min-width:80px">{{${v}}}</span>
+      <input id="stm-param-${v}" placeholder="${v}" style="flex:1;padding:6px;border:1px solid #e8eaed;border-radius:5px;font-size:13px">
+    </div>`).join('')}
+  </div>`;
+}
+
+async function sendTemplate() {
+  const tid = (document.getElementById('stm-template') || {}).value;
+  const phone = (document.getElementById('stm-phone') || {}).value.trim();
+  if (!tid || !phone) { alert('Template and phone are required'); return; }
+  const t = await apiFetch('/api/wa/templates/' + tid);
+  const bodyComp = (t.components || []).find(c => c.type === 'BODY') || {};
+  const vars = [...new Set((bodyComp.text || '').match(/\{\{(\w+)\}\}/g) || [])].map(v => v.slice(2,-2));
+  const parameters = {};
+  vars.forEach(v => {
+    const el = document.getElementById('stm-param-' + v);
+    if (el) parameters[v] = el.value;
+  });
+  const payload = {
+    phone, parameters,
+    frequency: (document.getElementById('stm-freq') || {}).value || 'one-time',
+    schedule_date: (document.getElementById('stm-date') || {}).value || '',
+  };
+  const r = await apiFetch('/api/wa/templates/' + tid + '/send', {method:'POST', body:JSON.stringify(payload)});
+  if (r.error) { alert('Send error: ' + r.error); return; }
+  closeModal();
+  alert('✅ Template sent successfully!');
+}
+
+// ── Send Log ──────────────────────────────────────────────────────────────
+let _sendLogOffset = 0;
+async function loadSendLog(loadMore = false) {
+  if (!loadMore) _sendLogOffset = 0;
+  const phone = (document.getElementById('sendlog-phone') || {}).value || '';
+  const params = new URLSearchParams({limit:50, offset:_sendLogOffset});
+  if (phone) params.set('phone', phone);
+  const d = await apiFetch('/api/wa/send-log?' + params);
+  const entries = d.entries || [];
+  const tbody = document.getElementById('sendlog-tbody');
+  if (!tbody) return;
+  const STATUS_COLOR = {sent:'#16a34a', failed:'#dc2626', scheduled:'#f59e0b'};
+  const rows = entries.map(e => {
+    const ts = (e.sent_at || '').replace('T',' ').slice(0,16);
+    return `<tr style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
+      <td style="padding:8px;font-size:12px;color:#56606b">${ts}</td>
+      <td style="padding:8px;font-size:13px;font-weight:500">${e.template_name}</td>
+      <td style="padding:8px;font-size:13px">${e.contact_name || ''}  <span style="font-size:11px;color:#8b95a1">${e.contact_phone}</span></td>
+      <td style="padding:8px"><span style="font-size:11px;background:#f3f4f6;border-radius:8px;padding:2px 8px">${e.frequency}</span></td>
+      <td style="padding:8px"><span style="font-size:11px;color:${STATUS_COLOR[e.status]||'#56606b'}">${e.status}</span></td>
+    </tr>`;
+  });
+  if (loadMore) {
+    tbody.innerHTML += rows.join('');
+  } else {
+    tbody.innerHTML = rows.length ? rows.join('') : '<tr><td colspan="5" style="text-align:center;padding:20px;color:#8b95a1">No template sends yet</td></tr>';
+  }
+  _sendLogOffset += entries.length;
+  const moreBtn = document.getElementById('sendlog-more-btn');
+  if (moreBtn) moreBtn.style.display = (entries.length === 50) ? 'block' : 'none';
+}
+
+// ── WA Register button ───────────────────────────────────────────────────
+async function registerWaContact(entityType, entityId, btnEl) {
+  if (btnEl) { btnEl.disabled = true; btnEl.textContent = '...'; }
+  const r = await apiFetch('/api/wa/contacts/from-' + entityType + '/' + entityId, {method:'POST', body:'{}'});
+  if (btnEl) {
+    if (r && !r.error) {
+      btnEl.textContent = '✅ WA';
+      btnEl.style.background = '#dcfce7';
+      btnEl.style.color = '#166534';
+      btnEl.style.borderColor = '#86efac';
+      btnEl.onclick = () => showWaContactFields(r.phone);
+    } else {
+      btnEl.textContent = '📲 WA';
+      btnEl.disabled = false;
+    }
+  }
+}
+
+async function initWaBtn(phone, entityType, entityId, btnEl) {
+  if (!phone || !btnEl) return;
+  try {
+    const r = await apiFetch('/api/wa/contacts/' + encodeURIComponent(phone));
+    if (r && !r.error) {
+      btnEl.textContent = '✅ WA';
+      btnEl.style.background = '#dcfce7';
+      btnEl.style.color = '#166534';
+      btnEl.style.borderColor = '#86efac';
+      btnEl.onclick = () => showWaContactFields(phone);
+    }
+  } catch(e) {}
+}
+
+async function loadScopedWaLog(entityType, entityId, phone, containerId) {
+  const el = document.getElementById(containerId);
+  if (!el) return;
+  el.textContent = 'Loading...';
+  try {
+    const phoneParam = phone ? '&phone=' + encodeURIComponent(phone) : '';
+    const url = `/api/whatsapp/log?limit=5${phoneParam}`;
+    const data = await apiFetch(url);
+    const msgs = Array.isArray(data) ? data : (data.messages || data.log || []);
+    if (!msgs.length) { el.textContent = 'No messages yet.'; return; }
+    el.innerHTML = msgs.map(m => {
+      const dir = m.direction === 'out' ? '➡️' : '⬅️';
+      const ts = m.created_at ? new Date(m.created_at).toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const body = (m.body||'').slice(0, 120) + ((m.body||'').length > 120 ? '…' : '');
+      return `<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start">
+        <span style="flex-shrink:0">${dir}</span>
+        <div style="flex:1;min-width:0"><div style="color:var(--text)">${body||'—'}</div><div style="color:var(--text-muted);font-size:10px;margin-top:2px">${ts}</div></div>
+      </div>`;
+    }).join('');
+  } catch(e) { el.textContent = 'Could not load messages.'; }
+}
 </script>
 
 <!-- ══════════ TASK DETAIL MODAL ══════════ -->
@@ -5279,7 +5934,10 @@ async function syncProsMonday() {
         </div>
         <div>
           <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone 1</label>
-          <input id="pro-phone" placeholder="+380..." style="width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+          <div style="display:flex;gap:6px;align-items:center">
+            <input id="pro-phone" placeholder="+380..." style="flex:1;padding:8px 10px;border:1px solid var(--border);border-radius:8px;font-size:13px">
+            <button id="pro-wa-btn" style="display:none;padding:5px 10px;border:1px solid #86efac;border-radius:8px;background:#dcfce7;color:#166534;font-size:11px;cursor:pointer;white-space:nowrap;flex-shrink:0">📲 WA</button>
+          </div>
         </div>
         <div>
           <label style="font-size:11px;color:var(--text-dim);display:block;margin-bottom:3px">Phone 2</label>
@@ -5328,6 +5986,12 @@ async function syncProsMonday() {
         <button class="btn" id="pro-delete-btn" onclick="deletePro()" style="color:var(--red);display:none">Delete</button>
         <button class="btn" onclick="closeProModal()">Cancel</button>
         <button class="btn btn-primary" onclick="savePro()">&#128190; Save</button>
+      </div>
+
+      <!-- Recent WA messages (scoped to this pro) -->
+      <div id="pro-scoped-log" style="display:none;border-top:1px solid var(--border);padding-top:16px;margin-top:4px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px">💬 Recent WhatsApp Messages</div>
+        <div id="pro-scoped-log-list" style="font-size:12px;color:var(--text-dim)">Loading...</div>
       </div>
 
       <!-- Payment history section (shown when editing existing pro) -->

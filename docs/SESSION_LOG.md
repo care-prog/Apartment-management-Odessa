@@ -1,3 +1,22 @@
+## 2026-04-21 — WhatsApp CRM: contacts registry, templates, scoped logs, WA buttons
+
+**Focus:** Full WhatsApp CRM layer — contact registry, template management, send log, WA buttons across all pages, scoped logs per entity
+
+### Done
+- `src/models.py` — 3 new tables: `wa_contacts`, `wa_templates`, `wa_template_sends`; 2 new columns on `whatsapp_log`: `entity_type`, `entity_id`; both PG + SQLite migrations
+- `src/routes/wa_contacts.py` — NEW: contact registry CRUD + `from-tenant/professional/owner/team` shortcuts; `user_fields` auto-built from entity data; `placeholder-fields` endpoint
+- `src/routes/wa_templates.py` — NEW: full template lifecycle (draft→submit Meta→approved); WABA_ID auto-discovery; status sync; send approved templates with positional body params; send log
+- `src/app.py` — registered `wa_contacts` + `wa_templates` blueprints; hourly WA report disabled; added 5-min template status sync scheduler job
+- `src/routes/whatsapp.py` — `wa_log()` entity_type/entity_id/phone filtering; image model fix (`claude-3-5-haiku-20241022`); `message_body=''` fix for UnboundLocalError
+- `index.html` — WhatsApp page: 4-tab layout (Inbox|Contacts|Templates|Send Log); full templates builder + preview; contacts table; send log; Team page WA log removed
+- `index.html` — 📲 WA button added: tenants modal, professionals cards + modal, owners modal; `initWaBtn()` + `registerWaContact()` functions
+- `index.html` — Scoped WA logs: pro modal shows last 5 messages for that pro's phone; tenant modal shows last 5 for tenant's phone; `loadScopedWaLog()` function
+
+### Context for next session
+- WhatsApp permanent system user token: still pending (24h expiry)
+- entity_type/entity_id on whatsapp_log INSERT: columns added but not yet populated in webhook handler (phone-based filter works instead)
+- UI/UX polish pass: subtle visual improvements (softer shadows, pill badges)
+
 ## 2026-04-21 — Auto-sync Monday + paginated logs + no more manual refresh
 
 **Focus:** Remove all manual refresh/sync buttons; everything auto-updates. Paginated log views.
