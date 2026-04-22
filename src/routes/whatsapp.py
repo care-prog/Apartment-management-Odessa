@@ -287,34 +287,38 @@ def wa_download_media(media_id):
 
 def analyze_image_with_claude(image_bytes, mime_type='image/jpeg', prompt=None):
     """Send image bytes to Claude Vision and return a description string."""
-    import anthropic, base64
-    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
-    if not api_key:
-        return 'Image received but Claude API key not configured.'
-    client = anthropic.Anthropic(api_key=api_key)
-    img_b64 = base64.standard_b64encode(image_bytes).decode()
-    # Clamp mime_type to what Claude accepts
-    if mime_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
-        mime_type = 'image/jpeg'
-    text_prompt = (prompt or
-        'Ты — помощник по управлению квартирами в Одессе. '
-        'Опиши что видишь на фото. Если это квартира/комната — опиши состояние, '
-        'любые повреждения или проблемы. Если это документ — кратко изложи его содержание. '
-        'Будь конкретным и кратким (3-5 предложений).')
-    resp = client.messages.create(
-        model='claude-haiku-4-5',
-        max_tokens=512,
-        messages=[{
-            'role': 'user',
-            'content': [
-                {'type': 'image', 'source': {'type': 'base64',
-                                              'media_type': mime_type,
-                                              'data': img_b64}},
-                {'type': 'text', 'text': text_prompt},
-            ]
-        }]
-    )
-    return resp.content[0].text.strip() if resp.content else 'Не удалось проанализировать изображение.'
+    try:
+        import anthropic, base64
+        api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+        if not api_key:
+            return 'Image received but Claude API key not configured.'
+        client = anthropic.Anthropic(api_key=api_key)
+        img_b64 = base64.standard_b64encode(image_bytes).decode()
+        # Clamp mime_type to what Claude accepts
+        if mime_type not in ('image/jpeg', 'image/png', 'image/gif', 'image/webp'):
+            mime_type = 'image/jpeg'
+        text_prompt = (prompt or
+            'Ты — помощник по управлению квартирами в Одессе. '
+            'Опиши что видишь на фото. Если это квартира/комната — опиши состояние, '
+            'любые повреждения или проблемы. Если это документ — кратко изложи его содержание. '
+            'Будь конкретным и кратким (3-5 предложений).')
+        resp = client.messages.create(
+            model='claude-3-5-haiku-20241022',
+            max_tokens=512,
+            messages=[{
+                'role': 'user',
+                'content': [
+                    {'type': 'image', 'source': {'type': 'base64',
+                                                  'media_type': mime_type,
+                                                  'data': img_b64}},
+                    {'type': 'text', 'text': text_prompt},
+                ]
+            }]
+        )
+        return resp.content[0].text.strip() if resp.content else 'Не удалось проанализировать изображение.'
+    except Exception as e:
+        print(f'[analyze_image] error: {e}')
+        return f'Не удалось проанализировать изображение: {str(e)[:80]}'
 
 
 def transcribe_audio_with_whisper(audio_bytes, mime_type='audio/ogg'):
@@ -451,11 +455,23 @@ def wa_webhook_receive():
             except Exception:
                 pass
             # Download + analyze
-            wa_send(from_phone, '📸 Analysing your photo…')
+            ack = '📸 מנתח את התמונה…' if role in ('team', 'property_owner') else '📸 Анализирую фото…'
+            wa_send(from_phone, ack)
+            try:
+                _ins('INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?, ?)',
+                     ('out', 'bot', from_phone, 'bot', 'bot', ack))
+            except Exception:
+                pass
             image_bytes, actual_mime = wa_download_media(media_id)
             print(f'[webhook] IMAGE download: got {len(image_bytes) if image_bytes else 0} bytes, mime={actual_mime}')
             if not image_bytes:
-                wa_send(from_phone, '❌ Could not download the image. Please try again.')
+                err_msg = '❌ לא הצלחתי להוריד את התמונה. נסה שוב.' if role in ('team', 'property_owner') else '❌ Не удалось скачать фото. Попробуй ещё раз.'
+                wa_send(from_phone, err_msg)
+                try:
+                    _ins('INSERT INTO whatsapp_log (direction, from_phone, to_phone, sender_name, sender_role, body) VALUES (?, ?, ?, ?, ?, ?)',
+                         ('out', 'bot', from_phone, 'bot', 'bot', err_msg))
+                except Exception:
+                    pass
                 return jsonify({'status': 'media_download_failed'}), 200
             description = analyze_image_with_claude(image_bytes, actual_mime or mime_type)
             print(f'[webhook] IMAGE claude desc: {description[:100] if description else "NONE"}')
