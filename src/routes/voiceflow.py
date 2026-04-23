@@ -3,12 +3,14 @@ Voiceflow Webhook — provides a voice-friendly API endpoint for Voiceflow agent
 Voiceflow calls POST /api/voiceflow/ask with a question, we respond with an answer
 built from live apartment data + Claude AI.
 
-Embed in Voiceflow:
-  URL: https://apartment-mgmt-odessa.onrender.com/api/voiceflow/ask
+Embed in Voiceflow (API step):
+  URL:    https://apartment-mgmt-odessa.onrender.com/api/voiceflow/ask
   Method: POST
-  Headers: Content-Type: application/json
+  Headers:
+    Content-Type: application/json
+    x-webhook-secret: 0f1ff218bf3354ae27a359d511e2f5c34fec056cdb3860db
   Body: {"question": "{last_utterance}", "lang": "he"}
-  Map response: answer → variable to speak
+  Map response field: answer → TTS variable
 """
 import os
 import json
@@ -20,6 +22,12 @@ bp = Blueprint('voiceflow', __name__)
 
 ANTHROPIC_API_URL = 'https://api.anthropic.com/v1/messages'
 MODEL = 'claude-haiku-4-5-20251001'
+
+# Unique webhook secret for Voiceflow — store this in Voiceflow API step headers
+VOICEFLOW_WEBHOOK_SECRET = os.environ.get(
+    'VOICEFLOW_WEBHOOK_SECRET',
+    '0f1ff218bf3354ae27a359d511e2f5c34fec056cdb3860db'
+)
 
 
 def _get_api_key():
@@ -103,6 +111,16 @@ Rules for voice responses:
 You have real-time data from the apartment management system below."""
 
 
+def _check_secret():
+    """Validate webhook secret from header or body. Returns True if valid."""
+    # Accept from header (x-webhook-secret) or body field (secret)
+    header_secret = request.headers.get('x-webhook-secret', '')
+    body_secret = (request.json or {}).get('secret', '') if request.is_json else ''
+    query_secret = request.args.get('secret', '')
+    provided = header_secret or body_secret or query_secret
+    return provided == VOICEFLOW_WEBHOOK_SECRET
+
+
 @bp.route('/api/voiceflow/ask', methods=['POST', 'GET'])
 def voiceflow_ask():
     """
@@ -111,11 +129,18 @@ def voiceflow_ask():
     Expected body (POST):
       { "question": "...", "lang": "he" }
 
-    Or GET params: ?question=...&lang=he
+    Header required:
+      x-webhook-secret: 0f1ff218bf3354ae27a359d511e2f5c34fec056cdb3860db
+
+    Or GET params: ?question=...&lang=he&secret=...
 
     Returns:
       { "answer": "...", "success": true }
     """
+    # Validate secret
+    if not _check_secret():
+        return jsonify({'error': 'Unauthorized — invalid or missing webhook secret', 'success': False}), 401
+
     if request.method == 'GET':
         question = request.args.get('question', '').strip()
         lang = request.args.get('lang', 'ru')
