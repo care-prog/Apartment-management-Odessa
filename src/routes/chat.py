@@ -451,6 +451,8 @@ You have FULL access to the live database AND can take actions using tools. The 
 - LOG payments to professionals — when David says he paid a contractor, use log_professional_payment.
 
 When the user asks you to do something (not just ask), USE THE APPROPRIATE TOOL. Don't just describe what should happen — actually do it.
+CRITICAL: If the user says "add expense", "log payment", "create task", "add maintenance" etc — you MUST call the tool immediately. Never respond with "I'll add..." or "OK, I added..." without having called the tool first. After the tool call succeeds, confirm with the ID returned.
+If a tool call fails or returns an error, tell the user exactly what went wrong instead of pretending it succeeded.
 
 LANGUAGE PREFERENCE:
 - The user has set their dashboard interface to: {lang_name}.
