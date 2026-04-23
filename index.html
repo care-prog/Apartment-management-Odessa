@@ -1614,7 +1614,34 @@
             </div>
             <!-- Right: template builder/detail -->
             <div id="tmpl-builder-panel" style="flex:1;overflow-y:auto;padding:20px">
-              <div style="color:#8b95a1;text-align:center;padding:60px;font-size:14px">Select a template or click + New</div>
+              <!-- AI Generator — shown as default, replaced when template selected -->
+              <div id="ai-gen-panel" style="max-width:560px;margin:0 auto">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px">
+                  <span style="font-size:22px">🤖</span>
+                  <div>
+                    <div style="font-size:15px;font-weight:700;color:#1a1d23">Generate Template with AI</div>
+                    <div style="font-size:12px;color:#8b95a1;margin-top:1px">Describe what you want to send — AI builds the template with the right placeholders</div>
+                  </div>
+                </div>
+                <textarea id="ai-tmpl-desc" rows="4" placeholder="e.g. Notify the tenant about upcoming rent payment due in 3 days — include their name, apartment, and amount due in USD...&#10;&#10;or: Send a job request to a professional with work type, apartment address, and requested date..." style="width:100%;padding:10px 12px;border:1px solid #d1d5db;border-radius:8px;font-size:13px;box-sizing:border-box;resize:vertical;margin-top:14px;line-height:1.5"></textarea>
+                <div style="display:flex;gap:8px;margin-top:10px;align-items:center">
+                  <select id="ai-tmpl-lang" style="padding:8px 10px;border:1px solid #d1d5db;border-radius:6px;font-size:13px;background:#fff">
+                    <option value="ru">🇷🇺 Russian</option>
+                    <option value="he">🇮🇱 Hebrew</option>
+                    <option value="en_US">🇺🇸 English</option>
+                    <option value="uk">🇺🇦 Ukrainian</option>
+                  </select>
+                  <button id="ai-gen-btn" onclick="generateTemplateAI()" style="flex:1;padding:9px 18px;background:#5e6ad2;color:#fff;border:none;border-radius:6px;font-size:13px;cursor:pointer;font-weight:600">🤖 Generate Template</button>
+                </div>
+                <div id="ai-gen-status" style="margin-top:10px;font-size:13px;color:#8b95a1;min-height:18px"></div>
+                <div style="margin-top:20px;padding:12px;background:#fafafa;border:1px solid #e8eaed;border-radius:8px">
+                  <div style="font-size:11px;font-weight:600;color:#56606b;margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px">Available placeholders</div>
+                  <div id="ai-gen-ph-hint" style="font-size:12px;color:#8b95a1;line-height:1.7">Loading...</div>
+                </div>
+                <div style="margin-top:20px;border-top:1px solid #e8eaed;padding-top:16px;text-align:center;color:#8b95a1;font-size:12px">
+                  Or <a href="#" onclick="openTemplateBuilder();return false" style="color:#5e6ad2;text-decoration:none;font-weight:600">build manually</a>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -5544,10 +5571,13 @@ async function loadTemplates() {
   const list = document.getElementById('tmpl-list');
   if (!list) return;
 
-  // Load placeholder fields for template builder
+  // Load placeholder fields for template builder and AI hint panel
   if (!_placeholderFields.length) {
     const pf = await apiFetch('/api/wa/placeholder-fields');
-    if (Array.isArray(pf)) _placeholderFields = pf;
+    if (Array.isArray(pf)) {
+      _placeholderFields = pf;
+      _initAiGenPlaceholders();
+    }
   }
 
   const STATUS_STYLE = {
@@ -5654,13 +5684,13 @@ function renderTemplateDetail(t) {
     </div>`;
 }
 
-function openTemplateBuilder(tid) {
+function openTemplateBuilder(tid, prefill) {
   const isNew = !tid;
-  const t = isNew ? {name:'', category:'UTILITY', language:'ru', components:[
+  const t = prefill || (isNew ? {name:'', category:'UTILITY', language:'ru', components:[
     {type:'HEADER', format:'TEXT', text:''},
     {type:'BODY', text:''},
     {type:'FOOTER', text:''},
-  ]} : (_currentTemplate || {});
+  ]} : (_currentTemplate || {}));
 
   const headerComp = (t.components || []).find(c => c.type === 'HEADER') || {format:'TEXT', text:''};
   const bodyComp   = (t.components || []).find(c => c.type === 'BODY')   || {text:''};
@@ -5669,7 +5699,22 @@ function openTemplateBuilder(tid) {
     `<button type="button" onclick="insertPlaceholder('${f.key}')" title="${f.example}" style="font-size:11px;padding:2px 7px;border:1px solid #c7d2fe;border-radius:5px;background:#f0f4ff;color:#5e6ad2;cursor:pointer;margin:2px">{{${f.key}}}</button>`
   ).join('');
 
-  showModal(`<h3 style="margin:0 0 16px">${isNew ? 'New Template' : 'Edit: ' + t.name}</h3>
+  const phMap = t.placeholder_map || {};
+  const phMapHtml = Object.keys(phMap).length ? `
+    <div style="background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;padding:12px;margin-top:2px">
+      <div style="font-size:12px;font-weight:600;color:#0369a1;margin-bottom:8px">🤖 AI Placeholder Guide</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">
+        ${Object.entries(phMap).map(([k,v]) =>
+          `<div style="background:#fff;border:1px solid #bae6fd;border-radius:6px;padding:3px 8px;font-size:12px;line-height:1.5">
+            <span style="color:#5e6ad2;font-weight:600">{{${k}}}</span>
+            <span style="color:#56606b"> = ${v.label}</span>
+            <span style="color:#9ca3af"> · ex: ${v.example}</span>
+          </div>`
+        ).join('')}
+      </div>
+    </div>` : '';
+
+  showModal(`<h3 style="margin:0 0 16px">${t.ai_generated ? '🤖 AI Generated Template' : (isNew ? 'New Template' : 'Edit: ' + t.name)}</h3>
     <div style="display:grid;gap:12px">
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
         <div>
@@ -5713,6 +5758,7 @@ function openTemplateBuilder(tid) {
         <div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:4px">${phButtons}</div>
         <textarea id="tb-body" rows="5" placeholder="Hello {{name}}, your rent payment of {{rent}} USD is due by {{lease_end}}." style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical">${bodyComp.text || ''}</textarea>
       </div>
+      ${phMapHtml}
       <div>
         <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Footer <span style="font-weight:400;color:#8b95a1">(optional, max 60 chars)</span></label>
         <input id="tb-footer" value="${footerComp.text || ''}" maxlength="60" placeholder="Apartment Management Odessa" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
@@ -5723,6 +5769,51 @@ function openTemplateBuilder(tid) {
         <button onclick="saveAndSubmitTemplate(${tid || 'null'})" style="padding:8px 16px;border:none;border-radius:6px;background:#5e6ad2;color:#fff;cursor:pointer;font-size:13px">🚀 Save & Submit</button>
       </div>
     </div>`);
+}
+
+// ── AI Template Generator ────────────────────────────────────────────────────
+async function generateTemplateAI() {
+  const desc = (document.getElementById('ai-tmpl-desc') || {}).value || '';
+  if (!desc.trim()) {
+    const s = document.getElementById('ai-gen-status');
+    if (s) { s.style.color = '#ef4444'; s.textContent = 'Please describe the template you want to create.'; }
+    return;
+  }
+  const lang = (document.getElementById('ai-tmpl-lang') || {}).value || 'ru';
+  const btn = document.getElementById('ai-gen-btn');
+  const status = document.getElementById('ai-gen-status');
+
+  if (btn) { btn.disabled = true; btn.textContent = '⏳ Generating...'; }
+  if (status) { status.style.color = '#8b95a1'; status.textContent = 'AI is designing your template…'; }
+
+  try {
+    const r = await apiFetch('/api/wa/templates/generate', {
+      method: 'POST',
+      body: JSON.stringify({ description: desc, language: lang })
+    });
+    if (!r || r.error) {
+      if (status) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + (r ? r.error : 'No response'); }
+      return;
+    }
+    if (status) { status.style.color = '#16a34a'; status.textContent = '✓ Template generated! Review and edit below, then save or submit.'; }
+    // Hide the placeholder hint row so the modal looks clean
+    setTimeout(() => {
+      if (status) { status.textContent = ''; }
+    }, 4000);
+    openTemplateBuilder(null, r);
+  } catch (e) {
+    if (status) { status.style.color = '#ef4444'; status.textContent = 'Error: ' + e.message; }
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '🤖 Generate Template'; }
+  }
+}
+
+function _initAiGenPlaceholders() {
+  const el = document.getElementById('ai-gen-ph-hint');
+  if (!el || _placeholderFields.length === 0) return;
+  el.innerHTML = _placeholderFields.map(f =>
+    `<span style="display:inline-block;margin:1px 4px 1px 0;background:#f3f4f6;border-radius:4px;padding:1px 6px;font-family:monospace;font-size:11px;color:#5e6ad2">{{${f.key}}}</span> <span style="color:#8b95a1">${f.label}</span>`
+  ).join('&nbsp; ');
 }
 
 function insertPlaceholder(key) {

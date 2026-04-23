@@ -1,3 +1,20 @@
+## 2026-04-22 — AI Template Generator + placeholder fields expansion
+
+**Focus:** AI-powered WhatsApp template generation from natural language description; new placeholder fields; fixed template builder prefill
+
+### Done
+- `src/routes/wa_templates.py` — `POST /api/wa/templates/generate`: accepts description + language, calls Claude Haiku, returns `{name, category, language, components, placeholder_map, ai_generated:true}`
+- `src/routes/wa_contacts.py` — 6 new placeholder fields: `landlord_name`, `total_collected`, `amount_due`, `job_type`, `job_apartment`, `job_date`
+- `index.html` — Templates tab right panel: replaced default "Select a template" text with AI generator form (textarea + language selector + Generate button + placeholder hint section)
+- `index.html` — `openTemplateBuilder(tid, prefill)`: added `prefill` param; modal title shows "🤖 AI Generated Template" when from AI; `phMapHtml` shows placeholder guide when available
+- `index.html` — `generateTemplateAI()`: calls backend, opens builder modal with pre-filled data; status feedback on button
+- `index.html` — `_initAiGenPlaceholders()`: populates placeholder hint grid from loaded placeholder-fields
+
+### Context for next session
+- WhatsApp permanent system user token: still expired (April 19). User needs permanent system user token to submit templates
+- Template `owner_payment_update` (ID 1) in DB as draft — ready to submit once token is refreshed
+- AI generator implemented but Render deploy needed to see it live (trigger manually via Render API if auto-deploy still broken)
+
 ## 2026-04-21 — WhatsApp CRM: contacts registry, templates, scoped logs, WA buttons
 
 **Focus:** Full WhatsApp CRM layer — contact registry, template management, send log, WA buttons across all pages, scoped logs per entity

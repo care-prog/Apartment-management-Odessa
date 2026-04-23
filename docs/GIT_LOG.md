@@ -8,6 +8,7 @@
 <!-- DASHBOARD:GIT_LOG:START -->
 | Hash | Date | Message | Phase | Files Changed |
 |---|---|---|---|---|
+| pending | 2026-04-22 | [phase2] AI template generator: describe → AI builds template with placeholders | 2 | 3 files |
 | pending | 2026-04-21 | [phase2] WhatsApp CRM: contacts registry, templates, WA buttons, scoped logs | 2 | 7 files |
 | e60e245 | 2026-04-21 | [phase1] auto-sync Monday every 30min + paginated logs + no manual refresh | 1 | 5 files |
 | 2b2a4ab | 2026-04-21 | [fix] owner assignment — define apiFetch, fix owner modal for apartment model | 1 | 1 file |

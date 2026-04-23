@@ -89,6 +89,130 @@ def get_waba_id():
     return jsonify({'error': 'Could not discover WABA_ID'}), 500
 
 
+# ── AI Template Generator ────────────────────────────────────────────────────
+@bp.route('/api/wa/templates/generate', methods=['POST'])
+def generate_template_ai():
+    """Generate a WhatsApp template using Claude AI from a natural language description."""
+    import urllib.request as _ur
+
+    d = request.json or {}
+    description = (d.get('description') or '').strip()
+    language = d.get('language', 'ru')
+
+    if not description:
+        return jsonify({'error': 'description required'}), 400
+
+    api_key = os.environ.get('ANTHROPIC_API_KEY', '')
+    if not api_key:
+        env_path = os.path.join(
+            os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), '.env'
+        )
+        if os.path.exists(env_path):
+            for line in open(env_path):
+                line = line.strip()
+                if line.startswith('ANTHROPIC_API_KEY='):
+                    api_key = line.split('=', 1)[1].strip()
+
+    if not api_key:
+        return jsonify({'error': 'AI not configured (ANTHROPIC_API_KEY missing)'}), 500
+
+    system_prompt = """You are an expert WhatsApp Business template creator for an apartment rental management company in Odessa, Ukraine. The company has ~19 apartments, rents to tenants, works with maintenance professionals, and reports to property owners.
+
+Available named placeholder variables (write them as {{placeholder_name}} in double braces):
+- TENANT: {{name}}, {{phone}}, {{apartment}}, {{building}}, {{rent}}, {{currency}}, {{lease_end}}, {{email}}
+- OWNER: {{name}}, {{phone}}, {{landlord_name}}, {{total_collected}}, {{amount_due}}
+- PROFESSIONAL: {{name}}, {{phone}}, {{category}}, {{messenger}}
+- JOB/WORK: {{job_type}}, {{job_apartment}}, {{job_date}}
+- TEAM: {{name}}, {{role}}
+
+Rules:
+1. name: lowercase letters and underscores only, short but descriptive
+2. category: UTILITY (service/transactional messages), MARKETING (promotions/offers), AUTHENTICATION (OTP)
+3. body: max 1024 chars, include {{placeholder}} variables naturally, write in the requested language
+4. header: optional short title text (max 60 chars), or empty string
+5. footer: optional short note (max 60 chars, e.g. company name), or empty string
+6. Only include placeholders in placeholder_map that are actually used in header/body/footer
+7. Match the requested language for all text content
+
+Respond ONLY with a single valid JSON object — no markdown, no explanation, no code fences:
+{
+  "name": "template_name_here",
+  "category": "UTILITY",
+  "language": "ru",
+  "header": "Header text or empty string",
+  "body": "Message body text with {{placeholder}} variables",
+  "footer": "Footer text or empty string",
+  "placeholder_map": {
+    "placeholder_name": {
+      "label": "Human readable field label",
+      "source": "tenant/owner/professional/job",
+      "example": "Example value"
+    }
+  }
+}"""
+
+    user_msg = f"Create a WhatsApp template for this purpose: {description}\nLanguage: {language}"
+
+    payload = {
+        "model": "claude-haiku-4-5-20251001",
+        "max_tokens": 1024,
+        "system": system_prompt,
+        "messages": [{"role": "user", "content": user_msg}]
+    }
+
+    raw_text = ''
+    try:
+        data = json.dumps(payload).encode()
+        req = _ur.Request(
+            'https://api.anthropic.com/v1/messages',
+            data=data,
+            headers={
+                'x-api-key': api_key,
+                'anthropic-version': '2023-06-01',
+                'content-type': 'application/json'
+            }
+        )
+        with _ur.urlopen(req, timeout=30) as resp:
+            result = json.loads(resp.read())
+
+        raw_text = result['content'][0]['text'].strip()
+
+        # Strip markdown code fences if the model wrapped it anyway
+        if '```' in raw_text:
+            for part in raw_text.split('```'):
+                part = part.strip()
+                if part.startswith('json'):
+                    part = part[4:].strip()
+                if part.startswith('{'):
+                    raw_text = part
+                    break
+
+        generated = json.loads(raw_text)
+
+        # Build the components array expected by the template builder
+        components = []
+        if generated.get('header'):
+            components.append({'type': 'HEADER', 'format': 'TEXT', 'text': generated['header']})
+        if generated.get('body'):
+            components.append({'type': 'BODY', 'text': generated['body']})
+        if generated.get('footer'):
+            components.append({'type': 'FOOTER', 'text': generated['footer']})
+
+        return jsonify({
+            'name': generated.get('name', ''),
+            'category': generated.get('category', 'UTILITY'),
+            'language': generated.get('language', language),
+            'components': components,
+            'placeholder_map': generated.get('placeholder_map', {}),
+            'ai_generated': True,
+        })
+
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'AI response could not be parsed: {e}', 'raw': raw_text[:500]}), 500
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+
 # ── List templates ──────────────────────────────────────────────────────────
 @bp.route('/api/wa/templates', methods=['GET'])
 def list_templates():
