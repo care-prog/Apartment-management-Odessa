@@ -2302,6 +2302,28 @@ const I18N = {
 
 let LANG = localStorage.getItem('lang') || 'he';
 function t(key) { return (I18N[LANG] && I18N[LANG][key]) || I18N.en[key] || key; }
+
+// ── Timezone helpers ──────────────────────────────────────────────────────────
+const USER_TZ = Intl.DateTimeFormat().resolvedOptions().timeZone;
+const USER_LOCALE = navigator.language || 'en-US';
+// Format a timestamp string to local date+time (respects user's browser timezone)
+function fmtTs(val, opts = {}) {
+  if (!val) return '—';
+  try {
+    const d = new Date(val.includes('T') || val.includes('Z') ? val : val.replace(' ', 'T') + 'Z');
+    const defaults = { timeZone: USER_TZ, hour: '2-digit', minute: '2-digit' };
+    return d.toLocaleString(USER_LOCALE, { ...defaults, ...opts });
+  } catch(e) { return String(val).slice(0, 16); }
+}
+// Format date only (YYYY-MM-DD or ISO string) → locale date string
+function fmtDateLocal(val) {
+  if (!val) return '—';
+  const s = String(val).slice(0, 10); // YYYY-MM-DD
+  try {
+    const [y, m, d] = s.split('-').map(Number);
+    return new Date(y, m - 1, d).toLocaleDateString(USER_LOCALE, { day: '2-digit', month: '2-digit', year: 'numeric' });
+  } catch(e) { return s; }
+}
 function setLang(lang) {
   LANG = lang;
   localStorage.setItem('lang', lang);
@@ -2972,7 +2994,7 @@ function renderWaConvoList(convos) {
     const isActive = c.phone === _waActivePhone;
     const roleColor = c.role === 'team' ? '#10b981' : c.role === 'property_owner' ? '#6366f1' : c.role === 'tenant' ? '#f59e0b' : '#94a3b8';
     const roleLabel = c.role === 'team' ? 'Team' : c.role === 'property_owner' ? 'Owner' : c.role === 'tenant' ? 'Tenant' : '?';
-    const timeStr = c.last_time ? new Date(c.last_time).toLocaleString('he-IL', {hour:'2-digit',minute:'2-digit'}) : '';
+    const timeStr = c.last_time ? new Date(c.last_time).toLocaleString(USER_LOCALE, {hour:'2-digit',minute:'2-digit',timeZone:USER_TZ}) : '';
     const preview = (c.last_message || '').replace(/\n/g,' ').slice(0, 52) + ((c.last_message||'').length > 52 ? '…' : '');
     const arrowPfx = c.last_direction === 'out' ? '<span style="color:var(--accent)">↗</span> ' : '';
     // Status badges
@@ -3095,8 +3117,8 @@ async function loadWaThread(phone, forceScroll) {
       const isDashboard = m.direction === 'out' && (m.from_phone === 'dashboard' || m.sender_name === 'Dashboard');
       const isBot  = m.direction === 'out' && !isDashboard;
       const isIn   = m.direction === 'in';
-      const time   = m.created_at ? new Date(m.created_at).toLocaleString('he-IL',
-        {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit'}) : '';
+      const time   = m.created_at ? new Date(m.created_at).toLocaleString(USER_LOCALE,
+        {hour:'2-digit',minute:'2-digit',day:'2-digit',month:'2-digit',timeZone:USER_TZ}) : '';
 
       // Sender label
       let senderLabel, senderColor;
@@ -3232,7 +3254,7 @@ function renderWaContext(phone, name, role, botPaused, optedOut) {
     <div style="margin-bottom:16px">
       <div style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted);margin-bottom:8px">Conversation</div>
       <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">💬 ${c.msg_count || 0} messages total</div>
-      ${c.last_time ? `<div style="font-size:12px;color:var(--text-muted)">🕐 Last: ${new Date(c.last_time).toLocaleString('he-IL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})}</div>` : ''}
+      ${c.last_time ? `<div style="font-size:12px;color:var(--text-muted)">🕐 Last: ${new Date(c.last_time).toLocaleString(USER_LOCALE,{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit',timeZone:USER_TZ})}</div>` : ''}
     </div>
 
     <!-- Quick actions -->
@@ -5076,7 +5098,7 @@ async function sendChat(message) {
     const res = await fetch('/api/chat', {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({message: text, history: CHAT_HISTORY.slice(0, -1), lang: LANG}),
+      body: JSON.stringify({message: text, history: CHAT_HISTORY.slice(0, -1), lang: LANG, timezone: USER_TZ}),
     });
     const data = await res.json();
     thinking.remove();
@@ -5879,7 +5901,7 @@ async function loadScopedWaLog(entityType, entityId, phone, containerId) {
     if (!msgs.length) { el.textContent = 'No messages yet.'; return; }
     el.innerHTML = msgs.map(m => {
       const dir = m.direction === 'out' ? '➡️' : '⬅️';
-      const ts = m.created_at ? new Date(m.created_at).toLocaleString('ru-RU', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const ts = m.created_at ? fmtTs(m.created_at, {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
       const body = (m.body||'').slice(0, 120) + ((m.body||'').length > 120 ? '…' : '');
       return `<div style="padding:5px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:flex-start">
         <span style="flex-shrink:0">${dir}</span>

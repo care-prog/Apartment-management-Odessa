@@ -6,6 +6,7 @@ take actions (create tasks, add expenses, log payments, etc.).
 import os
 import json
 import urllib.request
+from datetime import datetime, timezone
 from flask import Blueprint, request, jsonify
 from src.models import query_db, insert_db, execute_db
 
@@ -420,14 +421,27 @@ def chat():
     history = data.get('history', [])
     user_message = data.get('message', '')
     ui_lang = data.get('lang', 'en')
+    user_tz = data.get('timezone', 'UTC')
 
     if not user_message:
         return jsonify({'error': 'Empty message'}), 400
+
+    # Compute current datetime in user's timezone
+    try:
+        from zoneinfo import ZoneInfo
+        tz = ZoneInfo(user_tz)
+    except Exception:
+        tz = timezone.utc
+    now_local = datetime.now(tz)
+    current_date = now_local.strftime('%Y-%m-%d')
+    current_datetime_str = now_local.strftime('%A, %d %B %Y, %H:%M') + f' ({user_tz})'
 
     context = gather_context()
     lang_name = LANG_NAMES.get(ui_lang, 'English')
 
     system_prompt = f"""You are an intelligent assistant for "Apartment Management Odessa" — a property management business in Odessa, Ukraine, owned by David Persiko.
+
+TODAY: {current_datetime_str}  (use this as "today" for all tasks, deadlines, and date calculations — never guess the date)
 
 You have FULL access to the live database AND can take actions using tools. The user (David) can ask you to:
 - Read/answer questions about properties, tenants, finances, tasks, maintenance
