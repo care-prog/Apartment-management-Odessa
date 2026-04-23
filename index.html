@@ -4310,6 +4310,8 @@ async function loadOwnerFinanceReport() {
       const fin = o.financials;
       const owedC = fin.balance_owed > 0 ? 'var(--red)' : 'var(--green)';
       const owedLabel = fin.balance_owed > 0 ? '🔴 Owed to Owner' : '🟢 Overpaid';
+      const owPhone = o.phone || o.contact || '';
+      const waOwnerBadge = owPhone ? `<span id="wa-ow-badge-${o.id}" style="font-size:10px;display:inline-block;margin-left:6px;padding:1px 6px;border-radius:8px;background:#f3f4f6;color:#8b95a1;cursor:pointer" onclick="event.stopPropagation();registerWaContactFromList('owner',${o.id},'${owPhone.replace(/\D/g,'')}')">📲</span>` : '';
 
       // Apartments breakdown (per-apartment ownership model)
       const aptList = o.apartments || [];
@@ -4352,7 +4354,7 @@ async function loadOwnerFinanceReport() {
           <div style="display:flex;align-items:center;gap:10px">
             <div style="width:40px;height:40px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent-2));display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:16px">${(o.name||'?')[0].toUpperCase()}</div>
             <div>
-              <div style="font-weight:700;font-size:15px">${o.name}</div>
+              <div style="font-weight:700;font-size:15px">${o.name}${waOwnerBadge}</div>
               <div style="font-size:11px;color:var(--text-muted)">${o.phone||o.email||o.contact||'No contact'}</div>
             </div>
           </div>
@@ -4395,6 +4397,15 @@ async function loadOwnerFinanceReport() {
         </div>
       </div>`;
     }).join('');
+
+    // Init WA badges for owners with phones
+    owners.forEach(o => {
+      const owPhone = o.phone || o.contact || '';
+      if (!owPhone) return;
+      const badge = document.getElementById('wa-ow-badge-' + o.id);
+      if (!badge) return;
+      initWaBtn(owPhone, 'owner', o.id, badge);
+    });
 
   } catch(e) {
     kpiEl.innerHTML = '<div style="color:var(--red);font-size:13px">Error loading financial data</div>';
@@ -5398,42 +5409,102 @@ function switchWaTab(tab, btn) {
 // ── WA Contacts ──────────────────────────────────────────────────────────
 async function loadWaContacts() {
   const search = (document.getElementById('wac-search') || {}).value || '';
-  const type = (document.getElementById('wac-filter-type') || {}).value || '';
-  const params = new URLSearchParams();
-  if (search) params.set('search', search);
-  if (type) params.set('entity_type', type);
-  const contacts = await apiFetch('/api/wa/contacts?' + params);
+  const typeFilter = (document.getElementById('wac-filter-type') || {}).value || '';
   const list = document.getElementById('wac-list');
   if (!list) return;
-  if (!contacts || !Array.isArray(contacts) || contacts.length === 0) {
-    list.innerHTML = '<div style="color:#8b95a1;text-align:center;padding:40px;font-size:13px">No contacts registered yet.<br>Use the 📲 button next to any phone number to register.</div>';
+  list.innerHTML = '<div style="color:#8b95a1;text-align:center;padding:30px">Loading...</div>';
+
+  // Fetch registered contacts + all entities in parallel
+  const [waContacts, pros] = await Promise.all([
+    apiFetch('/api/wa/contacts'),
+    apiFetch('/api/professionals'),
+  ]);
+
+  // Fetch tenants separately for reliable field names
+  const tenants = await apiFetch('/api/tenants');
+
+  // Build a phone→waContact map for quick lookup
+  const waMap = {};
+  (waContacts || []).forEach(c => { if (c.phone) waMap[c.phone.replace(/\D/g,'')] = c; });
+
+  // Build unified list of all people with phones
+  const allPeople = [];
+
+  // Professionals
+  (pros || []).forEach(p => {
+    if (!p.phone) return;
+    allPeople.push({ name: p.name, phone: p.phone, entity_type: 'professional', entity_id: p.id });
+    if (p.phone_2) allPeople.push({ name: p.name + ' (2)', phone: p.phone_2, entity_type: 'professional', entity_id: p.id });
+  });
+
+  // Tenants from /api/tenants directly
+  (tenants || []).forEach(t => {
+    if (!t.phone) return;
+    allPeople.push({ name: t.name, phone: t.phone, entity_type: 'tenant', entity_id: t.id });
+  });
+
+  // Also add any registered contacts not in above lists (owners etc.)
+  (waContacts || []).forEach(c => {
+    if (!allPeople.find(p => p.phone.replace(/\D/g,'') === c.phone.replace(/\D/g,''))) {
+      allPeople.push({ name: c.name, phone: c.phone, entity_type: c.entity_type, entity_id: c.entity_id });
+    }
+  });
+
+  // Filter
+  let filtered = allPeople;
+  if (typeFilter) filtered = filtered.filter(p => p.entity_type === typeFilter);
+  if (search) {
+    const s = search.toLowerCase();
+    filtered = filtered.filter(p => (p.name||'').toLowerCase().includes(s) || (p.phone||'').includes(s));
+  }
+
+  if (!filtered.length) {
+    list.innerHTML = '<div style="color:#8b95a1;text-align:center;padding:40px;font-size:13px">No contacts found.</div>';
     return;
   }
+
   const TYPE_BADGE = { tenant:'🏠 Tenant', professional:'🔧 Pro', owner:'👤 Owner', team:'👔 Team' };
   list.innerHTML = `<table style="width:100%;border-collapse:collapse;font-size:13px">
     <thead><tr style="border-bottom:2px solid #e8eaed">
       <th style="text-align:left;padding:8px;color:#56606b">Name</th>
       <th style="text-align:left;padding:8px;color:#56606b">Phone</th>
       <th style="text-align:left;padding:8px;color:#56606b">Type</th>
-      <th style="text-align:left;padding:8px;color:#56606b">Fields</th>
+      <th style="text-align:left;padding:8px;color:#56606b">WA Status</th>
       <th style="text-align:left;padding:8px;color:#56606b">Actions</th>
     </tr></thead>
-    <tbody>${contacts.map(c => {
-      const fields = c.user_fields || {};
-      const fieldCount = Object.keys(fields).filter(k => fields[k]).length;
-      const optBadge = c.opted_out ? '<span style="background:#fee2e2;color:#dc2626;border-radius:10px;padding:2px 8px;font-size:11px">Opted out</span>' : '';
+    <tbody>${filtered.map(p => {
+      const normPhone = p.phone.replace(/\D/g,'');
+      const wc = waMap[normPhone];
+      const isReg = !!wc;
+      const waBadge = isReg
+        ? '<span style="background:#dcfce7;color:#166534;border-radius:10px;padding:2px 8px;font-size:11px;font-weight:600">✅ Registered</span>'
+        : '<span style="background:#f3f4f6;color:#8b95a1;border-radius:10px;padding:2px 8px;font-size:11px">Not registered</span>';
+      const actions = isReg
+        ? `<button onclick="showWaContactFields('${wc.phone}')" style="font-size:11px;padding:3px 8px;border:1px solid #e8eaed;border-radius:5px;background:#fff;cursor:pointer;margin-right:4px">View fields</button>
+           <button onclick="openSendTemplateModal('${wc.phone}','${(p.name||'').replace(/'/g,"\\'")}')  " style="font-size:11px;padding:3px 8px;border:1px solid #5e6ad2;border-radius:5px;background:#5e6ad2;color:#fff;cursor:pointer">Send</button>`
+        : `<button id="reg-btn-${normPhone}" onclick="registerWaContactFromList('${p.entity_type}',${p.entity_id},'${normPhone}')" style="font-size:11px;padding:3px 8px;border:1px solid #86efac;border-radius:5px;background:#dcfce7;color:#166534;cursor:pointer">📲 Register</button>`;
       return `<tr style="border-bottom:1px solid #f3f4f6" onmouseover="this.style.background='#f9fafb'" onmouseout="this.style.background=''">
-        <td style="padding:8px;font-weight:500">${c.name || '—'} ${optBadge}</td>
-        <td style="padding:8px;color:#56606b">${c.phone}</td>
-        <td style="padding:8px"><span style="background:#f0f4ff;color:#5e6ad2;border-radius:10px;padding:2px 8px;font-size:11px">${TYPE_BADGE[c.entity_type] || c.entity_type || '?'}</span></td>
-        <td style="padding:8px;color:#8b95a1">${fieldCount} fields</td>
-        <td style="padding:8px">
-          <button onclick="showWaContactFields('${c.phone}')" style="font-size:11px;padding:3px 8px;border:1px solid #e8eaed;border-radius:5px;background:#fff;cursor:pointer">View fields</button>
-          <button onclick="openSendTemplateModal('${c.phone}','${(c.name||'').replace(/'/g,"\\'")}')  " style="font-size:11px;padding:3px 8px;border:1px solid #5e6ad2;border-radius:5px;background:#5e6ad2;color:#fff;cursor:pointer;margin-left:4px">Send template</button>
-        </td>
+        <td style="padding:8px;font-weight:500">${p.name || '—'}</td>
+        <td style="padding:8px;color:#56606b">${p.phone}</td>
+        <td style="padding:8px"><span style="background:#f0f4ff;color:#5e6ad2;border-radius:10px;padding:2px 8px;font-size:11px">${TYPE_BADGE[p.entity_type] || p.entity_type || '?'}</span></td>
+        <td style="padding:8px">${waBadge}</td>
+        <td style="padding:8px">${actions}</td>
       </tr>`;
     }).join('')}</tbody>
   </table>`;
+}
+
+async function registerWaContactFromList(entityType, entityId, normPhone) {
+  const btn = document.getElementById('reg-btn-' + normPhone);
+  if (btn) { btn.disabled = true; btn.textContent = '...'; }
+  const r = await apiFetch('/api/wa/contacts/from-' + entityType + '/' + entityId, {method:'POST', body:'{}'});
+  if (r && !r.error) {
+    showToast('✅ Registered on WhatsApp!');
+    loadWaContacts();
+  } else {
+    if (btn) { btn.disabled = false; btn.textContent = '📲 Register'; }
+    showToast('❌ Registration failed');
+  }
 }
 
 async function showWaContactFields(phone) {
@@ -5910,6 +5981,16 @@ async function loadScopedWaLog(entityType, entityId, phone, containerId) {
     }).join('');
   } catch(e) { el.textContent = 'Could not load messages.'; }
 }
+
+function showModal(html) {
+  document.getElementById('generic-modal-content').innerHTML = html;
+  document.getElementById('generic-modal').style.display = 'block';
+  document.body.style.overflow = 'hidden';
+}
+function closeModal() {
+  document.getElementById('generic-modal').style.display = 'none';
+  document.body.style.overflow = '';
+}
 </script>
 
 <!-- ══════════ TASK DETAIL MODAL ══════════ -->
@@ -6031,6 +6112,13 @@ async function loadScopedWaLog(entityType, entityId, phone, containerId) {
         </div>
       </div>
     </div>
+  </div>
+</div>
+
+<!-- ══════ GENERIC MODAL ══════ -->
+<div id="generic-modal" onclick="if(event.target===this)closeModal()" style="display:none;position:fixed;inset:0;background:rgba(15,20,25,.45);z-index:500;overflow-y:auto;padding:24px 16px">
+  <div style="max-width:660px;margin:40px auto;background:var(--surface);border-radius:16px;box-shadow:0 8px 40px rgba(0,0,0,.18);overflow:hidden">
+    <div id="generic-modal-content" style="padding:24px"></div>
   </div>
 </div>
 
