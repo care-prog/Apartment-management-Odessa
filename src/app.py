@@ -4,7 +4,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from flask import Flask, send_from_directory, jsonify, request
 from src.models import init_db
 from src.routes import properties, tenants, payments, utilities, maintenance, tasks, dashboard, finance, whatsapp, chat, uploads, wallets, activity, users, professionals as professionals_mod
-from src.routes import wa_contacts, wa_templates
+from src.routes import wa_contacts, wa_templates, voiceflow
 from src.monday_sync import sync_to_db, fetch_board_items, parse_item
 from src.auth import init_auth
 
@@ -52,6 +52,7 @@ app.register_blueprint(users.bp)
 app.register_blueprint(professionals_mod.bp)
 app.register_blueprint(wa_contacts.bp)
 app.register_blueprint(wa_templates.bp)
+app.register_blueprint(voiceflow.bp)
 
 ROOT = os.path.dirname(os.path.dirname(__file__))
 
