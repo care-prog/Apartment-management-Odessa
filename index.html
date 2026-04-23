@@ -5681,7 +5681,45 @@ function renderTemplateDetail(t) {
           <div style="font-size:11px;color:#8b95a1;margin-top:4px">Click to copy placeholder</div>
         </div>
       </div>
-    </div>`;
+    </div>
+    ${_renderTemplateRules(t)}`;
+}
+
+function _renderTemplateRules(t) {
+  const sched = (t.schedule_config && typeof t.schedule_config === 'object') ? t.schedule_config : {};
+  const aud   = (t.audience_config && typeof t.audience_config === 'object') ? t.audience_config : {};
+  const hasRules = sched.type || aud.entity_type || t.rules_summary;
+  if (!hasRules) return '';
+
+  const SCHED_LABELS = {
+    manual: '📤 Manual only',
+    on_event: { rent_collected:'💰 When rent is collected', lease_expiring_30d:'📋 Lease expiring in 30 days', lease_expiring_7d:'🚨 Lease expiring in 7 days', maintenance_completed:'🔧 When maintenance completed', payment_recorded:'💳 When payment recorded' },
+    daily: '📅 Daily at ' + (sched.time || '09:00'),
+    weekly: '📅 Weekly on ' + (sched.day_of_week || '') + ' at ' + (sched.time || '09:00'),
+    monthly: '📅 Monthly on day ' + (sched.day_of_month || '1') + ' at ' + (sched.time || '09:00'),
+  };
+  const AUD_LABELS = { owner:'🏠 Apartment Owners', tenant:'🔑 Tenants', professional:'🔧 Professionals', team:'👔 Team Members' };
+
+  let schedLabel = sched.type === 'on_event'
+    ? (SCHED_LABELS.on_event[sched.event] || '⚡ On event: ' + sched.event)
+    : (SCHED_LABELS[sched.type] || sched.type || '—');
+  const audLabel = AUD_LABELS[aud.entity_type] || aud.entity_type || '—';
+  const excl = (aud.exclusions || []).filter(Boolean);
+
+  return `<div style="margin-top:16px;background:#f0fdf4;border:1px solid #86efac;border-radius:10px;padding:14px">
+    <div style="font-size:12px;font-weight:700;color:#16a34a;margin-bottom:10px;text-transform:uppercase;letter-spacing:.5px">📋 Automation Rules</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:${t.rules_summary?'10px':'0'}">
+      <div style="background:#fff;border-radius:7px;padding:9px 12px">
+        <div style="font-size:11px;font-weight:600;color:#56606b;margin-bottom:3px">SCHEDULE</div>
+        <div style="font-size:13px;color:#1a1d23">${schedLabel}</div>
+      </div>
+      <div style="background:#fff;border-radius:7px;padding:9px 12px">
+        <div style="font-size:11px;font-weight:600;color:#56606b;margin-bottom:3px">AUDIENCE</div>
+        <div style="font-size:13px;color:#1a1d23">${audLabel}${excl.length ? '<br><span style="font-size:11px;color:#dc2626">Exclude: ' + excl.join(', ') + '</span>' : ''}</div>
+      </div>
+    </div>
+    ${t.rules_summary ? `<div style="font-size:13px;color:#374151;border-top:1px solid #86efac;padding-top:8px;line-height:1.5">${t.rules_summary}</div>` : ''}
+  </div>`;
 }
 
 function openTemplateBuilder(tid, prefill) {
@@ -5698,6 +5736,17 @@ function openTemplateBuilder(tid, prefill) {
   const phButtons = _placeholderFields.map(f =>
     `<button type="button" onclick="insertPlaceholder('${f.key}')" title="${f.example}" style="font-size:11px;padding:2px 7px;border:1px solid #c7d2fe;border-radius:5px;background:#f0f4ff;color:#5e6ad2;cursor:pointer;margin:2px">{{${f.key}}}</button>`
   ).join('');
+
+  const schedConf = (t.schedule_config && typeof t.schedule_config === 'object') ? t.schedule_config : {};
+  const audConf   = (t.audience_config && typeof t.audience_config === 'object') ? t.audience_config : {};
+  const schedType = schedConf.type || 'manual';
+  const schedEvent = schedConf.event || 'rent_collected';
+  const schedTime  = schedConf.time  || '09:00';
+  const schedDom   = schedConf.day_of_month || '1';
+  const schedDow   = schedConf.day_of_week  || 'monday';
+  const audType    = audConf.entity_type || 'owner';
+  const audExcl    = (audConf.exclusions || []).join(', ');
+  const rulesSummary = t.rules_summary || '';
 
   const phMap = t.placeholder_map || {};
   const phMapHtml = Object.keys(phMap).length ? `
@@ -5763,6 +5812,78 @@ function openTemplateBuilder(tid, prefill) {
         <label style="font-size:12px;font-weight:600;color:#56606b;display:block;margin-bottom:4px">Footer <span style="font-weight:400;color:#8b95a1">(optional, max 60 chars)</span></label>
         <input id="tb-footer" value="${footerComp.text || ''}" maxlength="60" placeholder="Apartment Management Odessa" style="width:100%;padding:8px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
       </div>
+      <!-- ⏰ Schedule Section -->
+      <div style="border:1px solid #e8eaed;border-radius:8px;padding:14px">
+        <div style="font-size:13px;font-weight:600;color:#1a1d23;margin-bottom:10px">⏰ Schedule — When to Send</div>
+        <div style="display:grid;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Trigger type</label>
+            <select id="tb-sched-type" onchange="toggleScheduleFields()" style="width:100%;padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+              <option value="manual" ${schedType==='manual'?'selected':''}>📤 Manual only — send from dashboard manually</option>
+              <option value="on_event" ${schedType==='on_event'?'selected':''}>⚡ On event — triggered automatically</option>
+              <option value="monthly" ${schedType==='monthly'?'selected':''}>📅 Monthly — every month on a specific day</option>
+              <option value="weekly" ${schedType==='weekly'?'selected':''}>📅 Weekly — every week on a specific day</option>
+              <option value="daily" ${schedType==='daily'?'selected':''}>📅 Daily — every day at a specific time</option>
+            </select>
+          </div>
+          <div id="tb-sched-event-row" style="display:${schedType==='on_event'?'block':'none'}">
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Event trigger</label>
+            <select id="tb-sched-event" style="width:100%;padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+              <option value="rent_collected" ${schedEvent==='rent_collected'?'selected':''}>💰 When rent is collected for an apartment</option>
+              <option value="lease_expiring_30d" ${schedEvent==='lease_expiring_30d'?'selected':''}>📋 When lease expires in 30 days</option>
+              <option value="lease_expiring_7d" ${schedEvent==='lease_expiring_7d'?'selected':''}>🚨 When lease expires in 7 days</option>
+              <option value="maintenance_completed" ${schedEvent==='maintenance_completed'?'selected':''}>🔧 When a maintenance job is completed</option>
+              <option value="payment_recorded" ${schedEvent==='payment_recorded'?'selected':''}>💳 When any payment is recorded manually</option>
+            </select>
+          </div>
+          <div id="tb-sched-time-row" style="display:${['daily','weekly','monthly'].includes(schedType)?'flex':'none'};gap:12px;align-items:center">
+            <div>
+              <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Send at</label>
+              <input type="time" id="tb-sched-time" value="${schedTime}" style="padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+            </div>
+          </div>
+          <div id="tb-sched-dom-row" style="display:${schedType==='monthly'?'block':'none'}">
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Day of month</label>
+            <select id="tb-sched-dom" style="padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+              ${Array.from({length:28},(_,i)=>i+1).map(d=>`<option value="${d}" ${String(schedDom)==String(d)?'selected':''}>${d}</option>`).join('')}
+            </select>
+          </div>
+          <div id="tb-sched-dow-row" style="display:${schedType==='weekly'?'block':'none'}">
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Day of week</label>
+            <select id="tb-sched-dow" style="padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+              ${[['monday','Monday'],['tuesday','Tuesday'],['wednesday','Wednesday'],['thursday','Thursday'],['friday','Friday'],['saturday','Saturday'],['sunday','Sunday']].map(([v,l])=>`<option value="${v}" ${schedDow===v?'selected':''}>${l}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- 👥 Audience Section -->
+      <div style="border:1px solid #e8eaed;border-radius:8px;padding:14px">
+        <div style="font-size:13px;font-weight:600;color:#1a1d23;margin-bottom:10px">👥 Audience — Who Receives This</div>
+        <div style="display:grid;gap:8px">
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Send to</label>
+            <select id="tb-aud-type" style="width:100%;padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px">
+              <option value="owner" ${audType==='owner'?'selected':''}>🏠 Apartment Owners</option>
+              <option value="tenant" ${audType==='tenant'?'selected':''}>🔑 Tenants (active leases)</option>
+              <option value="professional" ${audType==='professional'?'selected':''}>🔧 Professionals</option>
+              <option value="team" ${audType==='team'?'selected':''}>👔 Team Members</option>
+            </select>
+          </div>
+          <div>
+            <label style="font-size:11px;font-weight:600;color:#56606b;display:block;margin-bottom:3px">Exclude (comma-separated names)</label>
+            <input id="tb-aud-excl" value="${audExcl}" placeholder="e.g. Nathan, David" style="width:100%;padding:7px;border:1px solid #e8eaed;border-radius:6px;font-size:13px;box-sizing:border-box">
+            <div style="font-size:11px;color:#8b95a1;margin-top:2px">Names to skip — exact match or partial</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 📋 Rules Summary -->
+      <div style="background:#f0fdf4;border:1px solid #86efac;border-radius:8px;padding:12px">
+        <div style="font-size:12px;font-weight:600;color:#16a34a;margin-bottom:6px">📋 Automation Rules Summary</div>
+        <textarea id="tb-rules-summary" rows="2" placeholder="Describe when and who gets this message..." style="width:100%;padding:7px;border:1px solid #86efac;border-radius:6px;font-size:13px;box-sizing:border-box;resize:vertical;background:#fff;color:#374151">${rulesSummary}</textarea>
+      </div>
+
       <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px">
         <button onclick="closeModal()" style="padding:8px 16px;border:1px solid #e8eaed;border-radius:6px;background:#fff;cursor:pointer;font-size:13px">Cancel</button>
         <button onclick="saveTemplateDraft(${tid || 'null'})" style="padding:8px 16px;border:none;border-radius:6px;background:#f3f4f6;color:#56606b;cursor:pointer;font-size:13px">💾 Save Draft</button>
@@ -5816,6 +5937,32 @@ function _initAiGenPlaceholders() {
   ).join('&nbsp; ');
 }
 
+function toggleScheduleFields() {
+  const type = (document.getElementById('tb-sched-type') || {}).value || 'manual';
+  const show = (id, cond) => { const el = document.getElementById(id); if (el) el.style.display = cond ? (id.includes('time') ? 'flex' : 'block') : 'none'; };
+  show('tb-sched-event-row', type === 'on_event');
+  show('tb-sched-time-row',  ['daily','weekly','monthly'].includes(type));
+  show('tb-sched-dom-row',   type === 'monthly');
+  show('tb-sched-dow-row',   type === 'weekly');
+}
+
+function _buildScheduleConfig() {
+  const type = (document.getElementById('tb-sched-type') || {}).value || 'manual';
+  const conf = { type };
+  if (type === 'on_event') conf.event = (document.getElementById('tb-sched-event') || {}).value || 'rent_collected';
+  if (['daily','weekly','monthly'].includes(type)) conf.time = (document.getElementById('tb-sched-time') || {}).value || '09:00';
+  if (type === 'monthly') conf.day_of_month = (document.getElementById('tb-sched-dom') || {}).value || '1';
+  if (type === 'weekly')  conf.day_of_week  = (document.getElementById('tb-sched-dow') || {}).value || 'monday';
+  return conf;
+}
+
+function _buildAudienceConfig() {
+  const entityType  = (document.getElementById('tb-aud-type') || {}).value || 'owner';
+  const exclRaw     = (document.getElementById('tb-aud-excl') || {}).value || '';
+  const exclusions  = exclRaw.split(',').map(s => s.trim()).filter(Boolean);
+  return { entity_type: entityType, exclusions };
+}
+
 function insertPlaceholder(key) {
   const ta = document.getElementById('tb-body');
   if (!ta) return;
@@ -5866,6 +6013,9 @@ async function saveTemplateDraft(tid) {
     category: (document.getElementById('tb-category') || {}).value || 'UTILITY',
     language: (document.getElementById('tb-language') || {}).value || 'ru',
     components: _buildTemplateComponents(),
+    schedule_config: _buildScheduleConfig(),
+    audience_config: _buildAudienceConfig(),
+    rules_summary: (document.getElementById('tb-rules-summary') || {}).value || '',
   };
   const r = tid
     ? await apiFetch('/api/wa/templates/' + tid, {method:'PUT', body:JSON.stringify(payload)})

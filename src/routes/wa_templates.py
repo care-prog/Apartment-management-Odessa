@@ -46,10 +46,16 @@ def _row_to_dict(row):
     if not row:
         return row
     r = dict(row)
-    try:
-        r['components'] = json.loads(r['components']) if r.get('components') else []
-    except Exception:
-        r['components'] = []
+    for field in ('components',):
+        try:
+            r[field] = json.loads(r[field]) if r.get(field) else []
+        except Exception:
+            r[field] = []
+    for field in ('schedule_config', 'audience_config'):
+        try:
+            r[field] = json.loads(r[field]) if r.get(field) else {}
+        except Exception:
+            r[field] = {}
     return r
 
 
@@ -134,6 +140,18 @@ Rules:
 6. Only include placeholders in placeholder_map that are actually used in header/body/footer
 7. Match the requested language for all text content
 
+Also infer scheduling and audience rules from the description:
+
+Schedule types:
+- "on_event" + event: "rent_collected" | "lease_expiring_30d" | "lease_expiring_7d" | "maintenance_completed" | "payment_recorded"
+- "monthly" — every month (add day_of_month: 1-28, time: "HH:MM")
+- "weekly" — every week (add day_of_week: "monday".."sunday", time: "HH:MM")
+- "daily" — every day (add time: "HH:MM")
+- "manual" — only sent manually from the dashboard
+
+Audience entity types: "owner" | "tenant" | "professional" | "team"
+Exclusions: names mentioned as "except X" or "not Y" or "חוץ מ..." or "כמובן חוץ מ..."
+
 Respond ONLY with a single valid JSON object — no markdown, no explanation, no code fences:
 {
   "name": "template_name_here",
@@ -148,7 +166,21 @@ Respond ONLY with a single valid JSON object — no markdown, no explanation, no
       "source": "tenant/owner/professional/job",
       "example": "Example value"
     }
-  }
+  },
+  "schedule": {
+    "type": "on_event",
+    "event": "rent_collected",
+    "day_of_month": null,
+    "day_of_week": null,
+    "time": null,
+    "label": "Human readable schedule description in the same language as body"
+  },
+  "audience": {
+    "entity_type": "owner",
+    "exclusions": [],
+    "label": "Human readable audience description in the same language as body"
+  },
+  "rules_summary": "Full plain-language summary of WHEN this sends, WHO receives it, and WHAT it contains. Same language as body. 1-3 sentences."
 }"""
 
     user_msg = f"Create a WhatsApp template for this purpose: {description}\nLanguage: {language}"
@@ -204,6 +236,9 @@ Respond ONLY with a single valid JSON object — no markdown, no explanation, no
             'language': generated.get('language', language),
             'components': components,
             'placeholder_map': generated.get('placeholder_map', {}),
+            'schedule_config': generated.get('schedule', {}),
+            'audience_config': generated.get('audience', {}),
+            'rules_summary': generated.get('rules_summary', ''),
             'ai_generated': True,
         })
 
@@ -250,11 +285,18 @@ def create_template():
     category = d.get('category', 'UTILITY').upper()
     language = d.get('language', 'ru')
     components = d.get('components', [])
+    schedule_config = json.dumps(d['schedule_config'], ensure_ascii=False) if d.get('schedule_config') else None
+    audience_config = json.dumps(d['audience_config'], ensure_ascii=False) if d.get('audience_config') else None
+    rules_summary = d.get('rules_summary', '') or ''
     status = 'draft'
 
     nid = insert_db(
-        'INSERT INTO wa_templates (name, category, language, status, components) VALUES (?, ?, ?, ?, ?)',
-        (name, category, language, status, json.dumps(components, ensure_ascii=False))
+        '''INSERT INTO wa_templates
+           (name, category, language, status, components, schedule_config, audience_config, rules_summary)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?)''',
+        (name, category, language, status,
+         json.dumps(components, ensure_ascii=False),
+         schedule_config, audience_config, rules_summary)
     )
     row = query_db('SELECT * FROM wa_templates WHERE id = ?', (nid,), one=True)
     return jsonify(_row_to_dict(row)), 201
@@ -268,12 +310,17 @@ def update_template(tid):
         return jsonify({'error': 'not found'}), 404
     d = request.json or {}
     name = (d.get('name') or row['name']).strip().lower().replace(' ', '_')
+    schedule_config = json.dumps(d['schedule_config'], ensure_ascii=False) if d.get('schedule_config') else row.get('schedule_config')
+    audience_config = json.dumps(d['audience_config'], ensure_ascii=False) if d.get('audience_config') else row.get('audience_config')
+    rules_summary = d.get('rules_summary', row.get('rules_summary') or '')
     execute_db(
         '''UPDATE wa_templates SET name=?, category=?, language=?, components=?,
+           schedule_config=?, audience_config=?, rules_summary=?,
            updated_at=CURRENT_TIMESTAMP WHERE id=?''',
         (name, d.get('category', row['category']).upper(),
          d.get('language', row['language']),
          json.dumps(d.get('components', json.loads(row['components'] or '[]')), ensure_ascii=False),
+         schedule_config, audience_config, rules_summary,
          tid)
     )
     updated = query_db('SELECT * FROM wa_templates WHERE id = ?', (tid,), one=True)

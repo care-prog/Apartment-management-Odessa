@@ -158,8 +158,14 @@ def safe_migrate():
             status TEXT DEFAULT 'draft',
             meta_template_id TEXT, components TEXT,
             rejection_reason TEXT,
+            schedule_config TEXT,
+            audience_config TEXT,
+            rules_summary TEXT,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)""")
+        _pg_run("ALTER TABLE wa_templates ADD COLUMN IF NOT EXISTS schedule_config TEXT")
+        _pg_run("ALTER TABLE wa_templates ADD COLUMN IF NOT EXISTS audience_config TEXT")
+        _pg_run("ALTER TABLE wa_templates ADD COLUMN IF NOT EXISTS rules_summary TEXT")
         # WA template send log
         _pg_run("""CREATE TABLE IF NOT EXISTS wa_template_sends (
             id SERIAL PRIMARY KEY,
@@ -265,8 +271,17 @@ def safe_migrate():
             status TEXT DEFAULT 'draft',
             meta_template_id TEXT, components TEXT,
             rejection_reason TEXT,
+            schedule_config TEXT,
+            audience_config TEXT,
+            rules_summary TEXT,
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME DEFAULT CURRENT_TIMESTAMP)""")
+        try: execute_db("ALTER TABLE wa_templates ADD COLUMN schedule_config TEXT")
+        except: pass
+        try: execute_db("ALTER TABLE wa_templates ADD COLUMN audience_config TEXT")
+        except: pass
+        try: execute_db("ALTER TABLE wa_templates ADD COLUMN rules_summary TEXT")
+        except: pass
         execute_db("""CREATE TABLE IF NOT EXISTS wa_template_sends (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             template_id INTEGER,
